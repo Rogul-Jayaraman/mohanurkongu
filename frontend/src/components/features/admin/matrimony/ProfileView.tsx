@@ -1,0 +1,1105 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useLanguage } from '@/context/LanguageContext';
+import { useProfileDetailQuery } from '@/hooks/queries/useProfiles';
+import { useVerifyProfileMutation, useBlockProfileMutation, useSuspendAccountMutation, useUpdateProfileStatusMutation } from '@/hooks/queries/useAdminMatrimony';
+import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
+import { RejectionModal } from '@/modals/admin/RejectionModal';
+import { D1Chart, D9Chart } from '@/components/shared/horoscope';
+import type { PlanetData, HoroscopeResult } from '@/types/horoscope';
+import { getBilingualValue } from '@/utils/bilingual';
+import { toast } from 'sonner';
+import { ArrowLeft, Shield, ShieldBan, Check, X, Phone, Mail, Printer, FileText, Info, User, Users, Briefcase, Heart, Building2, Map, Camera, Eye, EyeOff } from 'lucide-react';
+import { Profile } from '@/types';
+import { getImageUrl } from '@/utils/getImageUrl';
+import { useProfileUtils } from '@/hooks/useProfileUtils';
+import { useDateFormatter } from '@/hooks/useDateFormatter';
+import {
+  KULAM_OPTIONS, PROFILE_FOR_OPTIONS, MARITAL_STATUS_OPTIONS, DIET_OPTIONS, COMPLEXION_OPTIONS,
+  BLOOD_GROUP_OPTIONS, JOB_SECTOR_OPTIONS, RESIDENCE_OPTIONS, NAKSHATRA_OPTIONS, RASI_OPTIONS,
+  DOSHAM_OPTIONS, GENDER_OPTIONS, HEIGHT_OPTIONS
+} from '@/constants/index';
+import PrintProfile, { JathagamPrintView } from './PrintProfile';
+import {
+  SectionCard3D,
+  SectionHeaderRedesigned,
+  DetailRow,
+  SectionDivider,
+} from '@/components/features/matrimony/ProfileViewPrimitives';
+import { AnimatedSection } from '@/components/ui/AnimatedSection';
+
+// ═══════════════════════════════════════════════════════════
+// QuickNav
+// ═══════════════════════════════════════════════════════════
+const NAV_KEYS: { id: string; key: string }[] = [
+  { id: "basic", key: "basic" },
+  { id: "personal", key: "personal" },
+  { id: "community", key: "community" },
+  { id: "professional", key: "professional" },
+  { id: "family", key: "family" },
+  { id: "assets", key: "assets" },
+  { id: "horoscope", key: "horoscope" },
+  { id: "gallery", key: "gallery" },
+  { id: "owner", key: "owner" },
+  { id: "admin", key: "admin" },
+];
+
+const QuickNav: React.FC = () => {
+  const [activeSection, setActiveSection] = useState("");
+  const { t } = useLanguage();
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const id = entry.target.id.replace("section-", "");
+            setActiveSection(id);
+          }
+        }
+      },
+      { rootMargin: "-80px 0px -60% 0px", threshold: 0 },
+    );
+
+    NAV_KEYS.forEach((s) => {
+      const el = document.getElementById(`section-${s.id}`);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div className="no-print relative">
+      <div className="flex items-center h-11 sm:h-12 overflow-x-auto overflow-y-hidden scrollbar-hide sm:overflow-visible">
+        {NAV_KEYS.map((s) => {
+          const isActive = activeSection === s.id;
+          return (
+            <button
+              key={s.id}
+              onClick={() => {
+                setActiveSection(s.id);
+                const el = document.getElementById(`section-${s.id}`);
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className={`h-full px-3 sm:px-5 flex items-center font-serif font-bold
+                          text-[11px] sm:text-sm whitespace-nowrap shrink-0
+                          transition-colors duration-200 relative select-none
+                          ${isActive
+                            ? "text-rosewood"
+                            : "text-rosewood/60 hover:text-rosewood"}`}
+            >
+              <span>{t(`section_nav.${s.key}`)}</span>
+              {isActive && (
+                <div className="absolute bottom-0 left-3 sm:left-5 right-3 sm:right-5 h-0.5 bg-gold rounded-t-full" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+
+
+// ═══════════════════════════════════════════════════════════
+// AdminProfileHeader (2-col: left info, right photo + status badges)
+// ═══════════════════════════════════════════════════════════
+const AdminProfileHeader: React.FC<{
+  profile: Profile | undefined;
+  name: string;
+  location: string;
+  isTamil: boolean;
+  getEnumLabel: (value: string, options: any[]) => string;
+  isLoading: boolean;
+}> = ({ profile, name, location, isTamil, getEnumLabel, isLoading }) => {
+  const { formatDate } = useDateFormatter();
+  const { calculateAge } = useProfileUtils();
+
+  const photoUrl = (() => {
+    if (!profile?.profilePhoto) return "";
+    if (typeof profile.profilePhoto === 'string') {
+      return getImageUrl(profile.profilePhoto);
+    }
+    return URL.createObjectURL(profile.profilePhoto as unknown as File);
+  })();
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8">
+        <div className="md:col-span-8">
+          <SectionCard3D isLoading>
+            <SectionHeaderRedesigned title="" isLoading isTamil={isTamil} />
+            <div className="space-y-0">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="flex flex-col sm:flex-row py-2 sm:py-1.5 border-b border-gold/10 last:border-0 sm:items-baseline gap-1 sm:gap-0">
+                  <div className="h-4 w-24 bg-gold/10 rounded animate-pulse sm:w-[160px]" />
+                  <span className="hidden sm:inline-block w-6 text-center" />
+                  <div className="h-4 w-3/4 bg-gold/10 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </SectionCard3D>
+        </div>
+        <div className="md:col-span-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gold/20 p-4">
+            <div className="w-full aspect-square rounded-xl bg-gold/10 animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) return null;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8">
+      <div className="md:col-span-8">
+        <SectionCard3D>
+          <SectionHeaderRedesigned
+            title={isTamil ? 'அடிப்படை தகவல்' : 'Basic Info'}
+            icon={<Info size={16} />}
+            gradient="bg-rosewood-gradient text-white"
+            isTamil={isTamil}
+          >
+          </SectionHeaderRedesigned>
+          <div className="space-y-0">
+            <DetailRow label={isTamil ? 'முழு பெயர்' : 'Full Name'} value={name} />
+            <DetailRow label={isTamil ? 'பதிவு எண்' : 'Registration No'} value={profile.regNo} />
+            <DetailRow label={isTamil ? 'பிறந்த தேதி' : 'Date of Birth'} value={profile.dob ? formatDate(profile.dob) : ''} />
+            <DetailRow label={isTamil ? 'வயது' : 'Age'} value={profile.dob ? `${calculateAge(profile.dob)} ${isTamil ? 'வயது' : 'yrs'}` : ''} />
+            <DetailRow label={isTamil ? 'பாலினம்' : 'Gender'} value={profile.gender ? getEnumLabel(profile.gender, GENDER_OPTIONS) : ''} />
+            <DetailRow label={isTamil ? 'தற்போதைய இடம்' : 'Current Location'} value={location} />
+          </div>
+        </SectionCard3D>
+      </div>
+      <div className="md:col-span-4">
+        <div className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gold/20 flex flex-col items-center">
+          <div className="w-full max-w-56 sm:max-w-none aspect-square rounded-xl overflow-hidden border-4 border-ivory bg-ivory">
+            {photoUrl ? (
+              <img src={photoUrl} alt={name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-ivory flex items-center justify-center">
+                <span className="text-rosewood/30 text-4xl font-serif font-bold">
+                  {name?.charAt(0)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// AdminStatusReasons
+// ═══════════════════════════════════════════════════════════
+const AdminStatusReasons: React.FC<{ profile: Profile | undefined; isTamil: boolean }> = ({ profile, isTamil }) => {
+  if (!profile) return null;
+  const rejectionReason = (profile as any).rejectionReasonEn;
+  const rejectionReasonTa = (profile as any).rejectionReasonTa;
+  const blockReason = (profile as any).blockReasonEn;
+  const blockReasonTa = (profile as any).blockReasonTa;
+  if (!rejectionReason && !blockReason) return null;
+  return (
+    <div className="space-y-3">
+      {rejectionReason && (
+        <div className="bg-red-50 rounded-xl p-4 border border-red-100">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-red-500 font-bold text-xs">!</span>
+            <p className="text-[9px] text-red-400 font-bold uppercase tracking-wider">
+              {isTamil ? 'நிராகரிப்பு காரணம்' : 'Rejection Reason'}
+            </p>
+          </div>
+          <p className="text-sm font-bold text-red-800 ml-5">
+            {isTamil && rejectionReasonTa ? rejectionReasonTa : rejectionReason}
+          </p>
+        </div>
+      )}
+      {blockReason && (
+        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-amber-500 font-bold text-xs">!</span>
+            <p className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">
+              {isTamil ? 'தடை காரணம்' : 'Block Reason'}
+            </p>
+          </div>
+          <p className="text-sm font-bold text-amber-800 ml-5">
+            {isTamil && blockReasonTa ? blockReasonTa : blockReason}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// AdminPersonalDetails
+// ═══════════════════════════════════════════════════════════
+const AdminPersonalDetails: React.FC<{
+  profile: Profile | undefined;
+  isTamil: boolean;
+  getEnumLabel: (value: string, options: any[]) => string;
+  isLoading: boolean;
+}> = ({ profile, isTamil, getEnumLabel, isLoading }) => (
+  <SectionCard3D isLoading={isLoading}>
+    <SectionHeaderRedesigned
+      title={isTamil ? 'தனிப்பட்ட விவரங்கள்' : 'Personal Details'}
+      icon={<User size={16} />}
+      gradient="bg-rosewood-gradient text-white"
+      isLoading={isLoading}
+      isTamil={isTamil}
+    />
+    <div className="space-y-0">
+      <DetailRow label={isTamil ? 'திட்டம்' : 'Profile For'} value={profile?.profileFor ? getEnumLabel(profile.profileFor, PROFILE_FOR_OPTIONS) : ''} isLoading={isLoading} />
+      <DetailRow label={isTamil ? 'திருமண நிலை' : 'Marital Status'} value={profile?.maritalStatus ? getEnumLabel(profile.maritalStatus, MARITAL_STATUS_OPTIONS) : ''} isLoading={isLoading} />
+      <DetailRow label={isTamil ? 'உணவு முறை' : 'Diet'} value={profile?.diet ? getEnumLabel(profile.diet, DIET_OPTIONS) : ''} isLoading={isLoading} />
+      <DetailRow label={isTamil ? 'உயரம்' : 'Height'} value={profile?.height ? getEnumLabel(profile.height.toString(), HEIGHT_OPTIONS) : ''} isLoading={isLoading} />
+      <DetailRow label={isTamil ? 'எடை' : 'Weight'} value={profile?.weight ? `${profile.weight} kg` : ''} isLoading={isLoading} />
+      <DetailRow label={isTamil ? 'நிறம்' : 'Complexion'} value={profile?.complexion ? getEnumLabel(profile.complexion, COMPLEXION_OPTIONS) : ''} isLoading={isLoading} />
+      <DetailRow label={isTamil ? 'இரத்த வகை' : 'Blood Group'} value={profile?.bloodGroup ? getEnumLabel(profile.bloodGroup, BLOOD_GROUP_OPTIONS) : ''} isLoading={isLoading} />
+    </div>
+  </SectionCard3D>
+);
+
+// ═══════════════════════════════════════════════════════════
+// AdminCommunityDetails
+// ═══════════════════════════════════════════════════════════
+const AdminCommunityDetails: React.FC<{
+  profile: Profile | undefined;
+  isTamil: boolean;
+  getEnumLabel: (value: string, options: any[]) => string;
+  getLocationLabel: (...args: any[]) => string;
+  isLoading: boolean;
+}> = ({ profile, isTamil, getEnumLabel, getLocationLabel, isLoading }) => {
+  const getCommunityLabel = () => {
+    if (!profile) return "";
+    const comm = profile.community || 'Kongu Vellalar';
+    if (isTamil && (comm === 'Kongu Vellalar' || comm === 'கொங்கு வேளாளர்' || comm === 'கொங்கு வெள்ளாளர்')) return 'கொங்கு வேளாளர்';
+    return comm;
+  };
+  return (
+    <SectionCard3D isLoading={isLoading}>
+      <SectionHeaderRedesigned
+        title={isTamil ? 'சமூக விவரங்கள்' : 'Community Details'}
+        icon={<Users size={16} />}
+        gradient="bg-ivory-gold-gradient text-rosewood"
+        isLoading={isLoading}
+        isTamil={isTamil}
+      />
+      <div className="space-y-0">
+        <DetailRow label={isTamil ? 'சாதி' : 'Caste'} value={profile?.caste || "BC"} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'சமூகம்' : 'Community'} value={getCommunityLabel()} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'குலம்' : 'Kulam'} value={profile?.kulam ? getEnumLabel(profile.kulam, KULAM_OPTIONS) : ''} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'குலதெய்வம்' : 'Kuladeivam'} value={profile ? (isTamil ? (profile.kuladeivamTa || profile.kuladeivamEn) : profile.kuladeivamEn) || '' : ''} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'பிறந்த இடம்' : 'Birth Place'} value={profile ? (isTamil ? (profile.birthPlaceTa || profile.birthPlaceEn) : profile.birthPlaceEn) || '' : ''} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'பூர்வீக இடம்' : 'Native Location'} value={profile ? getLocationLabel(profile.nativeDistrictEn || profile.nativeDistrict, profile.nativeTaluk || undefined, profile.nativeDistrictTa, profile.nativeTalukTa) : ''} isLoading={isLoading} />
+      </div>
+    </SectionCard3D>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// AdminProfessionalDetails
+// ═══════════════════════════════════════════════════════════
+const AdminProfessionalDetails: React.FC<{
+  profile: Profile | undefined;
+  isTamil: boolean;
+  getEnumLabel: (value: string, options: any[]) => string;
+  formatSalary: (amount: number) => string;
+  isLoading: boolean;
+}> = ({ profile, isTamil, getEnumLabel, formatSalary, isLoading }) => {
+  const education = profile?.education || (isTamil ? 'குறிப்பிடப்படவில்லை' : 'Not Specified');
+  const jobDetail = profile?.jobDetail || (isTamil ? 'குறிப்பிடப்படவில்லை' : 'Not Specified');
+  const jobLocation = profile ? (isTamil ? (profile.jobLocationTa || profile.jobLocationEn) : profile.jobLocationEn) || '' : '';
+  return (
+    <SectionCard3D isLoading={isLoading}>
+      <SectionHeaderRedesigned
+        title={isTamil ? 'தொழில் விவரங்கள்' : 'Professional Details'}
+        icon={<Briefcase size={16} />}
+        gradient="bg-rosewood-gradient text-white"
+        isLoading={isLoading}
+        isTamil={isTamil}
+      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
+        <DetailRow label={isTamil ? 'கல்வி' : 'Education'} value={isTamil ? (profile?.educationTa || education) : education} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'வேலை விவரம்' : 'Job Detail'} value={isTamil ? (profile?.jobDetailTa || jobDetail) : jobDetail} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'நிறுவனம்' : 'Company'} value={profile?.companyName || ''} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'துறை' : 'Sector'} value={profile?.jobSector ? getEnumLabel(profile.jobSector, JOB_SECTOR_OPTIONS) : ''} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'வேலை இடம்' : 'Job Location'} value={jobLocation} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'மாத சம்பளம்' : 'Monthly Salary'} value={profile?.salaryMonthly ? formatSalary(profile.salaryMonthly) : ''} isLoading={isLoading} />
+      </div>
+    </SectionCard3D>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// AdminFamilyDetails
+// ═══════════════════════════════════════════════════════════
+const AdminFamilyDetails: React.FC<{
+  profile: Profile | undefined;
+  isTamil: boolean;
+  formatSalary: (amount: number) => string;
+  isLoading: boolean;
+}> = ({ profile, isTamil, formatSalary, isLoading }) => {
+  const lateSuffix = isTamil ? ' (இறந்தவர்)' : ' (Late)';
+  const fatherNameRaw = profile ? (isTamil ? (profile.fatherNameTa || profile.fatherNameEn) : profile.fatherNameEn) || (isTamil ? 'வழங்கப்படவில்லை' : 'Not Provided') : '';
+  const motherNameRaw = profile ? (isTamil ? (profile.motherNameTa || profile.motherNameEn) : profile.motherNameEn) || (isTamil ? 'வழங்கப்படவில்லை' : 'Not Provided') : '';
+  const fatherName = profile?.fatherIsLate ? `${fatherNameRaw}${lateSuffix}` : fatherNameRaw;
+  const motherName = profile?.motherIsLate ? `${motherNameRaw}${lateSuffix}` : motherNameRaw;
+  return (
+    <SectionCard3D isLoading={isLoading}>
+      <SectionHeaderRedesigned
+        title={isTamil ? 'குடும்ப விவரங்கள்' : 'Family Details'}
+        icon={<Heart size={16} />}
+        gradient="bg-ivory-gold-gradient text-rosewood"
+        isLoading={isLoading}
+        isTamil={isTamil}
+      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
+        <div>
+          <h3 className="font-semibold text-rosewood text-sm mt-1 mb-2 border-b border-rosewood/10 pb-1">
+            {isLoading ? (
+              <div className="h-4 w-28 bg-gold/10 rounded animate-pulse" />
+            ) : (
+              `${isTamil ? 'தந்தை:' : 'Father:'}`
+            )}
+          </h3>
+          <DetailRow label={isTamil ? 'பெயர்' : 'Name'} value={fatherName} isLoading={isLoading} />
+          <DetailRow label={isTamil ? 'தொழில்' : 'Job'} value={profile?.fatherJob || ''} isLoading={isLoading} />
+          <DetailRow label={isTamil ? 'சம்பளம்' : 'Salary'} value={profile?.fatherSalary ? formatSalary(profile.fatherSalary) : ''} isLoading={isLoading} />
+          <h3 className="font-semibold text-rosewood text-sm mt-5 mb-2 border-b border-rosewood/10 pb-1">
+            {isLoading ? (
+              <div className="h-4 w-24 bg-gold/10 rounded animate-pulse" />
+            ) : (
+              `${isTamil ? 'சகோதரர்கள்:' : 'Siblings:'}`
+            )}
+          </h3>
+          <DetailRow label={isTamil ? 'சகோதரர்கள் எண்ணிக்கை' : 'No. of Brothers'} value={profile?.noOfBrothers ?? 0} isLoading={isLoading} />
+        </div>
+        <div>
+          <h3 className="font-semibold text-rosewood text-sm mt-1 mb-2 border-b border-rosewood/10 pb-1">
+            {isLoading ? (
+              <div className="h-4 w-28 bg-gold/10 rounded animate-pulse" />
+            ) : (
+              `${isTamil ? 'தாய்:' : 'Mother:'}`
+            )}
+          </h3>
+          <DetailRow label={isTamil ? 'பெயர்' : 'Name'} value={motherName} isLoading={isLoading} />
+          <DetailRow label={isTamil ? 'தொழில்' : 'Job'} value={profile?.motherJob || ''} isLoading={isLoading} />
+          <DetailRow label={isTamil ? 'சம்பளம்' : 'Salary'} value={profile?.motherSalary ? formatSalary(profile.motherSalary) : ''} isLoading={isLoading} />
+          <h3 className="font-semibold text-rosewood text-sm mt-5 mb-2 border-b border-rosewood/10 pb-1">
+            {isLoading ? (
+              <div className="h-4 w-24 bg-gold/10 rounded animate-pulse" />
+            ) : (
+              `${isTamil ? 'சகோதரிகள்:' : 'Siblings:'}`
+            )}
+          </h3>
+          <DetailRow label={isTamil ? 'சகோதரிகள் எண்ணிக்கை' : 'No. of Sisters'} value={profile?.noOfSisters ?? 0} isLoading={isLoading} />
+        </div>
+      </div>
+    </SectionCard3D>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// AdminAssetsAndExpectations
+// ═══════════════════════════════════════════════════════════
+const AdminAssetsAndExpectations: React.FC<{
+  profile: Profile | undefined;
+  isTamil: boolean;
+  getEnumLabel: (value: string, options: any[]) => string;
+  isLoading: boolean;
+}> = ({ profile, isTamil, getEnumLabel, isLoading }) => {
+  const property = profile ? (isTamil ? (profile.propertyDetailsTa || profile.propertyDetailsEn) : profile.propertyDetailsEn) || '' : '';
+  const expectations = profile ? (isTamil ? (profile.expectationTa || profile.expectationEn) : profile.expectationEn) || '' : '';
+  return (
+    <SectionCard3D isLoading={isLoading}>
+      <SectionHeaderRedesigned
+        title={isTamil ? 'சொத்து மற்றும் எதிர்பார்ப்புகள்' : 'Assets & Expectations'}
+        icon={<Building2 size={16} />}
+        gradient="bg-rosewood-gradient text-white"
+        isLoading={isLoading}
+        isTamil={isTamil}
+      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
+        <div>
+          <DetailRow label={isTamil ? 'வசிப்பிடம்' : 'Residence'} value={profile?.residence ? getEnumLabel(profile.residence, RESIDENCE_OPTIONS) : ''} isLoading={isLoading} />
+          <DetailRow label={isTamil ? 'சொத்து விவரங்கள்' : 'Property Details'} value={property || '-'} isLoading={isLoading} />
+        </div>
+        <div>
+          <DetailRow label={isTamil ? 'எதிர்பார்ப்புகள்' : 'Expectations'} value={expectations || '-'} isLoading={isLoading} />
+        </div>
+      </div>
+    </SectionCard3D>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// AdminHoroscopeDetails
+// ═══════════════════════════════════════════════════════════
+const AdminHoroscopeDetails: React.FC<{
+  profile: Profile | undefined;
+  isTamil: boolean;
+  getEnumLabel: (value: string, options: any[]) => string;
+  isLoading: boolean;
+}> = ({ profile, isTamil, getEnumLabel, isLoading }) => {
+  const lang: 'en' | 'ta' = isTamil ? 'ta' : 'en';
+  const natchathiram = profile?.star ? getBilingualValue(NAKSHATRA_OPTIONS, profile.star, lang) : '';
+  const rasiLabel = profile?.rasi ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang) : '';
+  const lagnam = profile?.laganam ? getBilingualValue(RASI_OPTIONS, profile.laganam, lang) : '';
+  const dosham = profile?.dosham ? getEnumLabel(profile.dosham, DOSHAM_OPTIONS) : '';
+  const hasCharts = profile?.horoscope && (profile.horoscope.rasi || profile.horoscope.navamsa);
+  return (
+    <SectionCard3D isLoading={isLoading}>
+      <SectionHeaderRedesigned
+        title={isTamil ? 'ஜாதக விவரங்கள்' : 'Horoscope Details'}
+        icon={<Map size={16} />}
+        gradient="bg-ivory-gold-gradient text-rosewood"
+        isLoading={isLoading}
+        isTamil={isTamil}
+      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0 mb-8">
+        <DetailRow label={isTamil ? 'நட்சத்திரம்' : 'Star'} value={natchathiram} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'ராசி' : 'Rasi'} value={rasiLabel} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'லக்னம்' : 'Lagnam'} value={lagnam} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'தோஷம்' : 'Dosham'} value={dosham} isLoading={isLoading} />
+      </div>
+      {isLoading || hasCharts ? (
+        <div className="mt-8 pt-8 border-t border-gold/20">
+          <h3 className="text-sm font-bold text-rosewood uppercase tracking-widest mb-6 flex items-center gap-2">
+            <FileText size={14} className="text-gold" />
+            {isTamil ? 'ஜாதக படங்கள்' : 'Horoscope Charts'}
+          </h3>
+          {isLoading ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="aspect-square bg-gold/10 rounded-xl animate-pulse" />
+              <div className="aspect-square bg-gold/10 rounded-xl animate-pulse" />
+            </div>
+          ) : profile?.horoscope?.mode === 'CREATE' ? (
+            (() => {
+              const hJson = profile?.horoscope?.horoscopeJson;
+              if (hJson) {
+                const parsed = typeof hJson === 'string' ? JSON.parse(hJson) : hJson as HoroscopeResult;
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d">
+                      <D1Chart lagnaSign={parsed.lagna.signIndex} planets={parsed.planets} />
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d">
+                      <D9Chart planets={parsed.planets} lagnaNavamsaSignIndex={parsed.lagnaNavamsa.signIndex} />
+                    </motion.div>
+                  </div>
+                );
+              }
+              return null;
+            })()
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {profile?.horoscope?.rasi && (
+                <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
+                  <img src={typeof profile.horoscope.rasi === 'string' ? getImageUrl(profile.horoscope.rasi) || '' : ''} alt="Rasi" className="w-full h-full object-contain p-4" />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{isTamil ? 'ராசி படம்' : 'Rasi Chart'}</span>
+                  </div>
+                </motion.div>
+              )}
+              {profile?.horoscope?.navamsa && (
+                <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
+                  <img src={typeof profile.horoscope.navamsa === 'string' ? getImageUrl(profile.horoscope.navamsa) || '' : ''} alt="Navamsa" className="w-full h-full object-contain p-4" />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{isTamil ? 'நவாம்ச படம்' : 'Navamsa Chart'}</span>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="mt-8 p-6 bg-white rounded-xl border border-gold/20 text-center">
+          <p className="text-sm text-slate-400 italic font-medium">{isTamil ? 'ஜாதக படம் வழங்கப்படவில்லை' : 'No horoscope chart provided'}</p>
+        </div>
+      )}
+    </SectionCard3D>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// AdminGallerySection
+// ═══════════════════════════════════════════════════════════
+const AdminGallerySection: React.FC<{
+  profile: Profile | undefined;
+  isTamil: boolean;
+  isLoading: boolean;
+}> = ({ profile, isTamil, isLoading }) => {
+  const galleryImages = (profile?.gallery || []).filter((url: string) => !!url);
+  if (!isLoading && galleryImages.length === 0) return null;
+  return (
+    <SectionCard3D isLoading={isLoading}>
+      <SectionHeaderRedesigned
+        title={isTamil ? 'புகைப்படங்கள்' : 'Photos'}
+        icon={<Camera size={16} />}
+        gradient="bg-rosewood-gradient text-white"
+        isLoading={isLoading}
+        isTamil={isTamil}
+      />
+      {(() => {
+        if (isLoading) {
+          return (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 mt-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="aspect-4/5 rounded-2xl bg-gold/10 animate-pulse" />
+              ))}
+            </div>
+          );
+        }
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 mt-4">
+            {galleryImages.map((url: string, i: number) => (
+              <motion.div
+                key={i}
+                whileHover={{ rotateY: -2, scale: 1.02 }}
+                className="perspective-1000 preserve-3d aspect-4/5 rounded-2xl overflow-hidden border border-gold/20 cursor-pointer shadow-sm hover:shadow-xl hover:shadow-gold/10 transition-shadow duration-300 group bg-white relative"
+              >
+                <img src={getImageUrl(url) ?? ''} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" />
+                <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
+                  <span className="text-white text-2xl font-bold">{i + 1}</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        );
+      })()}
+    </SectionCard3D>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// AdminOwnerCard
+// ═══════════════════════════════════════════════════════════
+const AdminOwnerCard: React.FC<{ profile: Profile | undefined; isTamil: boolean }> = ({ profile, isTamil }) => {
+  if (!profile?.owner) return null;
+  const ownerName = isTamil ? [profile.owner.firstNameTa, profile.owner.lastNameTa].filter(Boolean).join(' ') : [profile.owner.firstNameEn, profile.owner.lastNameEn].filter(Boolean).join(' ');
+  return (
+    <SectionCard3D>
+      <SectionHeaderRedesigned
+        title={isTamil ? 'கணக்கு உரிமையாளர்' : 'Account Owner'}
+        icon={<User size={16} />}
+        gradient="bg-ivory-gold-gradient text-rosewood"
+        isTamil={isTamil}
+      />
+      <div className="space-y-0">
+        <DetailRow label={isTamil ? 'பெயர்' : 'Name'} value={ownerName} />
+        <DetailRow label={isTamil ? 'பதிவு எண்' : 'Reg No'} value={profile.regNo} />
+        <DetailRow label={isTamil ? 'தொலைபேசி' : 'Phone'} value={profile.owner.phone} />
+        <DetailRow label={isTamil ? 'மின்னஞ்சல்' : 'Email'} value={(profile as any).owner?.email || ''} />
+        {profile.adminVerified === 'REJECTED' && (profile.rejectionReasonEn || (profile as any).rejectionReasonTa) && (
+          <DetailRow
+            label={isTamil ? 'நிராகரிப்பு காரணம்' : 'Rejection Reason'}
+            value={isTamil && (profile as any).rejectionReasonTa ? (profile as any).rejectionReasonTa : profile.rejectionReasonEn}
+          />
+        )}
+        {(profile.adminVerified !== 'REJECTED' && (profile as any).statusReasonEn) && (
+          <DetailRow
+            label={isTamil ? 'தடை காரணம்' : 'Block Reason'}
+            value={isTamil && (profile as any).statusReasonTa ? (profile as any).statusReasonTa : (profile as any).statusReasonEn}
+          />
+        )}
+      </div>
+    </SectionCard3D>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// AdminControls
+// ═══════════════════════════════════════════════════════════
+const AdminControls: React.FC<{
+  profile: Profile | undefined;
+  isTamil: boolean;
+  id: string;
+  onVerify: () => void;
+  onToggleStatus: () => void;
+  onActionClick: (mode: 'REJECT' | 'BLOCK' | 'SUSPEND') => void;
+  isStatusPending: boolean;
+}> = ({ profile, isTamil, onVerify, onToggleStatus, onActionClick, isStatusPending }) => {
+  const { t } = useLanguage();
+  if (!profile) return null;
+  return (
+    <SectionCard3D>
+      <SectionHeaderRedesigned
+        title={isTamil ? 'நிர்வாகக் கட்டுப்பாடுகள்' : 'Administrative Controls'}
+        icon={<Shield size={16} />}
+        gradient="bg-rosewood-gradient text-white"
+        isTamil={isTamil}
+      >
+        <StatusBadge status={(profile.adminVerified || 'PENDING').toLowerCase() as any} minimal />
+      </SectionHeaderRedesigned>
+
+      {/* Rejection reason banner */}
+      {profile.adminVerified === 'REJECTED' && (profile.rejectionReasonEn || (profile as any).rejectionReasonTa) && (
+        <div className="bg-red-50 rounded-xl p-4 border border-red-100">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-500 shrink-0 mt-0.5">
+              <X size={16} strokeWidth={3} />
+            </div>
+            <div>
+              <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider mb-1">
+                {isTamil ? 'நிராகரிப்பு காரணம்' : 'Rejection Reason'}
+              </p>
+              <p className="text-sm font-bold text-red-800">
+                {isTamil && (profile as any).rejectionReasonTa ? (profile as any).rejectionReasonTa : profile.rejectionReasonEn}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Block reason banner */}
+      {profile.adminVerified !== 'REJECTED' && (profile as any).statusReasonEn && (
+        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 shrink-0 mt-0.5">
+              <ShieldBan size={16} strokeWidth={3} />
+            </div>
+            <div>
+              <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mb-1">
+                {isTamil ? 'தடை காரணம்' : 'Block Reason'}
+              </p>
+              <p className="text-sm font-bold text-amber-800">
+                {isTamil && (profile as any).statusReasonTa ? (profile as any).statusReasonTa : (profile as any).statusReasonEn}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 mt-4">
+        {profile.adminVerified === 'PENDING' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ y: 0 }}
+              onClick={onVerify}
+              className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5
+                         bg-linear-to-b from-emerald-500 to-emerald-700 text-white
+                         rounded-xl shadow-sm shadow-emerald-200/50
+                         hover:shadow-md hover:from-emerald-600 hover:to-emerald-800
+                         active:shadow-inner
+                         transition-all duration-200 text-sm font-bold tracking-wide"
+            >
+              <Check size={18} strokeWidth={2.5} />
+              {isTamil ? 'ஏற்க' : 'Approve Profile'}
+            </motion.button>
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ y: 0 }}
+              onClick={() => onActionClick('REJECT')}
+              className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5
+                         bg-white text-rosewood/70 rounded-xl
+                         border border-red-200 shadow-sm
+                         hover:bg-red-50 hover:border-red-300 hover:text-red-600 hover:shadow-md
+                         active:shadow-inner
+                         transition-all duration-200 text-sm font-bold tracking-wide"
+            >
+              <X size={18} strokeWidth={2.5} />
+              {isTamil ? 'நிராகரி' : 'Reject Profile'}
+            </motion.button>
+          </div>
+        ) : profile.adminVerified === 'ACCEPTED' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ y: 0 }}
+              onClick={() => onActionClick('BLOCK')}
+              className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5
+                         bg-white text-rosewood/70 rounded-xl
+                         border border-amber-200 shadow-sm
+                         hover:bg-amber-50 hover:border-amber-300 hover:text-amber-600 hover:shadow-md
+                         active:shadow-inner
+                         transition-all duration-200 text-sm font-bold tracking-wide"
+            >
+              <ShieldBan size={18} strokeWidth={2.5} />
+              {isTamil ? 'தடு' : 'Block Profile'}
+            </motion.button>
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ y: 0 }}
+              onClick={onToggleStatus}
+              disabled={isStatusPending}
+              className={`w-full flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl
+                         transition-all duration-200 text-sm font-bold tracking-wide
+                         active:shadow-inner
+                         disabled:opacity-50 disabled:cursor-not-allowed ${
+                profile.status === 'ACTIVE'
+                  ? 'bg-linear-to-b from-emerald-500 to-emerald-700 text-white shadow-sm shadow-emerald-200/50 hover:shadow-md hover:from-emerald-600 hover:to-emerald-800'
+                  : 'bg-white text-rosewood/70 border border-slate-200 shadow-sm hover:bg-slate-50 hover:border-slate-300 hover:shadow-md'
+              }`}
+            >
+              {profile.status === 'ACTIVE' ? <Eye size={18} strokeWidth={2.5} /> : <EyeOff size={18} strokeWidth={2.5} />}
+              {profile.status === 'ACTIVE' ? (isTamil ? 'செயலில் நிறுத்து' : 'Deactivate') : (isTamil ? 'செயல்படுத்து' : 'Activate')}
+            </motion.button>
+          </div>
+        )}
+      </div>
+    </SectionCard3D>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// LoadingState
+// ═══════════════════════════════════════════════════════════
+const LoadingState: React.FC<{ isTamil: boolean }> = ({ isTamil }) => (
+  <div className="min-h-screen bg-white font-manrope selection:bg-gold/20">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-10">
+      <div className="py-4 sm:py-6 pb-4 sm:pb-8">
+        <div className="h-10 w-24 bg-gold/10 rounded-xl animate-pulse" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8">
+        <div className="md:col-span-8">
+          <div className="bg-ivory rounded-xl shadow-sm border border-gold/20 px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6">
+            <div className="flex items-center gap-3 mb-4 border-b border-gold/10 pb-2">
+              <div className="w-10 h-10 rounded-xl bg-gold/10 animate-pulse" />
+              <div className="h-5 w-32 bg-gold/10 rounded animate-pulse" />
+            </div>
+            <div className="space-y-0">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="flex flex-col sm:flex-row py-2 sm:py-1.5 border-b border-gold/10 last:border-0 sm:items-baseline gap-1 sm:gap-0">
+                  <div className="h-4 w-24 bg-gold/10 rounded animate-pulse sm:w-[160px]" />
+                  <span className="hidden sm:inline-block w-6 text-center" />
+                  <div className="h-4 w-3/4 bg-gold/10 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="md:col-span-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gold/20 p-4">
+            <div className="w-full aspect-square rounded-xl bg-gold/10 animate-pulse" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════════
+// ErrorState
+// ═══════════════════════════════════════════════════════════
+const ErrorState: React.FC<{ onBack: () => void; isTamil: boolean }> = ({ onBack, isTamil }) => (
+  <div className="min-h-screen bg-white flex items-center justify-center p-6">
+    <div className="text-center">
+      <div className="w-20 h-20 rounded-2xl bg-rosewood/5 flex items-center justify-center mx-auto mb-6">
+        <span className="text-rosewood/30 text-2xl font-serif font-bold">!</span>
+      </div>
+      <h2 className="text-2xl font-serif font-black text-rosewood mb-2">
+        {isTamil ? 'சுயவிவரம் கிடைக்கவில்லை' : 'Profile Not Found'}
+      </h2>
+      <p className="text-gray-500 text-sm mb-6">
+        {isTamil ? 'இந்த சுயவிவரம் நீக்கப்பட்டிருக்கலாம்.' : 'This profile may have been removed.'}
+      </p>
+      <button
+        onClick={onBack}
+        className="px-8 py-3 bg-rosewood text-white rounded-xl font-black text-xs uppercase tracking-widest-plus hover:scale-105 active:scale-95 transition-all shadow-lg shadow-rosewood/20"
+      >
+        {isTamil ? 'பின் செல்ல' : 'Go Back'}
+      </button>
+    </div>
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════════
+// AdminProfileView (Main Orchestrator)
+// ═══════════════════════════════════════════════════════════
+const AdminProfileView: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { t, language, translateError } = useLanguage();
+  const isTamil = language === 'ta';
+  const { getEnumLabel, formatSalary, getLocationLabel } = useProfileUtils();
+
+  const verifyMutation = useVerifyProfileMutation();
+  const blockMutation = useBlockProfileMutation();
+  const suspendMutation = useSuspendAccountMutation();
+  const statusMutation = useUpdateProfileStatusMutation();
+
+  const { data: profile, isLoading, isError, refetch } = useProfileDetailQuery(id || '');
+
+  const [rejectionModal, setRejectionModal] = React.useState<{ open: boolean; mode: 'REJECT' | 'BLOCK' | 'SUSPEND' }>({ open: false, mode: 'REJECT' });
+  const [isPrintingJathagam, setIsPrintingJathagam] = React.useState(false);
+  const [isPrintingBiodata, setIsPrintingBiodata] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isPrintingJathagam && profile) {
+      document.body.classList.add('printing-jathagam');
+      const timer = setTimeout(() => window.print(), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isPrintingJathagam, profile]);
+
+  React.useEffect(() => {
+    if (isPrintingJathagam) {
+      const handler = () => {
+        setIsPrintingJathagam(false);
+        document.body.classList.remove('printing-jathagam');
+      };
+      window.addEventListener('afterprint', handler);
+      return () => window.removeEventListener('afterprint', handler);
+    }
+  }, [isPrintingJathagam]);
+
+  React.useEffect(() => {
+    if (isPrintingBiodata && profile) {
+      const timer = setTimeout(() => window.print(), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isPrintingBiodata, profile]);
+
+  React.useEffect(() => {
+    if (isPrintingBiodata) {
+      const handler = () => setIsPrintingBiodata(false);
+      window.addEventListener('afterprint', handler);
+      return () => window.removeEventListener('afterprint', handler);
+    }
+  }, [isPrintingBiodata]);
+
+  const name = profile ? (isTamil ? ([profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' ') || [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ')) : ([profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' '))) : '';
+  const currentLocation = profile ? getLocationLabel(
+    profile.currentDistrictEn || profile.currentDistrict,
+    profile.currentTaluk || profile.currentCityEn,
+    profile.currentDistrictTa,
+    profile.currentTalukTa,
+    profile.currentCityEn,
+    profile.currentStateEn,
+    profile.currentCountryEn,
+    profile.currentCityTa,
+    profile.currentStateTa,
+    profile.currentCountryTa,
+  ) : '';
+
+  const galleryImages = (profile?.gallery || []).filter((url: string) => !!url);
+  const hasGallery = galleryImages.length > 0;
+  const hasOwner = !!profile?.owner;
+
+  const handleVerify = () => {
+    if (!id) return;
+    verifyMutation.mutate({ id, data: { status: 'ACCEPTED' } }, {
+      onSuccess: () => toast.success(t('adminMatrimony.users.verifySuccess')),
+      onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.verifyError'))
+    });
+  };
+
+  const handleToggleStatus = () => {
+    if (!id) return;
+    const newStatus = profile?.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    statusMutation.mutate({ id, status: newStatus }, {
+      onSuccess: () => { toast.success(t('adminMatrimony.users.statusUpdated')); refetch(); },
+      onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
+    });
+  };
+
+  const handleActionClick = (mode: 'REJECT' | 'BLOCK' | 'SUSPEND') => setRejectionModal({ open: true, mode });
+
+  const handleConfirmAction = (reasonEn: string, reasonTa: string) => {
+    if (!id) return;
+    if (rejectionModal.mode === 'REJECT') {
+      verifyMutation.mutate({ id, data: { status: 'REJECTED', reasonEn, reasonTa } }, {
+        onSuccess: () => { toast.success(t('adminMatrimony.users.rejectSuccess')); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); },
+        onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.rejectFailed'))
+      });
+    } else if (rejectionModal.mode === 'BLOCK') {
+      blockMutation.mutate({ id, data: { reasonEn, reasonTa } }, {
+        onSuccess: () => { toast.success(t('adminMatrimony.users.blockSuccess')); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); },
+        onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
+      });
+    } else if (rejectionModal.mode === 'SUSPEND') {
+      suspendMutation.mutate({ id, data: { reasonEn, reasonTa } }, {
+        onSuccess: () => { toast.success(t('adminMatrimony.users.suspendSuccess')); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); },
+        onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.suspendError'))
+      });
+    }
+  };
+
+  const getModalTitle = () => {
+    if (rejectionModal.mode === 'REJECT') return t('adminMatrimony.common.rejectionReason');
+    if (rejectionModal.mode === 'BLOCK') return t('adminMatrimony.common.blockingReason');
+    return t('adminMatrimony.common.suspensionReason');
+  };
+
+  if (isPrintingJathagam && profile) {
+    return <JathagamPrintView profile={profile} />;
+  }
+
+  if (isPrintingBiodata && profile) {
+    return <PrintProfile profile={profile} />;
+  }
+
+  if (isLoading) return <LoadingState isTamil={isTamil} />;
+  if (isError || !profile) return <ErrorState onBack={() => navigate(-1)} isTamil={isTamil} />;
+
+  return (
+    <div className="min-h-screen bg-white font-manrope selection:bg-gold/20">
+      {/* Section Tabs — sticky top, full-width bar, matching user view pattern */}
+      <div className="sticky top-0 z-20 relative -mt-4 lg:-mt-8">
+        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-screen bg-white border-b border-gold/10 shadow-sm pointer-events-none" />
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
+          <QuickNav />
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="no-print max-w-6xl mx-auto px-4 sm:px-6 pb-10">
+        {/* Back + Print Buttons — matching user view */}
+        <div className="flex items-center justify-between pt-4 sm:pt-6 pb-4 sm:pb-8 gap-2">
+          <motion.button
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2
+                       bg-ivory-gold-gradient rounded-xl text-[10px] sm:text-xs
+                       font-black uppercase tracking-wider shadow-sm btn-shine shrink-0"
+          >
+            <ArrowLeft size={14} className="sm:size-4" />
+            <span className="hidden sm:inline">{t('common:back')}</span>
+          </motion.button>
+
+          {profile && (
+            <div className="flex items-center gap-1.5 sm:gap-3">
+              <motion.button
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsPrintingJathagam(true)}
+                className="btn-shine flex items-center gap-1 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2
+                           bg-rosewood-gradient text-white rounded-xl text-[10px] sm:text-[11px]
+                           font-bold shadow-sm border border-rosewood/20 shrink-0"
+              >
+                <FileText size={13} className="sm:size-[14px]" />
+                <span className="hidden sm:inline">{t('common:print_jathagam')}</span>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsPrintingBiodata(true)}
+                className="btn-shine flex items-center gap-1 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2
+                           bg-rosewood-gradient text-white rounded-xl text-[10px] sm:text-[11px]
+                           font-bold shadow-sm border border-rosewood/20 shrink-0"
+              >
+                <Printer size={13} className="sm:size-[14px]" />
+                <span className="hidden sm:inline">{t('common:print')}</span>
+              </motion.button>
+            </div>
+          )}
+        </div>
+
+        {/* Hero */}
+        <AnimatedSection>
+          <div id="section-basic" className="scroll-mt-20 mb-6">
+            <AdminProfileHeader profile={profile} name={name} location={currentLocation} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} />
+          </div>
+        </AnimatedSection>
+
+        {/* Status Reasons */}
+        <AnimatedSection>
+          <div className="mb-6">
+            <AdminStatusReasons profile={profile} isTamil={isTamil} />
+          </div>
+        </AnimatedSection>
+
+        {/* Sections 1 + 2: Personal + Community */}
+        <AnimatedSection>
+          <div id="section-personal" className="scroll-mt-20 grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+            <AdminPersonalDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} />
+            <AdminCommunityDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} getLocationLabel={getLocationLabel} isLoading={false} />
+          </div>
+        </AnimatedSection>
+        <SectionDivider />
+
+        {/* Section 3: Professional */}
+        <AnimatedSection>
+          <div id="section-professional" className="scroll-mt-20">
+            <AdminProfessionalDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} formatSalary={formatSalary} isLoading={false} />
+          </div>
+        </AnimatedSection>
+        <SectionDivider />
+
+        {/* Section 4: Family */}
+        <AnimatedSection>
+          <div id="section-family" className="scroll-mt-20">
+            <AdminFamilyDetails profile={profile} isTamil={isTamil} formatSalary={formatSalary} isLoading={false} />
+          </div>
+        </AnimatedSection>
+        <SectionDivider />
+
+        {/* Section 5: Assets & Expectations */}
+        <AnimatedSection>
+          <div id="section-assets" className="scroll-mt-20">
+            <AdminAssetsAndExpectations profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} />
+          </div>
+        </AnimatedSection>
+        <SectionDivider />
+
+        {/* Section 6: Horoscope */}
+        <AnimatedSection>
+          <div id="section-horoscope" className="scroll-mt-20">
+            <AdminHoroscopeDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} />
+          </div>
+        </AnimatedSection>
+        <SectionDivider />
+
+        {/* Section 7: Gallery */}
+        {hasGallery && (
+          <>
+            <AnimatedSection>
+              <div id="section-gallery" className="scroll-mt-20">
+                <AdminGallerySection profile={profile} isTamil={isTamil} isLoading={false} />
+              </div>
+            </AnimatedSection>
+            <SectionDivider />
+          </>
+        )}
+
+        {/* ADMIN: Section 8: Account Owner */}
+        {hasOwner && (
+          <>
+            <AnimatedSection>
+              <div id="section-owner" className="scroll-mt-20">
+                <AdminOwnerCard profile={profile} isTamil={isTamil} />
+              </div>
+            </AnimatedSection>
+            <SectionDivider />
+          </>
+        )}
+
+        {/* ADMIN: Section 9: Administrative Controls */}
+        <AnimatedSection>
+          <div id="section-admin" className="scroll-mt-20 mb-6">
+            <AdminControls
+              profile={profile}
+              isTamil={isTamil}
+              id={id || ''}
+              onVerify={handleVerify}
+              onToggleStatus={handleToggleStatus}
+              onActionClick={handleActionClick}
+              isStatusPending={statusMutation.isPending}
+            />
+          </div>
+        </AnimatedSection>
+      </div>
+
+      <RejectionModal
+        isOpen={rejectionModal.open}
+        onClose={() => setRejectionModal({ open: false, mode: 'REJECT' })}
+        onConfirm={handleConfirmAction}
+        title={getModalTitle()}
+        placeholder={t('adminMatrimony.common.enterReason')}
+        confirmLabel={rejectionModal.mode === 'REJECT' ? t('adminMatrimony.common.reject') : t('adminMatrimony.common.confirm')}
+        cancelLabel={t('adminMatrimony.common.cancel')}
+      />
+    </div>
+  );
+};
+
+export default AdminProfileView;

@@ -1,0 +1,22 @@
+export const Category = {
+    ALL: 'ALL',
+    WEDDINGS: 'WEDDINGS',
+    RECEPTIONS: 'RECEPTIONS',
+    STAGE_DECORATION: 'STAGE DECORATION',
+    DINING_AREA: 'DINING AREA',
+    VENUE_EXTERIOR: 'VENUE EXTERIOR'
+} as const;
+
+export type Category = typeof Category[keyof typeof Category];
+
+export interface GalleryItem {
+    id: string;
+    url: string;
+    category: Category;
+}
+
+export interface LayoutConfig {
+    id: number;
+    gridTemplate: string;
+    itemSpans: string[];
+}

@@ -1,0 +1,41 @@
+import React, { useEffect } from 'react';
+import { FacilitiesHero, MainHall, DiningHall, Parking, FacilitiesList, FacilitiesCTA } from '@/components/features/maaligai/Facilities';
+
+const MaaligaiFacilities: React.FC = () => {
+    useEffect(() => {
+        const observerOptions = {
+            threshold: 0.15,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        const revealFrames = document.querySelectorAll('.reveal-frame');
+        revealFrames.forEach(frame => {
+            frame.classList.add('is-ready');
+            observer.observe(frame);
+        });
+
+        return () => observer.disconnect();
+    }, []);
+
+    return (
+        <main className="min-h-screen bg-background-light selection:bg-rosewood selection:text-white overflow-x-hidden">
+            <FacilitiesHero />
+            <MainHall />
+            <DiningHall />
+            <Parking />
+            <FacilitiesList />
+            <FacilitiesCTA />
+        </main>
+    );
+};
+
+export default MaaligaiFacilities;

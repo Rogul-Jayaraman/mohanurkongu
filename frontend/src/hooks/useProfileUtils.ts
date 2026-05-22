@@ -1,0 +1,104 @@
+import { useTranslation } from 'react-i18next';
+import { DISTRICT_TAMIL, TALUK_TAMIL } from '../constants/locations';
+
+export const useProfileUtils = () => {
+    const { t, i18n } = useTranslation(['profile_new', 'common', 'dashboard']);
+    const isTamil = i18n.language === 'ta';
+
+    const calculateAge = (dob: string | null | undefined) => {
+        if (!dob) return '-';
+        const birthDate = new Date(dob);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age;
+    };
+
+    const getEnumLabel = (value: string | undefined | null, options: any[]) => {
+        if (!value || !options || !Array.isArray(options)) return '-';
+        const option = options.find((opt: any) => opt.value === value);
+        if (!option) return value;
+        
+        const label = option.label;
+        if (typeof label === 'object' && label !== null) {
+            return isTamil ? (label.ta || label.en) : (label.en || value);
+        }
+        
+        return isTamil ? (option.labelTa || label) : label;
+    };
+
+    const toTitleCase = (str?: string | null) => {
+        if (!str) return '';
+        if (/[\u0B80-\u0BFF]/.test(str)) return str;
+        return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    };
+
+    const getLocationLabel = (
+        districtEn?: string | null, 
+        talukEn?: string | null, 
+        districtTa?: string | null, 
+        talukTa?: string | null,
+        cityEn?: string | null,
+        stateEn?: string | null,
+        countryEn?: string | null,
+        cityTa?: string | null,
+        stateTa?: string | null,
+        countryTa?: string | null
+    ) => {
+        if (!districtEn && !talukEn && !districtTa && !talukTa && !cityEn && !cityTa) return '-';
+
+        if (isTamil) {
+            const dKey = districtEn?.toUpperCase();
+            const tKey = talukEn?.toUpperCase();
+            
+            const translatedD = dKey ? DISTRICT_TAMIL[dKey] : undefined;
+            const translatedT = tKey ? TALUK_TAMIL[tKey] : undefined;
+
+            const d = (translatedD === 'மற்றவை' || translatedD === 'OTHER') ? (districtTa || districtEn) : (translatedD || districtTa || districtEn);
+            const t_ = (talukTa || cityTa || talukEn || cityEn || translatedT);
+            
+            // Format as "Taluk, District" as requested
+            return [t_, d].filter(Boolean).join(', ');
+        }
+
+        const d = districtEn;
+        const t_ = talukEn || cityEn;
+        
+        // Format as "Taluk, District" as requested, and apply title case for English
+        return [toTitleCase(t_), toTitleCase(d)].filter(Boolean).join(', ');
+    };
+
+    const formatSalary = (salary: number | null | undefined) => {
+        if (!salary) return '-';
+        const formatted = salary.toLocaleString('en-IN');
+        return `₹ ${formatted}`;
+    };
+
+    const preparePlanets = (data?: any, isNavamsa = false) => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        if (typeof data === 'object' && data.planets) return data.planets;
+        
+        try {
+            const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+            return Array.isArray(parsed) ? parsed : (parsed.planets || []);
+        } catch (e) {
+            return [];
+        }
+    };
+
+    return {
+        isTamil,
+        calculateAge,
+        getEnumLabel,
+        toTitleCase,
+        getLocationLabel,
+        formatSalary,
+        preparePlanets,
+        t,
+        i18n
+    };
+};

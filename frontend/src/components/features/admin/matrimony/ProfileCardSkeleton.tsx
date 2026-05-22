@@ -1,0 +1,21 @@
+import React from 'react';
+
+export const AdminProfileCardSkeleton: React.FC = () => {
+    return (
+        <div className="p-3.5 rounded-3xl shadow-sm flex flex-col sm:flex-row gap-5 bg-white border border-gold-500/10 relative overflow-hidden">
+            <div className="w-40 md:w-44 aspect-3/4 rounded-2xl skeleton shrink-0 border-2 border-gold-500/5" />
+            <div className="flex-1 flex flex-col py-1 pe-2">
+                <div className="h-6 w-1/2 skeleton rounded-lg! mb-4" />
+                <div className="space-y-3">
+                    <div className="h-3 w-full skeleton" />
+                    <div className="h-3 w-5/6 skeleton" />
+                    <div className="h-3 w-4/6 skeleton" />
+                    <div className="h-3 w-full skeleton" />
+                </div>
+                <div className="mt-auto pt-4">
+                    <div className="h-10 w-full skeleton rounded-xl! bg-gold-500/5! border border-gold-500/10" />
+                </div>
+            </div>
+        </div>
+    );
+};

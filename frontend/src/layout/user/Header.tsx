@@ -1,0 +1,86 @@
+import React from "react";
+import { useAuth } from "../../context/AuthContext";
+import { useLanguage } from "../../context/LanguageContext";
+import { formatFullName, getInitials } from "../../utils/formatName";
+
+interface HeaderProps {
+  onMenuClick: () => void;
+  title: string;
+  headerContent?: React.ReactNode;
+}
+
+export const Header: React.FC<HeaderProps> = ({
+  onMenuClick,
+  title,
+  headerContent,
+}) => {
+  const { user, logout } = useAuth();
+  const { language, t } = useLanguage();
+
+  return (
+    <header className="sticky top-0 z-30 h-16 md:h-20 bg-ivory/80 backdrop-blur-md border-b border-gold-soft/10 px-4 md:px-8 flex items-center justify-between shrink-0">
+      <div className="flex items-center gap-4">
+        <button
+          onClick={onMenuClick}
+          className="xl:hidden p-2 -ml-2 text-rosewood hover:bg-gold-soft/10 rounded-lg transition-colors"
+        >
+          <span className="material-symbols-outlined">menu</span>
+        </button>
+        {headerContent ? (
+          <div className="flex items-center self-stretch gap-1 md:gap-2">
+            {headerContent}
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            <h2 className="text-xl md:text-2xl font-serif font-bold text-rosewood leading-tight truncate max-w-[200px] md:max-w-none">
+              {t(title)}
+            </h2>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 md:gap-6">
+        <div className="flex items-center gap-3 pl-2 md:pl-6 border-l border-gold-soft/10">
+          {/* User Profile Pill */}
+          <div className="hidden md:flex items-center gap-3 bg-linear-to-br from-ivory/50 to-gold/5 px-4 py-2 rounded-2xl border border-gold/20 shadow-xs hover:border-gold/40 transition-all duration-500">
+            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-rosewood via-dark-rosewood to-rosewood flex items-center justify-center text-ivory text-sm font-bold border border-gold/30 shadow-md group-hover:scale-105 transition-transform duration-500">
+              {getInitials(user?.firstNameEn)}
+            </div>
+            <div className="flex flex-col items-start">
+              <span className="text-[13px] font-serif font-black text-rosewood leading-tight">
+                {language === "ta"
+                  ? formatFullName(user?.firstNameTa, user?.lastNameTa)
+                  : formatFullName(user?.firstNameEn, user?.lastNameEn)}
+              </span>
+              {"customId" in (user || {}) && (user as any).customId && (
+                <div className="flex items-center gap-1">
+                  <span className="w-1 h-1 rounded-full bg-gold animate-pulse" />
+                  <span className="text-[10px] text-rosewood/60 font-bold uppercase tracking-wider">
+                    {(user as any).customId}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={logout}
+            className="group flex items-center justify-center md:gap-2.5 w-10 h-10 md:w-auto md:h-12 md:px-6 rounded-xl bg-linear-to-br from-ivory/5 to-gold/5 hover:from-rosewood hover:to-dark-rosewood border border-rosewood/10 hover:border-rosewood transition-all duration-500 shadow-xs hover:shadow-lg hover:shadow-rosewood/20"
+            title={t("logout")}
+          >
+            <span className="material-symbols-outlined text-rosewood group-hover:text-ivory text-[22px] md:text-[20px] transition-all duration-500">
+              logout
+            </span>
+            <span className={`hidden md:inline font-serif font-black text-rosewood group-hover:text-ivory transition-colors duration-500 ${
+              language === "ta" ? "text-xs" : "text-sm"
+            }`}>
+              {t("logout")}
+            </span>
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default Header;

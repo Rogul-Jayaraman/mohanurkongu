@@ -1,0 +1,216 @@
+import React, { useState, useEffect, useRef, useCallback, useId } from 'react';
+
+interface TimePickerProps {
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+  required?: boolean;
+  error?: string;
+  disabled?: boolean;
+}
+
+interface SegmentProps {
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  ariaLabel: string;
+  highlight?: (v: string) => boolean;
+  disabled?: boolean;
+}
+
+const ITEM_HEIGHT = 40;
+const VISIBLE_ITEMS = 8;
+
+const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
+const ALL_MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+const PERIODS = ['AM', 'PM'] as const;
+
+const ROUND_MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(s => String(s).padStart(2, '0'));
+const ROUND_SET = new Set(ROUND_MINUTES);
+
+function to12(h: number): { hour12: number; period: 'AM' | 'PM' } {
+  if (h === 0) return { hour12: 12, period: 'AM' };
+  if (h < 12) return { hour12: h, period: 'AM' };
+  if (h === 12) return { hour12: 12, period: 'PM' };
+  return { hour12: h - 12, period: 'PM' };
+}
+
+function to24(h12: number, period: 'AM' | 'PM'): number {
+  if (period === 'AM') return h12 === 12 ? 0 : h12;
+  return h12 === 12 ? 12 : h12 + 12;
+}
+
+function roundMinute(m: string): string {
+  const n = parseInt(m, 10);
+  const rounded = Math.round(n / 5) * 5;
+  return String(rounded === 60 ? 0 : rounded).padStart(2, '0');
+}
+
+function TimeSegment({ value, options, onChange, ariaLabel, highlight, disabled }: SegmentProps) {
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const selectedIndex = options.indexOf(value);
+
+  const uid = useId();
+  const listboxId = `${uid}-listbox`;
+
+  useEffect(() => {
+    if (!open || !listRef.current || selectedIndex < 0) return;
+    const top = selectedIndex * ITEM_HEIGHT;
+    listRef.current.scrollTop = Math.max(0, top - ITEM_HEIGHT * 3);
+  }, [open, selectedIndex]);
+
+  useEffect(() => {
+    if (open) setActiveIndex(selectedIndex);
+  }, [open, selectedIndex]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const commit = useCallback((idx: number) => {
+    if (idx >= 0 && idx < options.length) {
+      onChange(options[idx]);
+      setOpen(false);
+    }
+  }, [options, onChange]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') { setOpen(false); return; }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (open) { commit(activeIndex); return; }
+      setOpen(true);
+      return;
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!open) { setOpen(true); return; }
+      const dir = e.key === 'ArrowDown' ? 1 : -1;
+      setActiveIndex(prev => Math.max(0, Math.min(options.length - 1, prev + dir)));
+    }
+  }, [open, activeIndex, options, commit]);
+
+  return (
+    <div ref={containerRef} className="relative flex-1 sm:flex-none h-full flex items-stretch">
+      <button
+        type="button"
+        onClick={() => { if (!disabled) setOpen(p => !p); }}
+        onKeyDown={handleKeyDown}
+        role="combobox"
+        aria-label={ariaLabel}
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-haspopup="listbox"
+        aria-activedescendant={open && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined}
+        disabled={disabled}
+        className="w-full h-full min-w-0 px-2 sm:px-3 bg-transparent text-sm text-input-text outline-none cursor-pointer flex items-center justify-center gap-1 transition-colors hover:text-rosewood disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <span className="font-medium tabular-nums tracking-tight leading-none">{value}</span>
+        <svg className={`w-3.5 h-3.5 shrink-0 text-input-icon/30 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        </svg>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40 sm:hidden" onClick={() => setOpen(false)} />
+          <div
+            ref={listRef}
+            id={listboxId}
+            role="listbox"
+            aria-label={ariaLabel}
+            className="z-50 absolute left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 mt-1.5 top-full bg-dropdown-menu-bg border border-dropdown-menu-border rounded-xl shadow-xl overflow-y-auto min-w-[90px] p-1.5 animate-in fade-in slide-in-from-top-2 duration-200"
+            style={{ maxHeight: `${ITEM_HEIGHT * VISIBLE_ITEMS}px` }}
+          >
+            {options.map((opt, idx) => {
+              const isSelected = opt === value;
+              const isActive = idx === activeIndex;
+              return (
+                <button
+                  key={opt}
+                  id={`${listboxId}-${idx}`}
+                  role="option"
+                  aria-selected={isSelected}
+                  type="button"
+                  onClick={() => commit(idx)}
+                  onMouseEnter={() => setActiveIndex(idx)}
+                  className={`w-full text-left px-3.5 py-3 rounded-lg text-sm cursor-pointer transition-all border-b border-slate-100 last:border-0 ${
+                    isActive
+                      ? 'bg-dropdown-option-hover text-input-label font-bold shadow-sm'
+                      : isSelected
+                      ? 'bg-rosewood/8 text-rosewood font-bold'
+                      : highlight?.(opt)
+                      ? 'text-rosewood font-medium'
+                      : 'text-input-text hover:bg-dropdown-option-hover font-medium'
+                  }`}
+                  style={{ height: `${ITEM_HEIGHT}px` }}
+                >
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function TimePicker({ value, onChange, label, required = false, error, disabled = false }: TimePickerProps) {
+  const parsed = value ? to12(parseInt(value.split(':')[0], 10)) : { hour12: 12, period: 'AM' as const };
+  const parsedMin = value ? value.split(':')[1] : '00';
+
+  const [hour, setHour] = useState(String(parsed.hour12).padStart(2, '0'));
+  const [minute, setMinute] = useState(ROUND_SET.has(parsedMin) ? parsedMin : roundMinute(parsedMin));
+  const [period, setPeriod] = useState<'AM' | 'PM'>(parsed.period);
+
+  useEffect(() => {
+    if (disabled) return;
+    const h = to24(parseInt(hour, 10), period);
+    onChange(`${String(h).padStart(2, '0')}:${minute}`);
+  }, [hour, minute, period, onChange, disabled]);
+
+  return (
+    <div className={`w-full space-y-2 ${disabled ? 'opacity-50' : ''}`}>
+      <div className="flex items-center gap-2 px-1">
+        <label className="block text-xs font-input-label text-input-label tracking-tight">
+          {label}
+          {required && <span className="text-gold ml-1">*</span>}
+        </label>
+      </div>
+      <div className={`relative h-[56px] flex items-stretch bg-input-bg border-2 rounded-xl shadow-xl shadow-input-shadow transition-all ${
+        error
+          ? 'border-red-400 focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-100'
+          : 'border-input-border hover:border-input-border-hover focus-within:border-input-focus focus-within:ring-4 focus-within:ring-input-ring'
+      }`}>
+        <div className="flex-1 flex items-stretch min-w-0">
+          <div className="flex-1 sm:min-w-[120px] sm:max-w-[140px]">
+            <TimeSegment value={hour} options={HOURS} onChange={setHour} ariaLabel="Hour" disabled={disabled} />
+          </div>
+          <div className="flex items-center justify-center shrink-0 w-5">
+            <span className="text-input-icon/30 font-bold text-base leading-none select-none">:</span>
+          </div>
+          <div className="flex-1 sm:min-w-[120px] sm:max-w-[140px]">
+            <TimeSegment value={minute} options={ALL_MINUTES} onChange={setMinute} ariaLabel="Minute" disabled={disabled} highlight={(m) => ROUND_SET.has(m)} />
+          </div>
+          <div className="w-px self-stretch my-2.5 bg-input-border/40 shrink-0" />
+          <div className="flex-1 sm:min-w-[90px] sm:max-w-[120px]">
+            <TimeSegment value={period} options={[...PERIODS]} onChange={(v) => setPeriod(v as 'AM' | 'PM')} ariaLabel="AM/PM" disabled={disabled} />
+          </div>
+        </div>
+      </div>
+      {error && (
+        <p className="text-[11px] font-bold text-red-500 ml-2 animate-in fade-in slide-in-from-top-1">{error}</p>
+      )}
+    </div>
+  );
+}

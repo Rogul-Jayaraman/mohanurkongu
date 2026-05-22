@@ -1,0 +1,6 @@
+import React from 'react';
+import Shortlist from '@/components/features/user/Shortlist';
+
+export default function Page() {
+    return <Shortlist />;
+}

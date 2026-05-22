@@ -1,0 +1,515 @@
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import { motion, useScroll, useTransform, useMotionValue, useSpring, animate, Variants } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import lottie, { AnimationItem } from "lottie-web";
+import heroBg from "@/assets/images/hero.jpg";
+import { LazyBackground } from '@/components/ui/LazyBackground';
+import { useLanguage } from '@/context/LanguageContext';
+import { SmoothText } from '@/components/animations/SmoothText';
+import logo from "@/assets/images/logo.png";
+import animationData from "@/assets/animations/hand-tap.json";
+
+interface HeroTextSegment {
+  text: string;
+  breakAfter?: boolean;
+}
+
+interface HeroSectionProps {
+  href: string;
+  direction: "left" | "right";
+  delay?: number;
+  lang: string;
+  titleSegments: HeroTextSegment[];
+  subtitleSegments: HeroTextSegment[];
+  align: "left" | "right" | "center";
+  mouseX: any;
+  mouseY: any;
+}
+
+export const Hero: React.FC = () => {
+  const { language: lang } = useLanguage();
+  const { t, i18n } = useTranslation('landing');
+  const { scrollY } = useScroll();
+  const bgY = useTransform(scrollY, [0, 500], [0, 150]);
+  const orb1Y = useTransform(scrollY, [0, 500], [0, -100]);
+  const orb2Y = useTransform(scrollY, [0, 500], [0, -150]);
+  const contentY = useTransform(scrollY, [0, 500], [0, 50]);
+
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const springX = useSpring(mouseX, { stiffness: 50, damping: 20 });
+  const springY = useSpring(mouseY, { stiffness: 50, damping: 20 });
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const { clientX, clientY } = e;
+    const { innerWidth, innerHeight } = window;
+    const x = (clientX / innerWidth - 0.5) * 2;
+    const y = (clientY / innerHeight - 0.5) * 2;
+    mouseX.set(x);
+    mouseY.set(y);
+  };
+
+
+  const secondaryLang = lang === 'en' ? 'ta' : 'en';
+  const maaligaiUrl = "/maaligai";
+
+  return (
+    <section
+      onMouseMove={handleMouseMove}
+      className="relative w-full min-h-screen flex flex-col overflow-hidden bg-ivory pt-24 lg:pt-32"
+    >
+      <motion.div
+        style={{ y: bgY }}
+        className="absolute inset-0 z-0 pointer-events-none overflow-hidden"
+      >
+        <LazyBackground src={heroBg} priority={true} className="absolute inset-0 w-full h-full object-cover opacity-100 mix-blend-multiply -translate-y-30" />
+        <div className="absolute inset-0 bg-linear-to-t from-ivory via-ivory/60 to-transparent"></div>
+        <div className="absolute inset-x-0 bottom-0 h-64 bg-linear-to-t from-ivory to-transparent z-1"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-ivory/90 via-transparent to-ivory/90"></div>
+      </motion.div>
+
+      <div className="absolute inset-0 z-1 pointer-events-none bg-linear-to-b from-transparent via-ivory/20 to-ivory/95" />
+
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div style={{ y: orb1Y }} className="absolute top-[10%] left-[5%] w-64 h-64">
+          <div className="w-full h-full bg-gold-500/10 blur-[100px] rounded-full" />
+        </motion.div>
+        <motion.div style={{ y: orb2Y }} className="absolute bottom-[20%] right-[10%] w-80 h-80">
+          <div className="w-full h-full bg-rosewood/10 blur-[120px] rounded-full" />
+        </motion.div>
+      </div>
+
+      <motion.div
+        style={{ y: contentY }}
+        className="max-w-7xl mx-auto px-3 sm:px-6 w-full flex flex-col lg:flex-row items-center justify-between relative z-10 pt-8 lg:pt-16 gap-12 lg:gap-0"
+      >
+        <div className="w-full lg:flex-1 order-1 flex justify-center lg:justify-start">
+          <HeroSection
+            href={maaligaiUrl}
+            direction="left"
+            delay={0.2}
+            lang={lang}
+            align="left"
+            titleSegments={[
+              { text: `${t('hero.title.kongu')} ${t('hero.title.thirumana')} ${t('hero.title.maaligai')}` },
+            ]}
+            subtitleSegments={[
+              { text: `${i18n.t('landing:hero.title.kongu', { lng: secondaryLang })} ${i18n.t('landing:hero.title.thirumana', { lng: secondaryLang })} ${i18n.t('landing:hero.title.maaligai', { lng: secondaryLang })}` },
+            ]}
+            mouseX={springX}
+            mouseY={springY}
+          />
+        </div>
+
+        <div className="flex items-center justify-center order-2 lg:px-8 relative flex-shrink-0">
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
+            className="relative z-10"
+          >
+            <CoinFlipLogo />
+          </motion.div>
+        </div>
+
+        <div className="w-full lg:flex-1 order-3 flex justify-center lg:justify-end">
+          <HeroSection
+            href="/manamaalai/login"
+            direction="right"
+            delay={0.6}
+            lang={lang}
+            align="right"
+            titleSegments={[
+              { text: `${t('hero.manamaalaiTitle.mohanur')} ${t('hero.manamaalaiTitle.kongu')} ${t('hero.manamaalaiTitle.manamaalai')}` },
+            ]}
+            subtitleSegments={[
+              { text: `${i18n.t('landing:hero.manamaalaiTitle.mohanur', { lng: secondaryLang })} ${i18n.t('landing:hero.manamaalaiTitle.kongu', { lng: secondaryLang })} ${i18n.t('landing:hero.manamaalaiTitle.manamaalai', { lng: secondaryLang })}` },
+            ]}
+            mouseX={springX}
+            mouseY={springY}
+          />
+        </div>
+      </motion.div>
+
+      <AboutSection />
+    </section>
+  );
+};
+
+const COIN_DEPTH = 6;
+const EDGE_LAYERS = 10;
+
+const faceGradient = `radial-gradient(circle at 50% 50%,
+  #FCF9F2 0%,
+  #FCF9F2 30%,
+  #EBCBA0 65%,
+  #FCF9F2 100%
+)`;
+
+const faceGradientBack = faceGradient;
+
+const CoinFlipLogo: React.FC = () => {
+  const [isHovered, setIsHovered] = useState(false);
+  const rotateValue = useMotionValue(0);
+  const [coinDepth, setCoinDepth] = useState(6);
+
+  useEffect(() => {
+    const update = () => {
+      const isLg = window.matchMedia('(min-width: 1024px)').matches;
+      const isMd = window.matchMedia('(min-width: 768px)').matches;
+      setCoinDepth(isLg ? 6 : isMd ? 5 : 4);
+    };
+    update();
+    addEventListener('resize', update);
+    return () => removeEventListener('resize', update);
+  }, []);
+
+  useEffect(() => {
+    const current = rotateValue.get();
+
+    if (isHovered) {
+      const target = Math.ceil(current / 180) * 180;
+      const controls = animate(rotateValue, target, {
+        duration: 0.5,
+        ease: "easeInOut",
+      });
+      return () => controls.stop();
+    } else {
+      const start = Math.ceil(current / 360) * 360;
+      rotateValue.set(start);
+      const controls = animate(rotateValue, start + 360, {
+        duration: 3,
+        ease: "linear",
+        repeat: Infinity,
+      });
+      return () => controls.stop();
+    }
+  }, [isHovered]);
+
+  const edgeRings = React.useMemo(() =>
+    Array.from({ length: EDGE_LAYERS }).map((_, i) => {
+      const t = EDGE_LAYERS > 1 ? i / (EDGE_LAYERS - 1) : 0;
+      const z = -coinDepth + t * (coinDepth * 2);
+      const dist = Math.abs(z) / (coinDepth * 3);
+      const scale = 1 + 0.04 * (1 - dist * dist);
+      return { z, scale };
+    }), [coinDepth]
+  );
+
+  return (
+      <motion.div
+        style={{ perspective: 900 * (coinDepth / 6), perspectiveOrigin: "50% 50%" }}
+      className="relative w-20 h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 cursor-pointer"
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+    >
+      <motion.div
+        style={{
+          transformStyle: "preserve-3d",
+          rotateY: rotateValue,
+          willChange: "transform",
+        }}
+        className="relative w-full h-full"
+      >
+        {/* Edge cylinder — 7 stacked layers with gradient + border */}
+        {edgeRings.map(({ z, scale }, i) => (
+          <div
+            key={i}
+            className="absolute inset-0 rounded-full bg-gradient-to-br from-[#F5DAC8] via-[#F5DAC8] to-[#F5DAC8] border-10 lg:border-50 border-rosewood/30"
+            style={{
+              transform: `translateZ(${z}px) scale(${scale})`,
+            }}
+          />
+        ))}
+
+        {/* Front face */}
+        <div
+          className="absolute inset-0 rounded-full overflow-hidden"
+          style={{
+            backfaceVisibility: "hidden",
+            transform: `translateZ(${coinDepth}px)`,
+            backgroundColor: "#FCF9F2",
+          }}
+        >
+          <div className="absolute inset-0 rounded-full"
+            style={{ background: faceGradient }}
+          />
+          <div className="absolute -inset-[1.5px] rounded-full border-[1.5px] border-[#D4AF37]/50" />
+          <img
+            src={logo}
+            alt="Kongu Thirumana Maaligai Logo"
+            className="relative w-full h-full object-contain p-0.5"
+          />
+        </div>
+
+        {/* Back face */}
+        <div
+          className="absolute inset-0 rounded-full overflow-hidden"
+          style={{
+            backfaceVisibility: "hidden",
+            transform: `rotateY(180deg) translateZ(${coinDepth}px)`,
+            backgroundColor: "#FCF9F2",
+          }}
+        >
+          <div className="absolute inset-0 rounded-full"
+            style={{ background: faceGradientBack }}
+          />
+          <div className="absolute -inset-[1.5px] rounded-full border-[1.5px] border-[#D4AF37]/50" />
+          <img
+            src={logo}
+            alt=""
+            className="relative w-full h-full object-contain p-0.5"
+          />
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+const AboutSection: React.FC = () => {
+  const { t } = useTranslation('landing');
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.15, delayChildren: 0.2 } }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+  };
+
+  const paragraphs = t('hero.about.paragraphs', { returnObjects: true }) as string[];
+
+  return (
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-50px" }}
+      variants={containerVariants}
+      className="relative z-10 max-w-[1400px] mx-auto px-8 md:px-12 lg:px-16 pt-24 pb-24 lg:pt-32 lg:pb-18"
+    >
+      <motion.h2 variants={itemVariants} className="text-center font-heading text-xl md:text-2xl lg:text-3xl font-bold text-rosewood mb-10 lg:mb-12">
+        {t('hero.about.heading')}
+      </motion.h2>
+      <div className="space-y-4">
+        {Array.isArray(paragraphs) && paragraphs.map((para, idx) => (
+          <motion.p key={idx} variants={itemVariants} className="font-body text-sm md:text-base lg:text-[15px] text-stone-800 leading-relaxed lg:leading-normal text-justify">
+            {para}
+          </motion.p>
+        ))}
+      </div>
+    </motion.div>
+  );
+};
+
+const HeroSection: React.FC<HeroSectionProps> = ({
+  href,
+  direction,
+  delay = 0,
+  lang,
+  titleSegments,
+  subtitleSegments,
+  align,
+  mouseX,
+  mouseY,
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [isClicked, setIsClicked] = useState(false);
+  const handTapRef = useRef<HandTapHandle>(null);
+  const navigate = useNavigate();
+  const glowBackground = 'radial-gradient(circle at 50% 50%, rgba(222, 185, 65, 0.2) 0%, rgba(117, 10, 49, 0.1) 45%, transparent 80%)';
+
+  const titleCharCount = titleSegments.reduce((acc, seg) => acc + seg.text.length, 0);
+  const subtitleCharCount = subtitleSegments.reduce((acc, seg) => acc + seg.text.length, 0);
+  const subtitleBaseDelay = delay + 0.3 + titleCharCount * 0.04;
+  const lastAnimEnd = subtitleBaseDelay + subtitleCharCount * 0.03 + 0.7;
+  const handTapDelay = Math.max(lastAnimEnd, delay + 0.8) + 0.3;
+
+  return (
+    <div className="relative flex flex-col items-center text-center bg-gradient-to-br from-ivory via-gold/20 to-ivory border border-gold/50 rounded-2xl p-4 md:p-6 lg:px-6 lg:py-6">
+      <motion.div
+        initial="initial"
+        animate="animate"
+        whileHover="hover"
+        onHoverStart={() => setIsHovered(true)}
+        onHoverEnd={() => setIsHovered(false)}
+        variants={{
+          initial: { opacity: 0, x: direction === "left" ? -30 : 30 },
+          animate: {
+            opacity: 1,
+            x: 0,
+            transition: { duration: 0.8, delay, ease: "easeOut" }
+          },
+          hover: {
+            scale: 1.02,
+            transition: { duration: 0.3, ease: "easeOut" }
+          }
+        }}
+        className="group cursor-pointer relative"
+      >
+        <motion.div
+          style={{ background: glowBackground, filter: "blur(50px)" }}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1.15 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="absolute -inset-20 z-0 pointer-events-none"
+        >
+          <motion.div
+            animate={{ opacity: [0.7, 1, 0.7], scale: [1, 1.1, 1] }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="w-full h-full bg-inherit rounded-full"
+          />
+        </motion.div>
+        <Link
+          to={href}
+          onClick={(e) => {
+            e.preventDefault();
+            handTapRef.current?.stop();
+            setIsClicked(true);
+            setTimeout(() => navigate(href), 300);
+          }}
+          className="block transition-all duration-300 relative z-10"
+        >
+          <HeroContent lang={lang} align={align} delay={delay} titleSegments={titleSegments} subtitleSegments={subtitleSegments} subtitleBaseDelay={subtitleBaseDelay} mouseX={mouseX} mouseY={mouseY} isHovered={isHovered} />
+        </Link>
+        {!isClicked && (
+          <motion.div
+            initial={{ opacity: 0, x: -50, y: -15 }}
+            animate={{ opacity: 1, x: 0, y: 0 }}
+            transition={{ delay: handTapDelay, type: "spring", damping: 14, stiffness: 90, mass: 0.8 }}
+            onAnimationComplete={() => handTapRef.current?.play()}
+            className="absolute -bottom-4 -right-4 pointer-events-none z-10 w-[38px] h-[38px]"
+          >
+            <HandTapAnimation ref={handTapRef} />
+          </motion.div>
+        )}
+      </motion.div>
+    </div>
+  );
+};
+
+const HeroContent: React.FC<{
+  lang: string;
+  align: "left" | "right" | "center";
+  delay: number;
+  titleSegments: HeroTextSegment[];
+  subtitleSegments: HeroTextSegment[];
+  subtitleBaseDelay: number;
+  mouseX: any;
+  mouseY: any;
+  isHovered: boolean;
+}> = ({ lang, align, delay, titleSegments, subtitleSegments, subtitleBaseDelay, mouseX, mouseY, isHovered }) => {
+  const textX = useTransform(mouseX, [-1, 1], [-8, 8]);
+  const textY = useTransform(mouseY, [-1, 1], [-5, 5]);
+
+  const justifyClass = "justify-center text-center";
+
+  return (
+    <>
+      <h1 className={`${lang === "ta" ? "text-md md:text-lg lg:text-xl xl:text-2xl leading-[1.3]" : "text-xl md:text-3xl xl:text-4xl leading-[1.1]"} font-heading font-bold text-rosewood tracking-tight flex flex-wrap ${justifyClass} gap-x-2 overflow-hidden`} style={{ willChange: 'transform' }}>
+        {titleSegments.map((seg, i) => {
+          const precedingChars = titleSegments.slice(0, i).reduce((acc, s) => acc + s.text.length, 0);
+          return (
+            <React.Fragment key={i}>
+              <span className="nav:hidden">{seg.text}</span>
+              <div className="hidden nav:block">
+                <SmoothText key={`${lang}-${i}`} text={seg.text} stagger={0.04} duration={0.8} delay={delay + 0.15 + precedingChars * 0.04} y={40} />
+              </div>
+              {seg.breakAfter && <span className="hidden lg:block" style={{ flexBasis: "100%", height: 0 }} />}
+            </React.Fragment>
+          );
+        })}
+      </h1>
+      <motion.div
+        style={{ x: textX }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isHovered ? 1 : 0 }}
+        transition={{ duration: 0.3 }}
+        className="shimmer-line max-w-[280px]! h-px my-1 mx-auto"
+      />
+      <motion.h2
+        style={{ x: textX, y: textY }}
+        variants={{ initial: { y: 0 }, hover: { y: 12 } }}
+        transition={{ duration: 0.4, ease: "backOut" }}
+        className={`${lang === "ta" ? "text-md md:text-lg lg:text-2xl " : "text-xs md:text-sm lg:text-xl"} font-heading font-bold text-rosewood mb-2 flex ${justifyClass} gap-x-1.5 whitespace-nowrap overflow-hidden`}
+      >
+        {subtitleSegments.map((seg, i) => {
+          const precedingChars = subtitleSegments.slice(0, i).reduce((acc, s) => acc + s.text.length, 0);
+          return (
+            <React.Fragment key={`${lang}-${i}`}>
+              <span className="nav:hidden">{seg.text}</span>
+              <div className="hidden nav:block">
+                <SmoothText text={seg.text} stagger={0.03} duration={0.7} delay={subtitleBaseDelay + precedingChars * 0.03} y={25} />
+              </div>
+            </React.Fragment>
+          );
+        })}
+      </motion.h2>
+    </>
+  );
+};
+
+export interface HandTapHandle {
+  stop: () => void;
+  play: () => void;
+}
+
+interface HandTapAnimationProps {
+  speed?: number;
+}
+
+const HandTapAnimation = forwardRef<HandTapHandle, HandTapAnimationProps>(({ speed = 1 }, ref) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const animRef = useRef<AnimationItem | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    stop: () => {
+      if (animRef.current) {
+        animRef.current.destroy();
+        animRef.current = null;
+      }
+    },
+    play: () => {
+      if (animRef.current) {
+        animRef.current.play();
+      }
+    },
+  }));
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    animRef.current = lottie.loadAnimation({
+      container: containerRef.current,
+      renderer: "svg",
+      loop: true,
+      autoplay: false,
+      animationData,
+    });
+    animRef.current.setSpeed(speed);
+
+    return () => {
+      if (animRef.current) {
+        animRef.current.destroy();
+        animRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (animRef.current) {
+      animRef.current.setSpeed(speed);
+    }
+  }, [speed]);
+
+  return <div ref={containerRef} className="w-full h-full" />;
+});
+
+export default Hero;

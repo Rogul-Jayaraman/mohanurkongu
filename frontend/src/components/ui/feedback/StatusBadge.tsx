@@ -1,0 +1,71 @@
+import React from 'react';
+import { CheckCircle2, XCircle, Clock, AlertCircle, type LucideIcon } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
+import { Badge, type BadgeColor } from '@/components/ui/atoms/Badge';
+
+interface StatusBadgeProps {
+    status: 'pending' | 'approved' | 'rejected' | 'active' | 'suspended' | 'confirmed' | 'completed' | 'cancelled' | string;
+    className?: string;
+    minimal?: boolean;
+    label?: string;
+}
+
+interface StatusConfig {
+    color: BadgeColor;
+    icon: LucideIcon;
+}
+
+const statusToColor: Record<string, StatusConfig> = {
+    pending: { color: 'amber', icon: Clock },
+    draft: { color: 'blue', icon: Clock },
+    approved: { color: 'green', icon: CheckCircle2 },
+    accepted: { color: 'green', icon: CheckCircle2 },
+    verified: { color: 'green', icon: CheckCircle2 },
+    active: { color: 'green', icon: CheckCircle2 },
+    rejected: { color: 'rosewood', icon: XCircle },
+    suspended: { color: 'rosewood', icon: AlertCircle },
+    blocked: { color: 'rosewood', icon: AlertCircle },
+    inactive: { color: 'slate', icon: AlertCircle },
+    confirmed: { color: 'gold', icon: Clock },
+    completed: { color: 'sage', icon: CheckCircle2 },
+    cancelled: { color: 'rosewood', icon: XCircle },
+    upcoming: { color: 'gold', icon: Clock },
+};
+
+export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className, minimal = false, label }) => {
+    const { t, language } = useLanguage();
+    const isTamil = language === 'ta';
+
+    const statusLabelMap: Record<string, string> = {
+        pending: t('adminMatrimony.common.pending') || t('common:pending'),
+        draft: t('common:profile.status.draft') || 'Draft',
+        approved: t('adminMatrimony.common.approved') || t('common:verified'),
+        accepted: t('adminMatrimony.common.approved') || t('common:verified'),
+        verified: t('adminMatrimony.common.approved') || t('common:verified'),
+        active: t('adminMatrimony.common.active') || 'Active',
+        rejected: t('adminMatrimony.common.rejected') || t('common:rejected'),
+        suspended: t('adminMatrimony.common.suspended') || 'Suspended',
+        blocked: t('adminMatrimony.common.blocked') || 'Blocked',
+        inactive: t('adminMatrimony.common.inactive') || 'Inactive',
+        confirmed: t('adminMatrimony.common.confirmed') || 'Confirmed',
+        completed: t('adminMatrimony.common.completed') || 'Completed',
+        cancelled: t('adminMatrimony.common.cancelled') || 'Cancelled',
+        upcoming: t('adminMandapam.bookings.upcoming') || 'Upcoming',
+    };
+
+    const statusStr = typeof status === 'string' ? status : String(status || '');
+    const s = statusStr.toLowerCase();
+    const config = statusToColor[s] || { color: 'slate' as BadgeColor, icon: AlertCircle };
+    const displayLabel = label || statusLabelMap[s] || statusStr;
+
+    return (
+        <Badge
+            color={config.color}
+            icon={config.icon}
+            minimal={minimal}
+            className={`${isTamil ? (minimal ? '' : 'font-sans') : ''} ${className}`}
+        >
+            {displayLabel}
+        </Badge>
+    );
+};

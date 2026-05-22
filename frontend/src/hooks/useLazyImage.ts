@@ -1,0 +1,70 @@
+import { useState, useEffect, useRef } from 'react';
+
+interface UseLazyImageProps {
+    src: string;
+    rootMargin?: string;
+    threshold?: number;
+    priority?: boolean; // If true, bypasses intersection observer (for LCP)
+}
+
+interface UseLazyImageReturn {
+    ref: React.RefObject<HTMLImageElement | HTMLDivElement | any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+    source: string | undefined;
+    isLoaded: boolean;
+}
+
+/**
+ * Custom hook to handle lazy loading of images using IntersectionObserver.
+ * 
+ * @param src - The image source URL (remote or local import path)
+ * @param rootMargin - Margin around the root to detect intersection (default: '100px')
+ * @param threshold - Percentage of visibility to trigger (default: 0.1)
+ * @param priority - If true, loads immediately (useful for LCP images)
+ * @returns { ref, source, isLoaded }
+ */
+export const useLazyImage = ({
+    src,
+    rootMargin = '100px',
+    threshold = 0.1,
+    priority = false
+}: UseLazyImageProps): UseLazyImageReturn => {
+    const [source, setSource] = useState<string | undefined>(priority ? src : undefined);
+    const [isLoaded, setIsLoaded] = useState<boolean>(false);
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ref = useRef<any>(null);
+
+    useEffect(() => {
+        if (priority) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setSource(src);
+                    observer.disconnect();
+                }
+            },
+            { rootMargin, threshold }
+        );
+
+        if (ref.current) {
+            observer.observe(ref.current);
+        }
+
+        return () => {
+            observer.disconnect();
+        };
+    }, [src, rootMargin, threshold, priority]);
+
+    // Handle image load event to set isLoaded state for transitions
+    useEffect(() => {
+        if (source) {
+            const img = new Image();
+            img.src = source;
+            img.onload = () => setIsLoaded(true);
+            img.onerror = () => setIsLoaded(false); // Hide when image fails to load
+        }
+    }, [source]);
+
+    return { ref, source, isLoaded };
+};

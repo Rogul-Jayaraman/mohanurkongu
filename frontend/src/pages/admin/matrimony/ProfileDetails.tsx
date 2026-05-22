@@ -1,0 +1,8 @@
+import React from 'react';
+import ProfileView from '@/components/features/admin/matrimony/ProfileView';
+
+const ProfileDetailsPage: React.FC = () => {
+    return <ProfileView />;
+};
+
+export default ProfileDetailsPage;

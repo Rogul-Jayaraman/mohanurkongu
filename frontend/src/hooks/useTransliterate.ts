@@ -1,0 +1,86 @@
+import { useState, useEffect, useRef } from 'react';
+import { getTransliteration, getLocalTransliteration } from '../utils/transliterationService';
+import { toEnglish } from '../utils/tamilTransliterator';
+
+interface UseTransliterateOptions {
+    targetLanguage?: 'ta' | 'en';
+    mode?: 'title' | 'uppercase' | 'none';
+}
+
+// Increased debounce for natural typing cadence
+const DEBOUNCE_MS = 300;
+
+interface UseTransliterateReturn {
+    preview: string;
+    isPending: boolean;
+    setPreview: (value: string) => void;
+}
+
+/**
+ * Optimized hook for real-time transliteration.
+ * Features: Centralized caching, instant local feedback, debounced API refinement, and cancellation of stale requests.
+ */
+export function useTransliterate(
+    text: string,
+    options: UseTransliterateOptions = {}
+): UseTransliterateReturn {
+    const { targetLanguage = 'ta', mode = 'title' } = options;
+    const [preview, setPreview] = useState('');
+    const [isPending, setIsPending] = useState(false);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastTransliteratedText = useRef('');
+    const lastTargetLanguage = useRef(targetLanguage);
+
+    useEffect(() => {
+        let isMounted = true;
+        if (timerRef.current) clearTimeout(timerRef.current);
+
+        if (!text || !text.trim()) {
+            setPreview('');
+            setIsPending(false);
+            lastTransliteratedText.current = '';
+            lastTargetLanguage.current = targetLanguage;
+            return;
+        }
+
+        if (lastTargetLanguage.current !== targetLanguage) {
+            lastTransliteratedText.current = '';
+        }
+        lastTargetLanguage.current = targetLanguage;
+
+        if (text === lastTransliteratedText.current) return;
+
+        // Instant local preview for immediate feedback (Zero Latency Phase)
+        if (targetLanguage === 'en') {
+            setPreview(toEnglish(text, mode));
+        } else {
+            setPreview(getLocalTransliteration(text));
+        }
+
+        setIsPending(true);
+
+        // Debounced Refinement (Accuracy Phase)
+        timerRef.current = setTimeout(async () => {
+            try {
+                if (targetLanguage === 'en') {
+                    if (isMounted) setPreview(toEnglish(text, mode));
+                } else {
+                    const refined = await getTransliteration(text, targetLanguage);
+                    if (isMounted) setPreview(refined);
+                }
+                if (isMounted) lastTransliteratedText.current = text;
+            } catch (err) {
+                console.error('Transliteration hook error:', err);
+            } finally {
+                if (isMounted) setIsPending(false);
+            }
+        }, DEBOUNCE_MS);
+
+        return () => {
+            isMounted = false;
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, [text, targetLanguage, mode]);
+
+    return { preview, isPending, setPreview };
+}

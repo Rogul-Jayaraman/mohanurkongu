@@ -1,0 +1,64 @@
+import React from 'react';
+import { clsx } from 'clsx';
+
+const sizeMap: Record<HeadingSize, { tag: React.ElementType; classes: string }> = {
+    display: { tag: 'h1', classes: 'text-4xl md:text-5xl lg:text-6xl font-serif font-black tracking-tight leading-[1.1]' },
+    h1: { tag: 'h1', classes: 'text-3xl md:text-4xl font-serif font-black tracking-tight leading-tight' },
+    h2: { tag: 'h2', classes: 'text-2xl md:text-3xl font-serif font-bold tracking-tight leading-tight' },
+    h3: { tag: 'h3', classes: 'text-xl md:text-2xl font-serif font-bold tracking-tight leading-snug' },
+    h4: { tag: 'h4', classes: 'text-lg md:text-xl font-serif font-bold leading-snug' },
+    h5: { tag: 'h5', classes: 'text-base md:text-lg font-bold leading-snug' },
+    h6: { tag: 'h6', classes: 'text-sm md:text-base font-bold leading-normal' },
+    body: { tag: 'p', classes: 'text-sm md:text-base font-medium leading-relaxed' },
+    small: { tag: 'span', classes: 'text-xs font-bold leading-normal' },
+};
+
+const weightMap: Record<HeadingWeight, string> = {
+    normal: 'font-normal',
+    medium: 'font-medium',
+    bold: 'font-bold',
+    black: 'font-black',
+};
+
+const variantMap: Record<HeadingVariant, string> = {
+    rosewood: 'text-rosewood',
+    gold: 'text-gold',
+    slate: 'text-slate-500',
+    white: 'text-white',
+    inherit: 'text-inherit',
+};
+
+export type HeadingSize = 'display' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'body' | 'small';
+export type HeadingWeight = 'normal' | 'medium' | 'bold' | 'black';
+export type HeadingVariant = 'rosewood' | 'gold' | 'slate' | 'white' | 'inherit';
+
+export interface HeadingProps extends React.HTMLAttributes<HTMLElement> {
+    as?: React.ElementType;
+    size?: HeadingSize;
+    weight?: HeadingWeight;
+    variant?: HeadingVariant;
+    className?: string;
+    children: React.ReactNode;
+}
+
+export const Heading: React.FC<HeadingProps> = ({
+    as,
+    size = 'h3',
+    weight,
+    variant = 'rosewood',
+    className,
+    children,
+    ...props
+}) => {
+    const config = sizeMap[size];
+    const Tag = as || config.tag;
+
+    const classes = clsx(
+        config.classes,
+        weight ? weightMap[weight] : '',
+        variantMap[variant],
+        className
+    );
+
+    return <Tag className={classes} {...props}>{children}</Tag>;
+};

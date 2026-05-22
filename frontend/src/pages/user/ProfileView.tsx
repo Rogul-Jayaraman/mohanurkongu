@@ -1,0 +1,8 @@
+import React from "react";
+import ProfileViewFeature from "@/components/features/user/ProfileView";
+
+const ProfileView: React.FC = () => {
+  return <ProfileViewFeature />;
+};
+
+export default ProfileView;

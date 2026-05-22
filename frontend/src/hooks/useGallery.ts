@@ -1,0 +1,167 @@
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Category } from '@/types/gallery';
+import type { GalleryItem } from '@/types/gallery';
+import { GALLERY_IMAGES, MATRIX_GRIDS } from '@/constants/gallery';
+
+export const useGallery = (activeRoutes?: string[], rotationInterval: number = 5000) => {
+    const location = useLocation();
+    const [activeCategory, setActiveCategory] = useState<Category>(Category.ALL);
+    const [gridIndex, setGridIndex] = useState(0);
+    const [isMobile, setIsMobile] = useState(false);
+    const [isSmallScreen, setIsSmallScreen] = useState(false);
+    const [isExplorerOpen, setIsExplorerOpen] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null);
+
+    const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+
+    const currentGrid = useMemo(() => MATRIX_GRIDS[gridIndex], [gridIndex]);
+
+    const isOnGalleryRoute = useMemo(() => {
+        if (activeRoutes) {
+            return activeRoutes.some(route =>
+                location.pathname === route || location.hash === route
+            );
+        }
+        return location.pathname === '/maaligai/gallery' || location.pathname === '/maaligai';
+    }, [location.pathname, location.hash, activeRoutes]);
+
+    const getUniqueAreas = useCallback((grid: typeof MATRIX_GRIDS[0]) => {
+        const areasString = grid.areas.join(' ');
+        const parts = areasString.split(/\s+/).filter(p => p.length > 0);
+        return Array.from(new Set(parts));
+    }, []);
+
+    const mapImagesToLayout = useCallback((grid: typeof MATRIX_GRIDS[0], pool: GalleryItem[]) => {
+        if (pool.length === 0) return {};
+        const areas = getUniqueAreas(grid);
+        const shuffled = [...pool].sort(() => 0.5 - Math.random());
+        const mapping: Record<string, GalleryItem> = {};
+
+        areas.forEach((area, i) => {
+            mapping[area] = shuffled[i % shuffled.length];
+        });
+        return mapping;
+    }, [getUniqueAreas]);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            const width = window.innerWidth;
+            setIsMobile(width < 1024);
+            setIsSmallScreen(width < 600);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    const [isPageVisible, setIsPageVisible] = useState(true);
+
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            setIsPageVisible(!document.hidden);
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, []);
+
+    useEffect(() => {
+        if (selectedImage || isExplorerOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [selectedImage, isExplorerOpen]);
+
+    const filteredPool = useMemo(() => {
+        return activeCategory === Category.ALL
+            ? GALLERY_IMAGES
+            : GALLERY_IMAGES.filter(img => img.category === activeCategory);
+    }, [activeCategory]);
+
+    const currentIndex = useMemo(() => {
+        if (!selectedImage) return 0;
+        return filteredPool.findIndex(i => i.id === selectedImage.id);
+    }, [selectedImage, filteredPool]);
+
+    const displayMapping = useMemo(() => {
+        return mapImagesToLayout(currentGrid, filteredPool);
+    }, [currentGrid, filteredPool, mapImagesToLayout]);
+
+    const [currentBatch, setCurrentBatch] = useState(() => `${activeCategory}-${gridIndex}`);
+    const batchKey = `${activeCategory}-${gridIndex}`;
+    
+    if (currentBatch !== batchKey) {
+        setCurrentBatch(batchKey);
+        setLoadedImages(new Set());
+    }
+
+    useEffect(() => {
+        if (selectedImage || isExplorerOpen || !isPageVisible || !isOnGalleryRoute) return;
+
+        const timer = setInterval(() => {
+            setGridIndex(prev => {
+                const next = (prev + 1) % MATRIX_GRIDS.length;
+                return next;
+            });
+        }, rotationInterval);
+
+        return () => clearInterval(timer);
+    }, [selectedImage, isExplorerOpen, isPageVisible, isOnGalleryRoute, rotationInterval]);
+
+    const handlePrev = useCallback((e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (!selectedImage) return;
+        const prevIndex = (currentIndex - 1 + filteredPool.length) % filteredPool.length;
+        setSelectedImage(filteredPool[prevIndex]);
+    }, [selectedImage, filteredPool, currentIndex]);
+
+    const handleNext = useCallback((e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (!selectedImage) return;
+        const nextIndex = (currentIndex + 1) % filteredPool.length;
+        setSelectedImage(filteredPool[nextIndex]);
+    }, [selectedImage, filteredPool, currentIndex]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!selectedImage) return;
+            if (e.key === 'ArrowLeft') handlePrev();
+            if (e.key === 'ArrowRight') handleNext();
+            if (e.key === 'Escape') setSelectedImage(null);
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedImage, handlePrev, handleNext]);
+
+    const handleImageLoad = useCallback((imageId: string) => {
+        setLoadedImages(prev => new Set(prev).add(imageId));
+    }, []);
+
+    const uniqueAreas = useMemo(() => Object.keys(displayMapping), [displayMapping]);
+
+    return {
+        activeCategory,
+        setActiveCategory,
+        gridIndex,
+        currentGrid,
+        displayMapping,
+        uniqueAreas,
+        isMobile,
+        isSmallScreen,
+        isExplorerOpen,
+        setIsExplorerOpen,
+        selectedImage,
+        setSelectedImage,
+        filteredPool,
+        currentIndex,
+        handleNext,
+        handlePrev,
+        loadedImages,
+        handleImageLoad,
+    };
+};

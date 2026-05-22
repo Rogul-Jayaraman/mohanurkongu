@@ -1,0 +1,38 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+
+interface AnimatedSectionProps {
+    children: React.ReactNode;
+    className?: string;
+    delay?: number;
+    y?: number;
+}
+
+export const AnimatedSection: React.FC<AnimatedSectionProps> = ({
+    children,
+    className = '',
+    delay = 0,
+    y = 30
+}) => {
+    const variants = {
+        hidden: { opacity: 0, y },
+        visible: (d: number) => ({
+            opacity: 1,
+            y: 0,
+            transition: { duration: 0.7, delay: d, ease: 'easeOut' }
+        })
+    };
+
+    return (
+        <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={variants}
+            custom={delay}
+            className={className}
+        >
+            {children}
+        </motion.div>
+    );
+};

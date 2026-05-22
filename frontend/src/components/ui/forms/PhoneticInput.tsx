@@ -1,0 +1,69 @@
+import React, { useState, useEffect, useRef, forwardRef } from 'react';
+import { getTransliteration } from '@/utils/transliterationService';
+
+export interface TransliteratingInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+    targetLanguage?: 'ta' | 'en';
+    onValueChange?: (value: string) => void;
+    autoFormat?: boolean;
+}
+
+export const TransliteratingInput = forwardRef<HTMLInputElement, TransliteratingInputProps>(
+    ({ targetLanguage = 'en', onChange, onValueChange, value, autoFormat = false, type, ...props }, ref) => {
+        const [localValue, setLocalValue] = useState<string>(value as string || '');
+        const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+        useEffect(() => {
+            if (value !== undefined && value !== localValue) {
+                setLocalValue(value as string);
+            }
+        }, [value]);
+
+        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            let rawVal = e.target.value;
+            setLocalValue(rawVal);
+
+            if (onChange) {
+                const syntheticEvent = {
+                    ...e,
+                    target: { ...e.target, value: rawVal, name: props.name }
+                } as React.ChangeEvent<HTMLInputElement>;
+                onChange(syntheticEvent);
+            }
+            if (onValueChange) onValueChange(rawVal);
+
+            if (targetLanguage === 'en' || !/[a-zA-Z]/.test(rawVal)) {
+                if (debounceRef.current) clearTimeout(debounceRef.current);
+                return;
+            }
+
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+
+            debounceRef.current = setTimeout(async () => {
+                const transliterated = await getTransliteration(rawVal);
+                if (transliterated && transliterated !== rawVal) {
+                    setLocalValue(transliterated);
+                    if (onChange) {
+                        const syntheticEvent = {
+                            ...e,
+                            target: { ...e.target, name: props.name, value: transliterated }
+                        } as unknown as React.ChangeEvent<HTMLInputElement>;
+                        onChange(syntheticEvent);
+                    }
+                    if (onValueChange) onValueChange(transliterated);
+                }
+            }, 200);
+        };
+
+        return (
+            <input
+                {...props}
+                ref={ref}
+                type={type}
+                value={localValue}
+                onChange={handleChange}
+            />
+        );
+    }
+);
+
+TransliteratingInput.displayName = 'TransliteratingInput';

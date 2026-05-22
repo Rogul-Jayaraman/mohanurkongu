@@ -1,0 +1,245 @@
+.horoscope-table-wrapper {
+  width: 100%;
+}
+
+.horoscope-zodiac-strip {
+  padding: 0.75rem 0.75rem 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-gold-500, #D4AF37) 10%, transparent);
+}
+
+.horoscope-zodiac-segment {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.horoscope-zodiac-dots {
+  position: absolute;
+  bottom: -0.125rem;
+  display: flex;
+  gap: 0.125rem;
+}
+
+.horoscope-zodiac-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+}
+
+.horoscope-zodiac-legend {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.375rem;
+  justify-content: center;
+}
+
+.horoscope-zodiac-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 9px;
+  color: color-mix(in srgb, var(--color-dark-brown, #3A2F2F) 50%, transparent);
+}
+
+.horoscope-zodiac-legend-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.horoscope-table {
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.horoscope-table-header {
+  text-align: left;
+  padding: 0.75rem 0.75rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-dark-brown, #3A2F2F) 60%, transparent);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.horoscope-table-header--right {
+  text-align: right;
+}
+
+.horoscope-table-header--center {
+  text-align: center;
+}
+
+.horoscope-planet-row {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-gold-500, #D4AF37) 10%, transparent);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-left: 2px solid transparent;
+}
+
+.horoscope-planet-row:hover {
+  background-color: color-mix(in srgb, var(--color-ivory, #FCF9F2) 50%, transparent);
+}
+
+.horoscope-planet-row--fire {
+  border-left-color: #FF6B6B;
+}
+
+.horoscope-planet-row--earth {
+  border-left-color: #4ECDC4;
+}
+
+.horoscope-planet-row--water {
+  border-left-color: #45B7D1;
+}
+
+.horoscope-planet-row--air {
+  border-left-color: #96CEB4;
+}
+
+.horoscope-planet-row--shadow {
+  border-left-color: #DDA0DD;
+}
+
+.horoscope-planet-cell {
+  padding: 0.75rem 0.75rem;
+}
+
+.horoscope-planet-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.horoscope-planet-color-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.horoscope-planet-name--en {
+  font-weight: 500;
+  color: var(--color-dark-brown, #3A2F2F);
+}
+
+.horoscope-planet-name--ta {
+  font-size: 11px;
+  font-family: var(--font-tamil-body, "Mukta Malar", sans-serif);
+  color: color-mix(in srgb, var(--color-dark-brown, #3A2F2F) 70%, transparent);
+}
+
+.horoscope-degree-cell {
+  padding: 0.75rem 0.75rem;
+  text-align: right;
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--color-dark-brown, #3A2F2F) 70%, transparent);
+}
+
+.horoscope-house-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background-color: var(--color-ivory, #FCF9F2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-dark-brown, #3A2F2F);
+}
+
+.horoscope-nakshatra-cell {
+  padding: 0.75rem 0.75rem;
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .horoscope-nakshatra-cell {
+    display: table-cell;
+  }
+}
+
+.horoscope-nakshatra-name--en {
+  color: var(--color-dark-brown, #3A2F2F);
+}
+
+.horoscope-nakshatra-name--ta {
+  font-size: 11px;
+  font-family: var(--font-tamil-body, "Mukta Malar", sans-serif);
+  color: color-mix(in srgb, var(--color-dark-brown, #3A2F2F) 70%, transparent);
+}
+
+.horoscope-pada-cell {
+  padding: 0.75rem 0.75rem;
+  text-align: center;
+  display: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--color-dark-brown, #3A2F2F);
+}
+
+@media (min-width: 768px) {
+  .horoscope-pada-cell {
+    display: table-cell;
+  }
+}
+
+.horoscope-detail-row {
+  animation: slide-up 0.2s ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.horoscope-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  padding: 0.75rem;
+  background-color: color-mix(in srgb, var(--color-ivory, #FCF9F2) 30%, transparent);
+}
+
+@media (min-width: 640px) {
+  .horoscope-detail-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.horoscope-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.horoscope-detail-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--color-dark-brown, #3A2F2F) 40%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.horoscope-detail-value--en {
+  color: var(--color-dark-brown, #3A2F2F);
+  font-weight: 500;
+}
+
+.horoscope-detail-value--ta {
+  font-family: var(--font-tamil-body, "Mukta Malar", sans-serif);
+  color: color-mix(in srgb, var(--color-dark-brown, #3A2F2F) 70%, transparent);
+}

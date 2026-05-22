@@ -1,0 +1,3 @@
+import { home } from "./home";
+
+export const landingTa = home;

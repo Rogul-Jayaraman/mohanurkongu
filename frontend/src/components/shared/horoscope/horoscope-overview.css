@@ -1,0 +1,144 @@
+.horoscope-overview-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.horoscope-overview-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.horoscope-overview-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-rosewood, #8B1D3D);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.horoscope-overview-subtitle {
+  font-size: 10px;
+  color: color-mix(in srgb, var(--color-dark-brown, #3A2F2F) 60%, transparent);
+}
+
+.horoscope-overview-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .horoscope-overview-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.horoscope-overview-card {
+  background-color: white;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold-500, #D4AF37) 10%, transparent);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.horoscope-overview-card-icon {
+  width: 2rem;
+  height: 2rem;
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 0.5rem;
+  background-color: color-mix(in srgb, var(--color-gold-500, #D4AF37) 10%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.horoscope-overview-card-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--color-dark-brown, #3A2F2F) 50%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.horoscope-overview-card-value--en {
+  font-size: 1.125rem;
+  font-family: var(--font-heading, "Namdhinggo", ui-sans-serif);
+  font-weight: 700;
+  color: var(--color-rosewood, #8B1D3D);
+  margin-top: 0.25rem;
+}
+
+.horoscope-overview-card-value--ta {
+  font-size: 0.875rem;
+  font-family: var(--font-tamil-serif, "Catamaran", serif);
+  color: color-mix(in srgb, var(--color-dark-brown, #3A2F2F) 80%, transparent);
+}
+
+.horoscope-overview-card-divider {
+  margin-left: auto;
+  margin-right: auto;
+  width: 2rem;
+  height: 0.125rem;
+  background-color: color-mix(in srgb, var(--color-gold-500, #D4AF37) 20%, transparent);
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.horoscope-overview-card-sub {
+  font-size: 10px;
+  color: color-mix(in srgb, var(--color-dark-brown, #3A2F2F) 50%, transparent);
+}
+
+.horoscope-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.horoscope-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.horoscope-section-title {
+  font-size: 0.875rem;
+  font-family: var(--font-heading, "Namdhinggo", ui-sans-serif);
+  font-weight: 700;
+  color: var(--color-rosewood, #8B1D3D);
+}
+
+.horoscope-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 0;
+}
+
+.horoscope-loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--color-gold-500, #D4AF37);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: horoscope-spin 0.6s linear infinite;
+}
+
+@keyframes horoscope-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.horoscope-error {
+  text-align: center;
+  padding: 2rem 0;
+  font-size: 0.875rem;
+  color: #ef4444;
+}

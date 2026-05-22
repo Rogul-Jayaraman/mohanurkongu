@@ -1,0 +1,27 @@
+import type { CalendarStatus } from '@/constants/calendar';
+
+export interface LegendProps {
+  available: string;
+  selected: string;
+  booked: string;
+  blocked?: string;
+  today?: string;
+  disabled?: string;
+  clear?: string;
+}
+
+export interface SharedCalendarProps {
+  currentDate: Date;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
+  selectedDay: number | null;
+  onSelectDay: (day: number | null) => void;
+  bookedDays: number[];
+  blockedDays?: number[];
+  isAdmin?: boolean;
+  language: string;
+  legend: LegendProps;
+  daysOfWeek: string[];
+}
+
+export type { CalendarStatus };

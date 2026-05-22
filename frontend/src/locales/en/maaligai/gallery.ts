@@ -1,0 +1,13 @@
+export const gallery = {
+  meta: {
+    title: "Gallery - Kongu Thirumana Maaligai",
+    desc: "Wedding venue gallery and moments",
+  },
+  heroTitle: "Gallery",
+  heroSubtitle: "Moments Captured with Elegance and Joy",
+  filters: ["All", "Weddings", "Receptions", "Stage Decor", "Dining Area", "Venue Exterior"],
+  memoriesTitle: "Memorable Moments",
+  memoriesP: "Every photograph from Kongu Thirumana Maaligai reflects the joy, traditions, and emotions shared within our walls. From the grand architecture to the intimate details, explore the beauty that makes us the perfect setting for your celebrations.",
+  ctaTitle: "Explore Our Wedding Packages",
+  ctaBtn: "View Packages",
+};

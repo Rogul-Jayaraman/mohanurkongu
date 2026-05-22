@@ -1,0 +1,84 @@
+import React, { useRef, useLayoutEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+
+interface ToggleOption {
+  value: string;
+  label: { en: string; ta: string };
+  icon?: string;
+}
+
+interface CentralToggleButtonProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: ToggleOption[];
+  variant: string;
+  name: string;
+  fullWidth?: boolean;
+  glass?: boolean;
+}
+
+const CentralToggleButton: React.FC<CentralToggleButtonProps> = ({
+  value,
+  onChange,
+  options,
+  variant,
+  name,
+  fullWidth = false,
+  glass = false,
+}) => {
+  const { i18n } = useTranslation();
+  const lang = i18n.language as 'en' | 'ta';
+  const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
+
+  useLayoutEffect(() => {
+    const idx = options.findIndex((o) => o.value === value);
+    const btn = btnRefs.current[idx];
+    if (btn) {
+      setIndicator({ left: btn.offsetLeft, width: btn.offsetWidth });
+    }
+  }, [value, options, lang]);
+
+  return (
+    <div
+      className={`relative p-1.5 rounded-2xl flex items-center border border-gold/10 ${
+        glass ? 'bg-white/10 backdrop-blur-md' : 'bg-ivory'
+      } shadow-inner ${fullWidth ? 'w-full' : 'w-fit'}`}
+      role="radiogroup"
+    >
+      <motion.div
+        className={`absolute top-1.5 bottom-1.5 rounded-xl z-0`}
+        style={{
+          background: `linear-gradient(135deg, ${variant === 'rosewood' ? 'rgba(139,29,61,0.9)' : 'rgba(180,150,70,0.9)'}, ${variant === 'rosewood' ? 'rgba(120,20,50,0.95)' : 'rgba(160,130,50,0.95)'}, ${variant === 'rosewood' ? 'rgba(139,29,61,0.9)' : 'rgba(180,150,70,0.9)'})`,
+          boxShadow: variant === 'rosewood'
+            ? '0 4px 16px rgba(139,29,61,0.2)'
+            : '0 4px 16px rgba(180,150,70,0.2)',
+        }}
+        animate={{ left: indicator.left, width: indicator.width }}
+        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+      />
+      {options.map((opt, idx) => (
+        <button
+          key={opt.value}
+          ref={(el) => { btnRefs.current[idx] = el; }}
+          onClick={() => onChange(opt.value)}
+          className={`${fullWidth ? 'flex-1' : ''} px-4 py-2.5 rounded-xl relative z-10 text-[10px] font-black tracking-medium flex items-center justify-center gap-2 transition-colors duration-300 ${
+            value === opt.value
+              ? 'text-white'
+              : `text-${variant}/40 hover:text-${variant}`
+          }`}
+          role="radio"
+          aria-checked={value === opt.value}
+        >
+          {opt.icon && (
+            <span className="material-symbols-outlined text-sm!">{opt.icon}</span>
+          )}
+          {opt.label[lang] ?? opt.label.en}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+export default CentralToggleButton;

@@ -1,0 +1,34 @@
+export const adminLayoutTa = {
+    meta: {
+      dashboard: {
+        title: "முகப்பு - மோகனூர் கொங்கு நிர்வாகம்",
+        desc: "நிர்வாகி கட்டுப்பாட்டு முகப்பு",
+      },
+      settings: {
+        title: "அமைப்புகள் - மோகனூர் கொங்கு நிர்வாகம்",
+        desc: "கணினி அமைப்புகள் மற்றும் உள்ளமைவு",
+      },
+      profile_details: {
+        title: "பதிவு விவரங்கள் - மோகனூர் கொங்கு நிர்வாகம்",
+        desc: "நிர்வாகியில் பதிவு விவரங்களை காண",
+      },
+    },
+    nav: {
+      dashboard: "டாஷ்போர்டு",
+      analytics: "பகுப்பாய்வு",
+      matrimony: "திருமணம்",
+      plans: "உறுப்பினர்",
+      profileVerification: "சுயவிவர சரிபார்ப்பு",
+      userAccounts: "கணக்கு மேலாண்மை",
+      profiles: "சுயவிவர மேலாண்மை",
+      mandapam: "மண்டபம்",
+      packages: "பேக்கேஜ்கள்",
+      hallAvailability: "மண்டப இருப்பு",
+      bookings: "முன்பதிவுகள்",
+      settings: "அமைப்புகள்",
+      profile_details: "சுயவிவர விவரங்கள்",
+    },
+    header: {
+      adminPanel: "நிர்வாக குழு",
+    }
+  };

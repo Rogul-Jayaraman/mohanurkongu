@@ -1,0 +1,32 @@
+import React from 'react';
+import { useLanguage } from '@/context/LanguageContext';
+
+interface PasswordStrengthProps {
+    password?: string;
+}
+
+export const PasswordStrengthIndicator: React.FC<PasswordStrengthProps> = ({ password = '' }) => {
+    const { t } = useLanguage();
+    
+    if (!password) return null;
+
+    const reqs = [
+        { key: 'length', text: t('signup.passwordReq.length'), met: password.length >= 8 },
+        { key: 'uppercase', text: t('signup.passwordReq.uppercase'), met: /[A-Z]/.test(password) },
+        { key: 'number', text: t('signup.passwordReq.number'), met: /[0-9]/.test(password) },
+    ];
+
+    return (
+        <div className="mt-2 p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1 shadow-sm animate-in fade-in zoom-in-95 duration-200">
+            <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-2">{t('signup.passwordReq.title')}</p>
+            {reqs.map(req => (
+                <div key={req.key} className={`flex items-center gap-2 text-xs transition-colors duration-300 ${req.met ? 'text-emerald-600' : 'text-slate-500'}`}>
+                    <span className="material-symbols-outlined text-[14px]">
+                        {req.met ? 'check_circle' : 'radio_button_unchecked'}
+                    </span>
+                    <span>{req.text}</span>
+                </div>
+            ))}
+        </div>
+    );
+};

@@ -1,0 +1,49 @@
+import React from 'react';
+import { motion, HTMLMotionProps } from 'framer-motion';
+
+// ====================
+// 🔹 Interfaces
+// ====================
+
+interface CardProps extends HTMLMotionProps<'div'> {
+    variant?: 'white' | 'ivory' | 'rosewood' | 'gold'; // Background and border theme variant
+    children: React.ReactNode; // Content to be displayed inside the card
+}
+
+// ============================================
+// 📌 Card Component
+// Base layout primitive for structured content display.
+// Used project-wide to encapsulate feature sections and data blocks.
+// ============================================
+
+/**
+ * Main Card component.
+ * Provides consistent border radius, shadowing, and thematic variants.
+ */
+export const Card: React.FC<CardProps> = ({ 
+    variant = 'white', 
+    children, 
+    className = '', 
+    ...props 
+}) => {
+    const variants = {
+        white: "bg-white border-rosewood/5 shadow-xl shadow-rosewood/5",
+        ivory: "bg-ivory border-gold-500/10 shadow-lg shadow-gold-500/5",
+        rosewood: "bg-rosewood border-white/10 text-ivory",
+        gold: "bg-gold-500 border-rosewood/10 text-rosewood"
+    };
+
+    const baseClasses = "rounded-xl border transition-all duration-500 overflow-hidden";
+    const combinedClasses = `${baseClasses} ${variants[variant]} ${className}`;
+
+    return (
+        <motion.div
+            className={combinedClasses}
+            {...props}
+        >
+            {children}
+        </motion.div>
+    );
+};
+
+export default Card;

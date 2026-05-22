@@ -1,0 +1,197 @@
+import React from "react";
+
+// ====================
+// 🔹 Helper Functions
+// ====================
+
+/**
+ * Splits text into grapheme clusters (correctly handles Tamil, Emojis, etc.)
+ * Uses Intl.Segmenter if available, falling back to Array.from.
+ */
+const splitGraphemes = (text: string): string[] => {
+  if (typeof Intl !== "undefined" && (Intl as any).Segmenter) {
+    const segmenter = new (Intl as any).Segmenter(undefined, { granularity: "grapheme" });
+    return Array.from(segmenter.segment(text)).map((s: any) => s.segment);
+  }
+  return Array.from(text);
+};
+
+// ====================
+// 🔹 Interfaces
+// ====================
+
+export interface SmoothTextProps {
+  /** The text string to animate character-by-character */
+  text: string;
+  /** Delay between each character in seconds */
+  stagger?: number;
+  /** Duration of each character's animation in seconds */
+  duration?: number;
+  /** Initial delay before the first character starts */
+  delay?: number;
+  /** Y offset (in px) characters animate up from */
+  y?: number;
+  /** Cubic-bezier high control point (0–100) */
+  easeHighPct?: number;
+  /** Cubic-bezier low control point (0–100) */
+  easeLowPct?: number;
+  /** Optional: enable motion blur during reveal */
+  motionBlur?: boolean;
+  /** Additional className for the container */
+  className?: string;
+  /** Additional className for each character span */
+  charClassName?: string;
+  /** Trigger key — change to replay animation */
+  animKey?: number;
+  /** Whether to prevent text from wrapping. Defaults to true. */
+  noWrap?: boolean;
+}
+
+// ============================================
+// 📌 SmoothText Component
+// Character-by-character staggered reveal animation.
+// Adapted from SmoothTextAnimation.jsx reference.
+// ============================================
+
+/**
+ * Renders each character of `text` with a staggered upward-reveal animation.
+ * Uses CSS `@keyframes smoothReveal` (must be defined in index.css).
+ *
+ * @example
+ * <SmoothText text="Hello World" stagger={0.04} duration={0.8} className="text-rosewood font-heading" />
+ */
+export const SmoothText: React.FC<SmoothTextProps> = ({
+  text,
+  stagger = 0.04,
+  duration = 0.8,
+  delay = 0,
+  y = 40,
+  easeHighPct = 25,
+  easeLowPct = 100,
+  motionBlur = false,
+  className = "",
+  charClassName = "",
+  animKey = 0,
+  noWrap = true,
+}) => {
+  const chars = splitGraphemes(text);
+  const easeH = easeHighPct / 100;
+  const easeL = easeLowPct / 100;
+  const cubicBezier = `cubic-bezier(${easeH}, ${easeL}, ${((easeH + 1) / 2).toFixed(2)}, 1)`;
+
+  return (
+    <span
+      className={className}
+      style={{
+        display: "inline-flex",
+        flexWrap: noWrap ? "nowrap" : "wrap",
+        overflow: "hidden",
+        lineHeight: "inherit",
+      }}
+    >
+      {chars.map((char, i) => {
+        const charDelay = delay + i * stagger;
+        return (
+          <span
+            key={`${animKey}-${i}`}
+            className={charClassName}
+            style={{
+              display: "inline-block",
+              whiteSpace: char === " " ? "pre" : "normal",
+              opacity: 0,
+              transform: `translateY(${y}px)`,
+              animation: `smoothReveal ${duration}s ${cubicBezier} ${charDelay}s forwards`,
+              ...(motionBlur
+                ? { filter: `blur(${Math.round(y * 0.04)}px)` }
+                : {}),
+            }}
+          >
+            {char}
+          </span>
+        );
+      })}
+    </span>
+  );
+};
+
+// ====================
+// 🔹 SmoothTextGroup
+// ====================
+
+export interface SmoothTextGroupProps {
+  /** Array of text segments to render sequentially */
+  segments: Array<{
+    text: string;
+    className?: string;
+    breakAfter?: boolean;
+  }>;
+  /** Base stagger between characters */
+  stagger?: number;
+  /** Duration per character */
+  duration?: number;
+  /** Initial delay */
+  delay?: number;
+  /** Y offset */
+  y?: number;
+  /** Container className */
+  className?: string;
+  /** Trigger key */
+  animKey?: number;
+  /** Whether to prevent text from wrapping. Defaults to false for groups. */
+  noWrap?: boolean;
+}
+
+/**
+ * Renders multiple text segments with continuous stagger timing.
+ * Characters across segments animate in a seamless sequence.
+ *
+ * @example
+ * <SmoothTextGroup
+ *   segments={[
+ *     { text: "Kongu ", className: "text-rosewood" },
+ *     { text: "Thirumana", className: "text-rosewood" },
+ *     { text: "Maaligai", className: "text-rosewood", breakAfter: true },
+ *   ]}
+ * />
+ */
+export const SmoothTextGroup: React.FC<SmoothTextGroupProps> = ({
+  segments,
+  stagger = 0.04,
+  duration = 0.8,
+  delay = 0,
+  y = 40,
+  className = "",
+  animKey = 0,
+  noWrap = false,
+}) => {
+  let runningGraphemeCount = 0;
+
+  return (
+    <span className={className} style={{ display: "inline-flex", flexWrap: noWrap ? "nowrap" : "wrap", overflow: "hidden", lineHeight: "inherit" }}>
+      {segments.map((seg, si) => {
+        const segDelay = delay + runningGraphemeCount * stagger;
+        const segGraphemes = splitGraphemes(seg.text);
+        runningGraphemeCount += segGraphemes.length;
+
+        return (
+          <React.Fragment key={`seg-${si}-${animKey}`}>
+            <SmoothText
+              text={seg.text}
+              stagger={stagger}
+              duration={duration}
+              delay={segDelay}
+              y={y}
+              className={seg.className}
+              animKey={animKey}
+            />
+            {seg.breakAfter && (
+              <span style={{ flexBasis: "100%", height: 0 }} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </span>
+  );
+};
+
+export default SmoothText;

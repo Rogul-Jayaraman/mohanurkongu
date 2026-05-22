@@ -1,0 +1,225 @@
+/* ═══════════════════════════════════════════════════════════════
+   PRINT BIODATA — REDESIGN V4.0
+   A4 Portrait | Minimalist | Professional | Bilingual
+   ═══════════════════════════════════════════════════════════════ */
+
+@media print {
+  /* ─── Page Setup ─── */
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm 12mm 15mm;
+  }
+
+  body {
+    background: #FFFFFF !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color: #333333 !important;
+  }
+
+  /* ─── Main Container ─── */
+  .biodata-container {
+    max-width: 180mm !important;
+    margin: 0 auto !important;
+    background: #FFFFFF !important;
+    display: grid !important;
+    grid-template-rows: auto auto 1fr auto auto !important;
+    gap: 0 !important;
+  }
+
+  /* ─── Header (28mm) ─── */
+  .print-header {
+    width: 100% !important;
+    height: 28mm !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 4mm !important;
+    border-bottom: 0.5pt solid #E8E8E8 !important;
+  }
+
+  .print-header-title {
+    font-size: 18pt !important;
+    font-weight: 700 !important;
+    color: #2C3E50 !important;
+    letter-spacing: 0.3px !important;
+    line-height: 1.2 !important;
+  }
+
+  .print-header-regno {
+    font-size: 12pt !important;
+    font-weight: 600 !important;
+    color: #2C3E50 !important;
+  }
+
+  /* ─── Photo (150×150mm centered) ─── */
+  .photo-container {
+    width: 100% !important;
+    max-width: 150mm !important;
+    margin: 6mm auto !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  .print-photo {
+    width: 150mm !important;
+    height: 150mm !important;
+    object-fit: cover !important;
+    border: 1pt solid #E8E8E8 !important;
+    border-radius: 4mm !important;
+  }
+
+  .print-photo-fallback {
+    width: 150mm !important;
+    height: 150mm !important;
+    background: #F4F6F9 !important;
+    border: 1pt solid #E8E8E8 !important;
+    border-radius: 4mm !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .print-photo-fallback-text {
+    font-size: 48pt !important;
+    font-weight: 700 !important;
+    color: #2C3E50 !important;
+  }
+
+  /* ─── Content Grid (2-column, 180mm total) ─── */
+  .print-content-grid {
+    display: grid !important;
+    grid-template-columns: 87mm 87mm !important;
+    gap: 6mm !important;
+    width: 180mm !important;
+    margin: 6mm 0 !important;
+  }
+
+  /* ─── Section Styling ─── */
+  .print-section {
+    page-break-inside: avoid !important;
+    margin-bottom: 6mm !important;
+  }
+
+  .print-section-title {
+    font-size: 12pt !important;
+    font-weight: 600 !important;
+    color: #2C3E50 !important;
+    margin-bottom: 4mm !important;
+    padding-bottom: 2mm !important;
+    border-bottom: 0.5pt solid #E8E8E8 !important;
+  }
+
+  /* ─── Field Styling ─── */
+  .print-field {
+    display: grid !important;
+    grid-template-columns: 80px 1fr !important;
+    gap: 6mm !important;
+    margin-bottom: 4mm !important;
+    align-items: baseline !important;
+  }
+
+  .print-label {
+    font-size: 10pt !important;
+    font-weight: 600 !important;
+    color: #333333 !important;
+  }
+
+  .print-value {
+    font-size: 10pt !important;
+    font-weight: 400 !important;
+    color: #333333 !important;
+  }
+
+  /* ─── Horoscope Charts (full-width) ─── */
+  .print-charts {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    gap: 20mm !important;
+    margin: 6mm 0 !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-chart {
+    width: 70mm !important;
+    height: 70mm !important;
+    border: 0.5pt solid #E8E8E8 !important;
+    border-radius: 2mm !important;
+    padding: 2mm !important;
+    background: white !important;
+  }
+
+  .print-chart-title {
+    font-size: 12pt !important;
+    font-weight: 600 !important;
+    color: #2C3E50 !important;
+    text-align: center !important;
+    margin-bottom: 4mm !important;
+  }
+
+  .print-chart-label {
+    font-size: 8pt !important;
+    font-weight: 700 !important;
+    color: #2C3E50 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4em !important;
+    margin-bottom: 2mm !important;
+  }
+
+  /* ─── Footer (14mm) ─── */
+  .print-footer {
+    width: 100% !important;
+    height: 14mm !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-top: 6mm !important;
+    padding-top: 4mm !important;
+    border-top: 0.5pt solid #E8E8E8 !important;
+    font-size: 9pt !important;
+  }
+
+  .print-footer-org {
+    font-weight: 600 !important;
+    color: #2C3E50 !important;
+    text-transform: uppercase !important;
+  }
+
+  .print-footer-disclaimer {
+    font-size: 8pt !important;
+    color: #999999 !important;
+    margin-top: 1mm !important;
+  }
+
+  .print-footer-meta {
+    text-align: right !important;
+    font-weight: 600 !important;
+    color: #2C3E50 !important;
+  }
+
+  .print-footer-ref {
+    font-size: 8pt !important;
+    color: #2C3E50 !important;
+    margin-top: 1mm !important;
+  }
+
+  /* ─── Tamil Font Support ─── */
+  html[lang="ta"] .biodata-container,
+  html[lang="ta"] body {
+    font-family: 'Noto Sans Tamil', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  }
+
+  /* ─── Hide Non-Print Elements ─── */
+  .no-print {
+    display: none !important;
+  }
+
+  header, nav, footer, button, .action-buttons {
+    display: none !important;
+  }
+}

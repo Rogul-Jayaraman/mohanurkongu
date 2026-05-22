@@ -1,0 +1,57 @@
+import React from 'react';
+
+interface OrnamentalDividerProps {
+    /** Material Symbols icon name. @default "spa" */
+    icon?: string;
+    /** Tailwind text-color class for the icon. @default "text-gold-accent" */
+    iconColor?: string;
+    /** Tailwind text-color class for the gradient lines. @default "text-soft-gold" */
+    lineColor?: string;
+    /** Tailwind text-size class for the icon. @default "text-base" */
+    iconSize?: string;
+    /**
+     * When true, lines use `flex-1` to fill available width (hero sections).
+     * When false, lines use fixed `w-20` width.
+     * @default false
+     */
+    stretch?: boolean;
+    /** Extra wrapper Tailwind classes. */
+    className?: string;
+}
+
+/**
+ * Horizontal ornamental divider: gradient lines flanking a Material Symbol icon.
+ */
+const OrnamentalDivider: React.FC<OrnamentalDividerProps> = ({
+    icon = 'spa',
+    iconColor = 'text-gold-accent',
+    lineColor = 'text-soft-gold',
+    iconSize = 'text-base',
+    stretch = false,
+    className = '',
+}) => {
+    const lineBase = stretch ? 'flex-1' : 'w-20';
+
+    return (
+        <div className={`flex items-center justify-center gap-4 ${className}`}>
+            {/* Left line */}
+            <div
+                className={`${lineBase} h-px ${lineColor} opacity-60`}
+                style={{ background: 'linear-gradient(to right, transparent, currentColor)' }}
+                aria-hidden="true"
+            />
+            {/* Center icon */}
+            <span className={`material-symbols-outlined leading-none ${iconSize} ${iconColor}`} aria-hidden="true">
+                {icon}
+            </span>
+            {/* Right line */}
+            <div
+                className={`${lineBase} h-px ${lineColor} opacity-60`}
+                style={{ background: 'linear-gradient(to left, transparent, currentColor)' }}
+                aria-hidden="true"
+            />
+        </div>
+    );
+};
+
+export default OrnamentalDivider;

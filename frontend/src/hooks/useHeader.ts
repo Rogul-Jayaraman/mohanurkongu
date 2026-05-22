@@ -1,0 +1,145 @@
+import { useState, useEffect, useRef } from 'react';
+
+export const useHeader = (startVisible = true) => {
+    const [isScrolled, setIsScrolled] = useState(false);
+    const [isVisible, setIsVisible] = useState(startVisible);
+    const [isSecondaryVisible, setIsSecondaryVisible] = useState(startVisible);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isLangOpen, setIsLangOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const lastScrollY = useRef(0);
+    const scrollDownAccumulator = useRef(0);
+    const scrollUpAccumulator = useRef(0);
+    const seqTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const seqStateRef = useRef<'idle' | 'showing' | 'hiding'>('idle');
+    const isVisibleRef = useRef(startVisible);
+    const isSecondaryVisibleRef = useRef(startVisible);
+    const wasHeroStartRef = useRef(startVisible);
+    const HIDE_SCROLL_DISTANCE = 300;
+    const SHOW_SCROLL_DISTANCE = 0;
+
+    const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+    const toggleLang = () => setIsLangOpen(!isLangOpen);
+
+    const closeAll = () => {
+        setIsMobileMenuOpen(false);
+        setIsLangOpen(false);
+    };
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            setIsScrolled(currentScrollY > 20);
+
+            const clearSeq = () => {
+                if (seqTimeoutRef.current) {
+                    clearTimeout(seqTimeoutRef.current);
+                    seqTimeoutRef.current = null;
+                }
+            };
+
+            if (currentScrollY > 250) {
+                if (currentScrollY > lastScrollY.current) {
+                    // Scrolling down past hero
+                    scrollUpAccumulator.current = 0;
+                    scrollDownAccumulator.current += currentScrollY - lastScrollY.current;
+                    if (scrollDownAccumulator.current > HIDE_SCROLL_DISTANCE) {
+                        if (seqStateRef.current === 'hiding') return;
+                        if (!isVisibleRef.current) return;
+                        seqStateRef.current = 'hiding';
+                        clearSeq();
+                        setIsSecondaryVisible(false);
+                        isSecondaryVisibleRef.current = false;
+
+                        if (wasHeroStartRef.current) {
+                            wasHeroStartRef.current = false;
+                            seqTimeoutRef.current = setTimeout(() => {
+                                setIsVisible(false);
+                                isVisibleRef.current = false;
+                                seqStateRef.current = 'idle';
+                                seqTimeoutRef.current = null;
+                            }, 300);
+                        } else {
+                            setIsVisible(false);
+                            isVisibleRef.current = false;
+                            seqStateRef.current = 'idle';
+                        }
+                    }
+                } else {
+                    // Scrolling up mid-page
+                    scrollDownAccumulator.current = 0;
+                    scrollUpAccumulator.current += lastScrollY.current - currentScrollY;
+                    if (scrollUpAccumulator.current < SHOW_SCROLL_DISTANCE) return;
+                    scrollUpAccumulator.current = 0;
+                    wasHeroStartRef.current = false;
+                    if (seqStateRef.current === 'showing') return;
+                    if (isVisibleRef.current && isSecondaryVisibleRef.current) return;
+                    seqStateRef.current = 'showing';
+                    clearSeq();
+                    setIsVisible(true);
+                    isVisibleRef.current = true;
+                    setIsSecondaryVisible(true);
+                    isSecondaryVisibleRef.current = true;
+                    seqStateRef.current = 'idle';
+                }
+            } else if (startVisible) {
+                // In hero section (only for pages that start visible like landing)
+                scrollDownAccumulator.current = 0;
+                scrollUpAccumulator.current = 0;
+                wasHeroStartRef.current = true;
+                if (seqStateRef.current === 'showing') return;
+                if (isVisibleRef.current && isSecondaryVisibleRef.current) return;
+                seqStateRef.current = 'showing';
+                clearSeq();
+                setIsVisible(true);
+                isVisibleRef.current = true;
+                seqTimeoutRef.current = setTimeout(() => {
+                    setIsSecondaryVisible(true);
+                    isSecondaryVisibleRef.current = true;
+                    seqStateRef.current = 'idle';
+                    seqTimeoutRef.current = null;
+                }, 300);
+            }
+
+            lastScrollY.current = currentScrollY;
+        };
+
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsLangOpen(false);
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        document.addEventListener("mousedown", handleClickOutside);
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            document.removeEventListener("mousedown", handleClickOutside);
+            if (seqTimeoutRef.current) clearTimeout(seqTimeoutRef.current);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (isMobileMenuOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+    }, [isMobileMenuOpen]);
+
+    return {
+        isScrolled,
+        isVisible,
+        isSecondaryVisible,
+        isMobileMenuOpen,
+        isLangOpen,
+        dropdownRef,
+        setIsLangOpen,
+        toggleMobileMenu,
+        toggleLang,
+        closeAll
+    };
+};
+
+export default useHeader;

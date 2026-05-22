@@ -1,0 +1,62 @@
+import React from 'react';
+import { useLazyImage } from '@/hooks/useLazyImage';
+
+interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+    src: string;
+    placeholder?: string; // Optional low-res placeholder or color
+    rootMargin?: string;
+    threshold?: number;
+    priority?: boolean;
+    className?: string;
+    containerClassName?: string;
+}
+
+/**
+ * A wrapper component for lazy loading images with smooth fade-in transitions.
+ */
+const LazyImage: React.FC<LazyImageProps> = ({
+    src,
+    alt,
+    placeholder,
+    rootMargin,
+    threshold,
+    priority = false,
+    className = '',
+    containerClassName = '',
+    style,
+    ...props
+}) => {
+    const { ref, source, isLoaded } = useLazyImage({ src, rootMargin, threshold, priority });
+
+    return (
+        <div
+            ref={ref}
+            className={`relative overflow-hidden ${containerClassName}`}
+            style={{ ...style }} // Allow passing styles to container if needed
+        >
+            {/* Placeholder / Background */}
+            <div
+                className={`absolute inset-0 bg-gray-200 transition-opacity duration-700 ${isLoaded ? 'opacity-0' : 'opacity-100'}`}
+                style={{
+                    backgroundImage: placeholder ? `url(${placeholder})` : undefined,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                }}
+            />
+
+            {/* Actual Image */}
+            <div className={`w-full h-full transition-opacity duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+                {source && (
+                    <img
+                        src={source}
+                        alt={alt || ''}
+                        className={className}
+                        {...props}
+                    />
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default LazyImage;

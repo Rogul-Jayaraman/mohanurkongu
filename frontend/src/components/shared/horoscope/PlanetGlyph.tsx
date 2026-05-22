@@ -1,0 +1,48 @@
+import React from 'react';
+
+const GLYPHS: Record<string, string> = {
+  Sun: '\u2609',
+  Moon: '\u263D',
+  Mars: '\u2642',
+  Mercury: '\u263F',
+  Jupiter: '\u2643',
+  Venus: '\u2640',
+  Saturn: '\u2644',
+  Rahu: '\u260A',
+  Ketu: '\u260B',
+};
+
+export default React.memo(function PlanetGlyph({
+  name,
+  shortName,
+  size = 14,
+  color,
+}: {
+  name: string;
+  shortName: string;
+  size?: number;
+  color?: string;
+}) {
+  const glyph = GLYPHS[name];
+
+  if (glyph) {
+    return (
+      <span
+        className="inline-flex items-center justify-center leading-none font-serif"
+        style={{ fontSize: size, color: color || 'var(--color-dark-brown)' }}
+        aria-label={name}
+      >
+        {glyph}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex items-center justify-center leading-none font-bold"
+      style={{ fontSize: size * 0.85, color: color || 'var(--color-dark-brown)' }}
+    >
+      {shortName}
+    </span>
+  );
+});

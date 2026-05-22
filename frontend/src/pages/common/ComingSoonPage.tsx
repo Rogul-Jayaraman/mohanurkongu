@@ -1,0 +1,67 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+
+export const ComingSoonPage: React.FC = () => {
+  const { t } = useTranslation('landing');
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute inset-0 bg-ivory opacity-50" />
+      <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.03] scale-125 pointer-events-none" />
+      
+      {/* Shimmer Overlay */}
+      <motion.div 
+        animate={{ x: ['-100%', '100%'] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+        className="absolute inset-0 z-5 pointer-events-none opacity-10"
+        style={{
+          background: 'linear-gradient(110deg, transparent 40%, rgba(212,175,55,0.4) 50%, transparent 60%)',
+          backgroundSize: '200% 100%'
+        }}
+      />
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative z-10 flex flex-col items-center text-center max-w-md"
+      >
+        <motion.div
+          animate={{ rotate: [0, 10, -10, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+          className="mb-8"
+        >
+          <span className="material-symbols-outlined text-7xl text-gold-500 drop-shadow-sm text-shine">
+            auto_awesome
+          </span>
+        </motion.div>
+
+        <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4 text-rosewood">
+          {t('common.comingSoon')}
+        </h1>
+        
+        <p className="text-rosewood/60 font-body mb-10 leading-relaxed">
+          We're working hard to bring this feature to you. Stay tuned for something amazing!
+        </p>
+
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 px-6 py-3 bg-linear-to-br from-rosewood/80 via-dark-rosewood/95 to-rosewood/80 text-ivory rounded-full font-bold transition-all shadow-lg shadow-rosewood/20 hover:scale-[1.02] active:scale-95 group relative overflow-hidden"
+        >
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+          <span>Go Back</span>
+        </button>
+      </motion.div>
+
+      {/* Decorative Circles */}
+      <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-gold-500/5 blur-3xl" />
+      <div className="absolute -bottom-24 -left-24 w-64 h-64 rounded-full bg-rosewood/5 blur-3xl" />
+    </div>
+  );
+};
+
+export default ComingSoonPage;

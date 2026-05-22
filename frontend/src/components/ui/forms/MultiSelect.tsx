@@ -1,0 +1,202 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+
+export interface MultiSelectOption {
+    value: string;
+    label: {
+        en: string;
+        ta: string;
+    };
+}
+
+interface MultiSelectProps {
+    label: string;
+    options: MultiSelectOption[];
+    values: string[];
+    onChange: (values: string[]) => void;
+    placeholder?: string;
+    required?: boolean;
+    error?: string;
+    disabled?: boolean;
+    className?: string;
+}
+
+/**
+ * A reusable, premium-styled multi-select component.
+ * Part of the Heritage Design System.
+ * Matches the style of Select.tsx and Input.tsx.
+ */
+const MultiSelect: React.FC<MultiSelectProps> = ({
+    label,
+    options,
+    values,
+    onChange,
+    placeholder,
+    required = false,
+    error,
+    disabled = false,
+    className = ''
+}) => {
+    const { t, i18n } = useTranslation(['common']);
+    const lang = i18n.language as 'en' | 'ta';
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    const filteredOptions = options.filter(opt => {
+        const query = searchQuery.toLowerCase();
+        return (opt.label.en.toLowerCase().includes(query) || opt.label.ta.toLowerCase().includes(query));
+    });
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            if (searchInputRef.current) {
+                setTimeout(() => searchInputRef.current?.focus(), 50);
+            }
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
+
+    const toggleOption = (val: string) => {
+        const newValues = values.includes(val) 
+            ? values.filter(v => v !== val)
+            : [...values, val];
+        onChange(newValues);
+    };
+
+    const defaultPlaceholder = placeholder || t('common:select_option');
+
+    return (
+        <div className={`space-y-1 relative w-full ${className}`} ref={containerRef}>
+            {/* Standardized Label */}
+            <label className="block text-[11px] sm:text-xs font-bold text-rosewood tracking-tight ml-1">
+                {label}
+                {required && <span className="text-gold ml-1 text-xs">*</span>}
+            </label>
+
+            <div 
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                className={`
+                    min-h-[56px] w-full px-4 py-2 bg-white border rounded-xl cursor-pointer
+                    flex flex-wrap items-center gap-2 transition-all duration-300
+                    shadow-sm shadow-black/2
+                    ${disabled ? 'bg-slate-50 cursor-not-allowed text-slate-400' : ''}
+                    ${error 
+                        ? 'border-red-300 ring-4 ring-red-500/5' 
+                        : isOpen 
+                            ? 'border-rosewood ring-4 ring-rosewood/5' 
+                            : 'border-slate-200 hover:border-gold-soft/50'
+                    }
+                `}
+            >
+                {values.length === 0 ? (
+                    <span className="text-sm text-slate-400 font-normal">
+                        {defaultPlaceholder}
+                    </span>
+                ) : (
+                    <div className="flex flex-wrap gap-1.5 py-1">
+                        {values.map(v => {
+                            const opt = options.find(o => o.value === v);
+                            return (
+                                <span 
+                                    key={v}
+                                    className="bg-rosewood/5 text-rosewood text-[11px] font-bold px-2 py-1 rounded-lg flex items-center gap-1.5 border border-rosewood/10"
+                                >
+                                    <span>{opt?.label[lang] || opt?.label.en}</span>
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleOption(v);
+                                        }}
+                                        className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-rosewood/10 transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">close</span>
+                                    </button>
+                                </span>
+                            );
+                        })}
+                    </div>
+                )}
+                
+                <div className="ml-auto pl-2 flex items-center">
+                    <span className={`material-symbols-outlined text-xl transition-transform duration-300 ${isOpen ? 'rotate-180 text-rosewood' : 'text-slate-400'}`}>
+                        expand_more
+                    </span>
+                </div>
+            </div>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 4, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                        className="absolute z-50 top-full w-full bg-white border border-gold-soft/20 rounded-xl shadow-2xl shadow-black/15 flex flex-col max-h-[300px] ring-1 ring-black/5 overflow-hidden"
+                    >
+                        <div className="p-3 bg-ivory/30 border-b border-slate-100 flex items-center gap-2 group">
+                            <span className="material-symbols-outlined text-rosewood/50 group-focus-within:text-rosewood transition-colors">search</span>
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                className="flex-1 text-sm bg-transparent outline-none text-slate-700 placeholder:text-gold-soft font-medium"
+                                placeholder={t('common:search')}
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                autoComplete="off"
+                            />
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto custom-scrollbar py-1">
+                            {filteredOptions.length > 0 ? filteredOptions.map(opt => {
+                                const isSelected = values.includes(opt.value);
+                                return (
+                                    <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => toggleOption(opt.value)}
+                                        className={`
+                                            w-full flex items-center justify-between px-4 py-2.5 text-sm text-left transition-all outline-none
+                                            ${isSelected 
+                                                ? 'bg-rosewood/5 text-rosewood font-black' 
+                                                : 'text-slate-600 hover:bg-gold-soft/5 hover:text-rosewood font-medium'
+                                            }
+                                        `}
+                                    >
+                                        <span className="truncate flex-1">{opt.label[lang] || opt.label.en}</span>
+                                        <span className={`material-symbols-outlined text-lg ${isSelected ? 'text-rosewood' : 'text-gold/20'}`}>
+                                            {isSelected ? 'check_circle' : 'radio_button_unchecked'}
+                                        </span>
+                                    </button>
+                                );
+                            }) : (
+                                <div className="px-4 py-8 text-center bg-slate-50/30">
+                                    <p className="text-xs font-bold text-slate-400 tracking-wider lowercase">
+                                        {t('common:no_results')}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Error Message */}
+            {error && (
+                <p className="text-[10px] font-bold text-rose-500 ml-1 mt-1 animate-in fade-in slide-in-from-top-1">
+                    {error}
+                </p>
+            )}
+        </div>
+    );
+};
+
+export default MultiSelect;

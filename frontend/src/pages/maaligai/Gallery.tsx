@@ -1,0 +1,15 @@
+import React from 'react';
+import { GalleryHero, GalleryGrid, Memories, GalleryCTA } from '@/components/features/maaligai/Gallery';
+
+const GalleryPage: React.FC = () => {
+  return (
+    <div className="bg-ivory overflow-hidden">
+      <GalleryHero />
+      <GalleryGrid />
+      <Memories />
+      <GalleryCTA />
+    </div>
+  );
+};
+
+export default GalleryPage;

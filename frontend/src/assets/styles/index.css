@@ -1,0 +1,717 @@
+@import url('https://fonts.googleapis.com/css2?family=Catamaran:wght@400;700&family=Great+Vibes&family=Kavivanar&family=Namdhinggo:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&family=Mukta+Malar:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+@import "tailwindcss";
+
+@theme {
+  --font-body: "Manrope", "Mukta Malar", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Namdhinggo", "Catamaran", ui-sans-serif, system-ui, sans-serif;
+  --font-decorative: "Great Vibes", "Kavivanar", cursive;
+
+  /* Aliases for backward compatibility if needed, though we should update usage */
+  --font-manrope: var(--font-body);
+  --font-serif: var(--font-heading);
+  --font-script: var(--font-decorative);
+  --font-tamil-body: "Mukta Malar", sans-serif;
+  --font-tamil-serif: "Catamaran", serif;
+
+  --color-primary: #F3E6B3;  /* Maps to soft-gold in reference */
+  --color-primary-gold: #F3E6B3;
+  --color-rosewood: #8B1D3D;  /* Reference app's rosewood */
+  --color-gold-300: #ffe699;
+  --color-gold-400: #e6c55c;
+  --color-gold-500: #D4AF37;
+  --color-gold-600: #B8960F;
+  --color-ivory: #FCF9F2;
+  --color-dark-brown: #3A2F2F;
+  --color-sage: #8A9A5B;
+
+  --animate-marquee: marquee 10s ease-in-out infinite;
+  --animate-marquee-reverse: marquee-reverse 10s ease-in-out infinite;
+  --animate-text-shine: text-shine 3s linear infinite;
+  --animate-shimmer-sweep: shimmer-sweep 2s ease-in-out infinite;
+  --flex-2: 2 2 0%;
+  --flex-3: 3 3 0%;
+
+  --text-nano: 0.5rem;      /* 8px */
+  --text-micro: 0.5625rem;   /* 9px */
+  --text-tiny: 0.625rem;     /* 10px */
+  --text-xs-tight: 0.6875rem; /* 11px */
+  --text-sm-tight: 0.8125rem; /* 13px */
+  --text-display-lg: 4.5rem;  /* 72px */
+  --text-display-md: 3.5rem;  /* 56px */
+  --text-giant: 4rem;         /* 64px */
+
+  --tracking-widest-plus: 0.2em;
+
+  --radius-4xl: 2rem;
+  --spacing-30: 7.5rem; /* 120px */
+
+  --breakpoint-xs: 400px;
+  --breakpoint-nav: 1000px;
+
+  /* Maaligai Specific Colors */
+  --color-soft-gold: #F3E6B3;
+  --color-gold-accent: #D4AF37;
+  --color-rose-beige: #D8A7A7;
+  /* --color-rosewood: #8B1D3D; (Already defined differently, sticking to original for now) */
+  --color-logo-dark: #7A4A3B;
+  --color-ivory-tint: #FDFBF4;
+  
+  /* Background Colors */
+  --color-background-light: #FBF6E8;
+  --color-background-dark: #201E12;
+  
+  /* Secondary Colors */
+  --color-sage-tint: #F4F7F0;
+  --color-nav-gray: #4B5563;
+  --color-deep-sage: #4A6E4A;
+  --color-dark-rosewood: #65152C;
+  --color-portrait-gray: #949496;
+  --color-sage-green: #C9D6C3;
+  --color-dark-gray: #3A3A3A;
+  
+  /* Typography */
+  --font-lato: "Lato", sans-serif;
+  --font-manrope: var(--font-body);
+  
+  /* Easing */
+  --ease-cinematic: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- Utility Classes --- */
+.bg-white\/60 { background-color: rgba(255, 255, 255, 0.6); }
+.backdrop-blur-xl { backdrop-filter: blur(24px); }
+.rounded-\[3rem\] { border-radius: 3rem; }
+.border-primary\/20 { border-color: rgba(243, 230, 179, 0.2); }
+.border-primary\/40 { border-color: rgba(243, 230, 179, 0.4); }
+.text-primary { color: var(--color-primary, #F3E6B3); }
+.text-primary\/60 { color: rgba(243, 230, 179, 0.6); }
+.text-primary\/40 { color: rgba(243, 230, 179, 0.4); }
+.border-gold\/30 { border-color: rgba(212, 175, 55, 0.3); }
+
+.font-variation-fill {
+  font-variation-settings: 'FILL' 1;
+}
+
+.font-variation-light {
+  font-variation-settings: 'wght' 300;
+}
+
+.transition-variation {
+  transition: font-variation-settings 0.3s ease;
+}
+
+.bg-rosewood-gradient {
+  background: linear-gradient(to bottom right, color-mix(in srgb, var(--color-rosewood) 80%, transparent), color-mix(in srgb, var(--color-dark-rosewood) 95%, transparent), color-mix(in srgb, var(--color-rosewood) 80%, transparent));
+  color: var(--color-ivory);
+}
+
+.bg-ivory-gold-gradient {
+  background: linear-gradient(to bottom right, var(--color-ivory), color-mix(in srgb, var(--color-gold-500) 40%, transparent));
+  color: var(--color-rosewood);
+  border: 1px solid color-mix(in srgb, var(--color-gold-500) 10%, transparent);
+}
+
+
+.text-shine {
+  background: linear-gradient(
+    to right,
+    #8B1D3D 20%,
+    #D4AF37 40%,
+    #D4AF37 60%,
+    #8B1D3D 80%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: text-shine 3s linear infinite;
+}
+
+.header-optimized {
+  transition: background-color 0.3s ease, 
+              padding 0.3s ease, 
+              box-shadow 0.3s ease,
+              border-color 0.3s ease;
+}
+
+/* --- SmoothText: Character Reveal Keyframe --- */
+
+@keyframes smoothReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(40px);
+    filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0px);
+    filter: blur(0px);
+  }
+}
+
+/* --- Heritage Shimmer: Rosewood & Gold Sweep --- */
+
+@keyframes shimmer-glow {
+  0%   { left: -40%; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+
+@keyframes shimmer-glow-reverse {
+  0%   { right: -40%; left: auto; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { right: 100%; left: auto; opacity: 0; }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marquee-reverse {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes text-shine {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.shimmer-line {
+  position: relative;
+  height: 1.5px;
+  width: 100%;
+  max-width: 250px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(107, 0, 40, 0.15) 15%,
+    rgba(212, 175, 55, 0.5) 50%,
+    rgba(107, 0, 40, 0.15) 85%,
+    transparent 100%
+  );
+  opacity: 1;
+  transform: scaleX(1);
+  transform-origin: center;
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+/* Sharp white highlight streak */
+.shimmer-line::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -30%;
+  width: 25%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 40%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(255, 255, 255, 0.6) 60%,
+    transparent 100%
+  );
+  filter: blur(0.5px);
+  opacity: 1;
+  z-index: 2;
+  animation: shimmer-glow 1.8s ease-in-out infinite;
+}
+
+/* Warm golden glow trail */
+.shimmer-line::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: -40%;
+  width: 40%;
+  height: calc(100% + 6px);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(212, 175, 55, 0.8) 0%,
+    rgba(255, 230, 153, 0.4) 50%,
+    transparent 75%
+  );
+  filter: blur(2px);
+  opacity: 1;
+  z-index: 1;
+  animation: shimmer-glow 2.5s ease-in-out infinite 0.3s;
+}
+
+
+@custom-variant dark (&:is(.dark *));
+
+html {
+  overflow-x: hidden;
+  /* Removed global smooth scroll to prevent conflicts with SPA route transitions */
+}
+
+body {
+  background-color: var(--color-ivory);
+  color: var(--color-dark-brown);
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+.glass {
+  background: rgba(252, 249, 242, 0.85); /* Ivory base */
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3); /* Gold accent */
+}
+
+.glass-dark {
+  background: rgba(107, 0, 40, 0.95); /* Rosewood base */
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.dot-grid {
+  background-image: radial-gradient(rgba(107, 0, 40, 0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transform: skewX(-20deg);
+  transition: 0.5s;
+}
+
+.btn-shine:hover::after {
+  left: 150%;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.mask-fade-h {
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+/* Tamil text needs to be slightly smaller to match English visual weight */
+.is-tamil {
+  font-size: 0.8em;
+}
+
+/* Prevent Tamil from being too large on mobile */
+.text-ta-adjusted {
+  font-size: 0.7rem;
+}
+
+/* Tamil Keyboard Specific */
+.tamil-keyboard-key {
+  font-size: 0.7rem !important;
+}
+
+@media (max-width: 768px) {
+  .tamil-keyboard-key {
+    font-size: 0.6rem !important;
+  }
+}
+
+/* --- Reveal Animations --- */
+.reveal-frame {
+  display: block;
+  visibility: hidden;
+}
+.reveal-frame.is-ready {
+  visibility: visible;
+}
+.reveal-item {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 1s var(--ease-cinematic), transform 1s var(--ease-cinematic);
+  will-change: opacity, transform;
+}
+.reveal-item-left {
+  opacity: 0;
+  transform: translateX(-40px);
+  transition: opacity 1.2s var(--ease-cinematic), transform 1.2s var(--ease-cinematic);
+  will-change: opacity, transform;
+}
+.reveal-item-right {
+  opacity: 0;
+  transform: translateX(40px);
+  transition: opacity 1.2s var(--ease-cinematic), transform 1.2s var(--ease-cinematic);
+  will-change: opacity, transform;
+}
+.reveal-frame.is-visible .reveal-item,
+.reveal-frame.is-visible .reveal-item-left,
+.reveal-frame.is-visible .reveal-item-right {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+/* Animation Delays */
+.delay-100 { transition-delay: 100ms; }
+.delay-200 { transition-delay: 200ms; }
+.delay-300 { transition-delay: 300ms; }
+.delay-400 { transition-delay: 400ms; }
+.delay-500 { transition-delay: 500ms; }
+
+/* --- Fade In --- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+.animate-fadeInUp {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%) skewX(-20deg); }
+  100% { transform: translateX(200%) skewX(-20deg); }
+}
+.shimmer-loader {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(252, 249, 242, 0) 20%,
+    rgba(252, 249, 242, 0.8) 50%,
+    rgba(252, 249, 242, 0) 80%,
+    transparent 100%
+  );
+  animation: shimmer 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  z-index: 5;
+}
+
+/* Base Skeleton Utility */
+.skeleton {
+  @apply bg-gold-500/5 relative overflow-hidden rounded-md;
+}
+
+.skeleton::after {
+  content: "";
+  @apply absolute inset-0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(212, 175, 55, 0) 25%,
+    rgba(212, 175, 55, 0.1) 50%,
+    rgba(212, 175, 55, 0) 75%,
+    transparent 100%
+  );
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* --- Custom Animations --- */
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(-5%) translateX(-50%); }
+  50% { transform: translateY(0) translateX(-50%); }
+}
+.animate-bounce-slow {
+  animation: bounce-slow 3s ease-in-out infinite;
+}
+
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(0.98); }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 3s ease-in-out infinite;
+}
+
+/* --- Kolam Pattern --- */
+.kolam-pattern {
+  background-image: radial-gradient(var(--color-soft-gold) 1.5px, transparent 1.5px);
+  background-size: 30px 30px;
+  opacity: 0.15;
+}
+
+.kolam-pattern-overlay {
+  background-image: radial-gradient(var(--color-soft-gold) 1.5px, transparent 1.5px);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.02));
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.02));
+  opacity: 0.1;
+}
+
+.kolam-border {
+  position: relative;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+.kolam-border::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 0.5px dashed rgba(212, 175, 55, 0.15);
+  pointer-events: none;
+}
+
+/* --- Floral Divider --- */
+.floral-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--color-soft-gold), transparent);
+  position: relative;
+}
+.floral-divider::after {
+  content: "local_florist";
+  font-family: 'Material Symbols Outlined';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 0 10px;
+  color: var(--color-soft-gold);
+  font-size: 1.1rem;
+}
+
+/* --- Welcome Divider --- */
+.welcome-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(212, 175, 55, 0.5), transparent);
+  position: relative;
+  width: 120px;
+  margin: 1rem auto;
+}
+.welcome-divider::after {
+  content: "spa";
+  font-family: 'Material Symbols Outlined';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--color-gold-accent);
+  font-size: 1rem;
+  background: transparent;
+}
+
+/* --- Gallery Grid --- */
+.gallery-matrix {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  margin: 0 auto;
+}
+@media (min-width: 1024px) {
+  .gallery-matrix { gap: 16px; }
+  .grid1 { grid-template-rows: repeat(4, 187.5px); }
+  .grid2 { grid-template-rows: repeat(5, 150px); }
+  .grid3 { grid-template-rows: repeat(5, 150px); }
+  .grid4 { grid-template-rows: repeat(5, 150px); }
+  .grid5 { grid-template-rows: repeat(5, 150px); }
+  .grid6 { grid-template-rows: repeat(4, 187.5px); }
+  .grid7 { grid-template-rows: repeat(5, 150px); }
+}
+
+.img-wrapper {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  position: relative;
+}
+@media (min-width: 1024px) {
+  .img-wrapper {
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(122, 74, 59, 0.12);
+  }
+}
+.img-wrapper img {
+  width: 100%;
+  border: 2px solid var(--color-soft-gold);
+  border-radius: 12px;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* --- Archive Scroll --- */
+.archive-scroll {
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--color-gold-accent) rgba(139, 29, 61, 0.05) !important;
+  -ms-overflow-style: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.archive-scroll::-webkit-scrollbar { width: 6px !important; display: block !important; }
+.archive-scroll::-webkit-scrollbar-track { background: var(--color-ivory-tint); border-radius: 0; }
+.archive-scroll::-webkit-scrollbar-thumb { background-color: var(--color-gold-accent); border-radius: 20px; }
+
+/* --- Safe Hover Lift --- */
+.safe-hover-lift {
+  transition: transform 0.4s var(--ease-cinematic);
+}
+@media (min-width: 1024px) {
+  .safe-hover-lift:hover {
+    transform: translateY(-8px);
+  }
+}
+
+/* --- Motion Reduced --- */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-item, .reveal-item-left, .reveal-item-right {
+    transition: opacity 0.3s ease !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* --- Section Spacing --- */
+:root {
+  --section-spacing-y: 4rem;
+}
+@media (min-width: 768px) {
+  :root {
+    --section-spacing-y: 6rem;
+  }
+}
+.section-spacing {
+  padding-block: var(--section-spacing-y);
+}
+
+/* --- Custom Utility Classes --- */
+.bg-rosewood-gradient {
+  background: linear-gradient(to bottom right, rgba(139, 29, 61, 0.8), rgba(101, 21, 44, 0.95), rgba(139, 29, 61, 0.8));
+  color: var(--color-ivory);
+  border: 1px solid rgba(139, 29, 61, 0.2);
+}
+
+.bg-ivory-gold-gradient {
+  background: linear-gradient(to bottom right, var(--color-ivory), rgba(212, 175, 55, 0.4));
+  color: var(--color-rosewood);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+}
+
+.perspective-1000 { perspective: 1000px; }
+.preserve-3d { transform-style: preserve-3d; }
+
+/* === Premium OTP Input System === */
+.otp-input-box {
+  height: 65px;
+  min-width: 0;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border-radius: 18px;
+  border: 1.5px solid var(--color-rosewood);
+  background: white;
+  outline: none;
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--color-dark-rosewood);
+  caret-color: var(--color-rosewood);
+}
+
+.otp-input-box:focus {
+  border-color: var(--color-rosewood);
+  box-shadow: 0 0 0 4px rgba(139, 29, 61, 0.12);
+  background: white;
+}
+.otp-input-box--filled {
+  border-color: var(--color-gold);
+  background: linear-gradient(to bottom, white, color-mix(in srgb, var(--color-gold-soft), transparent 70%));
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
+}
+.otp-input-box--error {
+  border-color: #fca5a5;
+  background: rgba(254, 242, 242, 0.5);
+  animation: otp-shake 300ms ease-in-out;
+}
+@keyframes otp-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+@media (max-width: 1023px) {
+  .otp-input-box {
+    height: 64px;
+    font-size: 1.5rem;
+    border-radius: 16px;
+  }
+}
+@media (max-width: 767px) {
+  .otp-input-box {
+    height: 56px;
+    font-size: 1.25rem;
+    border-radius: 14px;
+  }
+}
+@media (max-width: 480px) {
+  .otp-input-box {
+    height: 48px;
+    font-size: 1.125rem;
+    border-radius: 12px;
+  }
+}
+html[lang="ta"] .otp-input-box {
+  font-size: 1.5rem;
+}
+@media (max-width: 480px) {
+  html[lang="ta"] .otp-input-box {
+    font-size: 1.125rem;
+  }
+}
+
+/* OTP grid tiny screen: shrink gap */
+@media (max-width: 400px) {
+  .otp-input-box {
+    height: 44px;
+    font-size: 1rem;
+    border-radius: 10px;
+  }
+}
+@media (max-width: 767px) {
+  html[lang="ta"] .otp-input-box {
+    font-size: 1.25rem;
+  }
+}
+@media (max-width: 480px) {
+  html[lang="ta"] .otp-input-box {
+    font-size: 1rem;
+  }
+}
+
+/* === Premium Glass === */
+.glass-warm {
+  background: rgba(255, 252, 247, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid color-mix(in srgb, var(--color-gold), transparent 70%);
+  box-shadow: 0 20px 60px rgba(60, 30, 30, 0.12);
+}
+/*-----------------------------------------------------------------*/

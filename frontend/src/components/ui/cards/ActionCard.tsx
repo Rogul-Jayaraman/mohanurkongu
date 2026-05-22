@@ -1,0 +1,29 @@
+import React from 'react';
+import { Card } from './Card';
+import type { LucideIcon } from 'lucide-react';
+
+interface ActionCardProps {
+    title: string;
+    description?: string;
+    icon: LucideIcon | React.ReactNode;
+    onClick?: () => void;
+    className?: string;
+    delay?: number;
+    variant?: 'white' | 'ivory';
+}
+
+export const ActionCard: React.FC<ActionCardProps> = (props) => {
+    const { title, description, icon, onClick, className = '', delay = 0 } = props;
+    return (
+        <Card
+            variant="action"
+            title={title}
+            description={description}
+            icon={icon}
+            onClick={onClick}
+            delay={delay}
+            className={className}
+            animate
+        />
+    );
+};

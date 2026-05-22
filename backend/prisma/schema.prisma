@@ -1,0 +1,674 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS
+enum ProfileFor {
+  MYSELF
+  MY_SON
+  MY_DAUGHTER
+  MY_SISTER
+  MY_BROTHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum MaritalStatus {
+  NEVER_MARRIED
+  DIVORCED
+  WIDOWED
+}
+
+enum Diet {
+  VEGETARIAN
+  NON_VEGETARIAN
+}
+
+enum Complexion {
+  VERY_FAIR
+  FAIR
+  WHEATISH
+  DARK
+  NOT_SPECIFIED
+}
+
+enum JobSector {
+  PRIVATE
+  FOREIGN
+  BUSINESS
+  DOCTOR
+  GOVT
+  SELF_EMPLOYED
+  OTHERS
+}
+
+enum Dosham {
+  NO
+  CHEVVAI
+  NAGA
+  KALA_SARPA
+  RAHU_KETHU
+  OTHERS
+}
+
+enum Residence {
+  OWN_HOUSE
+  RENTED
+}
+
+enum AccountPlan {
+  BASIC
+  PREMIUM
+}
+
+enum AccountRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum ProfileVisibility {
+  ACTIVE
+  INACTIVE
+  DRAFT
+}
+
+enum VerificationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum HoroscopeMode {
+  CREATE
+  UPLOAD
+}
+
+enum Rasi {
+  MESHA
+  VRISHABHA
+  MITHUNA
+  KATAKA
+  SIMHA
+  KANYA
+  TULA
+  VRISCHIKA
+  DHANUS
+  MAKARA
+  KUMBHA
+  MEENA
+}
+
+enum Nakshatra {
+  ASHWINI
+  BHARANI
+  KRITTIKA
+  ROHINI
+  MRIGASHIRA
+  ARDRA
+  PUNARVASU
+  PUSHYA
+  ASHLESHA
+  MAGHA
+  PURVA_PHALGUNI
+  UTTARA_PHALGUNI
+  HASTA
+  CHITRA
+  SWATI
+  VISHAKHA
+  ANURADHA
+  JYESHTHA
+  MULA
+  PURVA_ASHADHA
+  UTTARA_ASHADHA
+  SHRAVANA
+  DHANISHTHA
+  SHATABHISHA
+  PURVA_BHADRAPADA
+  UTTARA_BHADRAPADA
+  REVATI
+}
+
+enum Kulam {
+  AANTHUVAN_KULAM
+  AZHAGU_KULAM
+  AATHE_KULAM
+  AANTHAI_KULAM
+  AADAR_KULAM
+  AAVAN_KULAM
+  EENJAN_KULAM
+  OZUKKAR_KULAM
+  OOTHAALAR_KULAM
+  KANNAKKAN_KULAM
+  KANNAN_KULAM
+  KANNAANTHAI_KULAM
+  KAADAI_KULAM
+  KAARI_KULAM
+  KEERAN_KULAM
+  KUZHLAAYAN_KULAM
+  KOORAI_KULAM
+  KOOVENDHAR_KULAM
+  SAATHANTHAI_KULAM
+  SELLAN_KULAM
+  SEMBAN_KULAM
+  SENGKANNAN_KULAM
+  SEMBUTHAN_KULAM
+  SENKUNNIER_KULAM
+  SEVVAAYAR_KULAM
+  CHERAN_KULAM
+  CHEDAN_KULAM
+  DANANJAYAN_KULAM
+  THAZHINJI_KULAM
+  THOORAN_KULAM
+  DEVENDRAN_KULAM
+  THOODAR_KULAM
+  NEERUNNIYAR_KULAM
+  PAVAZHALAR_KULAM
+  PANAYAN_KULAM
+  PATHUMAN_KULAM
+  PAYIRAN_KULAM
+  PANAGKAADAR_KULAM
+  PATHARIAR_KULAM
+  PANDIYAN_KULAM
+  PILLAR_KULAM
+  POOSAN_KULAM
+  POOCHANTHAI_KULAM
+  PERIYAN_KULAM
+  PERUNKUDIYAAN_KULAM
+  PORULAANTHAI_KULAM
+  PONNAR_KULAM
+  MANIYAN_KULAM
+  MAYILAR_KULAM
+  MAADAR_KULAM
+  MUTTHAN_KULAM
+  MUZHUKATHAN_KULAM
+  MEDHI_KULAM
+  VANNAKKAN_KULAM
+  VILLIYAR_KULAM
+  VILAYAN_KULAM
+  VIZHIYAR_KULAM
+  VENDUVAN_KULAM
+  VENNAG_KULAM
+  VELLAMPAR_KULAM
+}
+
+enum District {
+  TIRUVALLUR
+  CHENNAI
+  KANCHEEPURAM
+  VELLORE
+  DHARMAPURI
+  TIRUVANNAMALAI
+  VILLUPPURAM
+  SALEM
+  NAMAKKAL
+  ERODE
+  NILGIRIS
+  COIMBATORE
+  DINDIGUL
+  KARUR
+  THIRUCHIRAPPALLI
+  PERAMBALUR
+  ARIYALUR
+  CUDDALORE
+  NAGAPATTINAM
+  THIRUVARUR
+  THANJAVUR
+  PUDUKKOTTAI
+  SIVAGANGAI
+  MADURAI
+  THENI
+  VIRUDHUNAGAR
+  RAMANATHAPURAM
+  THOOTHUKKUDI
+  TIRUNELVELI
+  KANYAKUMARI
+  KRISHNAGIRI
+  TIRUPPUR
+  KALLAKURICHI
+  TENKASI
+  CHENGALPATTU
+  THIRUPATHUR
+  RANIPET
+  MAYILADUTHURAI
+  OTHER
+}
+
+
+
+
+
+// MANDAPAM ENUMS
+enum MandapamSession {
+  MORNING
+  EVENING
+  FULL_DAY
+}
+
+enum MandapamPaymentStatus {
+  NOT_PAID
+  ADVANCE
+  FULLY_PAID
+}
+
+enum MandapamPaymentMode {
+  CASH
+  UPI
+  BANK_TRANSFER
+  NONE
+}
+
+enum MandapamBookingStatus {
+  UPCOMING
+  COMPLETED
+  CANCELLED
+}
+
+
+
+// MODELS
+model User {
+  id               String      @id @default(uuid())
+  serialInt        Int         @unique @default(autoincrement())
+  customId         String      @unique // e.g. ID-0001
+  firstNameEn      String
+  lastNameEn       String
+  firstNameTa      String
+  lastNameTa       String
+  email            String      @unique
+  phone            String      @unique
+  password         String
+  role             AccountRole @default(USER)
+  plan             AccountPlan @default(BASIC)
+  planExpiry       DateTime?
+  accountStatus    AccountStatus @default(ACTIVE)
+  suspensionReasonEn String?
+  suspensionReasonTa String?
+  suspendedAt      DateTime?
+  otp              String?
+  otpExpiry        DateTime?
+  profiles         Profile[]
+  planTransactions PlanTransaction[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+model Admin {
+  id               String      @id @default(uuid())
+  firstNameEn      String
+  lastNameEn       String
+  firstNameTa      String
+  lastNameTa       String
+  email            String      @unique
+  phone            String      @unique
+  password         String
+  otp              String?
+  otpExpiry        DateTime?
+  adminBookings    MandapamBooking[] @relation("AdminBookings")
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  type       String   // "EMAIL" | "PHONE"
+  otp        String   // Email: stores OTP plain text / 'VERIFIED'. Phone: empty string (hashedOtp used instead)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  hashedOtp  String?  // Phone: SHA-256 hash of OTP
+  attempts   Int      @default(0)  // Phone: failed attempts counter
+  status     String   @default("PENDING") // Phone: "PENDING" | "VERIFIED" | "BLOCKED"
+  verifiedAt DateTime? // Phone: when OTP was verified
+
+  @@unique([identifier, type])
+}
+
+model ProfileSequence {
+  id        Int      @id
+  nextSeq   Int      @default(1001)
+  updatedAt DateTime @updatedAt
+}
+
+enum DraftStatus {
+  DRAFT
+  CANCELLED
+  PUBLISHED
+  EXPIRED
+}
+
+model ProfileDraft {
+  id                  String      @id @default(uuid())
+  draftId             String      @unique
+  userId              String
+  currentStep         Int         @default(0)
+  status              DraftStatus @default(DRAFT)
+  draftDataJson       Json?
+  birthDataJson       Json?
+  horoscopeJson       Json?
+  horoscopeGenerated  Boolean     @default(false)
+  horoscopeGeneratedAt DateTime?
+  inputHash           String?
+  editingSessionId    String?
+  lockedUntil         DateTime?
+  lastSavedAt         DateTime    @default(now())
+  expiresAt           DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([draftId])
+  @@index([inputHash])
+}
+
+model HoroscopeSnapshot {
+  id               String   @id @default(uuid())
+  profileId        String
+  version          Int
+  generatedAt      DateTime @default(now())
+  generatorVersion String   @default("1.0")
+  requestJson      Json
+  responseJson     Json
+  summaryJson      Json?
+  inputHash        String
+  supersededAt     DateTime?
+
+  @@unique([profileId, version])
+  @@index([profileId])
+  @@index([inputHash])
+}
+
+model ProfileSearch {
+  profileId   String   @id
+  gender      String?
+  age         Int?
+  district    String?
+  community   String?
+  rasi        Int?
+  nakshatra   Int?
+  occupation  String?
+  salaryRange String?
+  updatedAt   DateTime @updatedAt
+}
+
+model Profile {
+  id               String      @id @default(uuid())
+  profileId        String?     @unique // MK-1001 format — generated only on final publish
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  regNo            String      @unique // e.g. REG-123456 — kept for legacy
+  
+  // Personal Details
+  profileFor       ProfileFor?
+  firstNameEn      String?
+  lastNameEn       String?
+  firstNameTa      String?
+  lastNameTa       String?
+  dob              DateTime?
+  gender           Gender?
+  maritalStatus    MaritalStatus?
+  
+  // Current Location (Detailed)
+  currentDistrict  District?
+  currentDistrictEn String?
+  currentDistrictTa String?
+  currentCityEn    String?
+  currentCityTa    String?
+  currentStateEn   String?
+  currentStateTa   String?
+  currentCountryEn String?
+  currentCountryTa String?
+  currentTaluk     String?      // Legacy/Taluk support
+
+  // Native Location
+  nativeDistrict   District?
+  nativeTaluk      String?
+  
+  bloodGroup       String?      // Combined A+ve, etc.
+  height           Float?       // in inches or combined decimal 5.11
+  weight           Int?         // kg
+  diet             Diet?
+  complexion       Complexion?
+
+  // Community
+  caste            String?      @default("BC")
+  community        String?      @default("Kongu Vellalar")
+  kulam            Kulam?
+  kuladeivamEn     String?
+  kuladeivamTa     String?
+
+  // Astrology
+  star             Nakshatra?
+  rasi             Rasi?
+  laganam          Rasi?
+  dosham           Dosham?     @default(NO)
+  birthTime        String?     // HH:MM
+  birthPlace       String?
+  birthLocationName String?
+  birthLatitude    Float?
+  birthLongitude   Float?
+
+  // Professional
+  education        String?
+  jobDetail        String?
+  companyName      String?
+  jobSector        JobSector?
+  jobLocationEn    String?
+  jobLocationTa    String?
+  salaryMonthly    Int?        // in INR
+
+  // Family
+  fatherNameEn     String?
+  fatherNameTa     String?
+  fatherIsLate     Boolean     @default(false)
+  fatherJob        String?
+  fatherSalary     Int?
+  motherNameEn     String?
+  motherNameTa     String?
+  motherIsLate     Boolean     @default(false)
+  motherJob        String?
+  motherSalary     Int?
+  noOfBrothers     Int?        @default(0)
+  noOfSisters      Int?        @default(0)
+
+  // Assets & Expectations
+  residence        Residence?
+  propertyDetailsEn String?     @db.Text
+  propertyDetailsTa String?     @db.Text
+  expectationEn     String?     @db.Text
+  expectationTa     String?     @db.Text
+
+  // Extracted Sections (For modular updates)
+  horoscope        Horoscope?
+  gallery          String[]    @default([])
+  profilePhoto     String?
+
+  // Admin & Visibility
+  status           ProfileVisibility @default(ACTIVE)
+  adminVerified    VerificationStatus @default(PENDING)
+  verifiedBy       String?
+  verifiedAt       DateTime?
+  rejectionReasonEn String?
+  rejectionReasonTa String?
+  statusReasonEn    String?
+  statusReasonTa    String?
+  
+  // Shortlists
+  shortlistedBy    Shortlist[] @relation("ProfileShortlisted")
+
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([gender])
+  @@index([currentDistrict])
+  @@index([kulam])
+  @@index([dosham])
+  @@index([star])
+  @@index([rasi])
+  @@index([height])
+  @@index([salaryMonthly])
+  @@index([maritalStatus])
+  @@index([diet])
+  @@index([gender, status, adminVerified])
+}
+
+model Shortlist {
+  id               String   @id @default(uuid())
+  profile          Profile  @relation("ProfileShortlisted", fields: [profileId], references: [id], onDelete: Cascade)
+  profileId        String
+  userId           String
+  createdAt        DateTime @default(now())
+
+  @@unique([profileId, userId])
+  @@index([userId])
+}
+
+model Horoscope {
+  id               String      @id @default(uuid())
+  profile          Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId        String      @unique
+  mode             HoroscopeMode @default(CREATE)
+  
+  // Data storage based on mode:
+  // - If mode is 'CREATE': rasi and navamsa store the generated JSON as strings.
+  // - If mode is 'UPLOAD': rasi and navamsa store the Cloudinary image paths/links.
+  rasi             String?     @db.Text
+  navamsa          String?     @db.Text
+  horoscopeVersion Int         @default(1)
+  birthDate        DateTime?
+  birthTime        String?
+  birthLocationName String?
+  birthLatitude    Float?
+  birthLongitude   Float?
+  timezone         String?
+  ayanamsa         Float?
+  generatedAt      DateTime    @default(now())
+  generationHash   String?
+  horoscopeJson    Json?
+
+  updatedAt        DateTime    @updatedAt
+}
+
+
+
+model PlanTransaction {
+  id          String              @id @default(uuid())
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  plan        AccountPlan
+  months      Int
+  amount      Float
+  paymentMode MandapamPaymentMode
+
+  // Plan coverage window — computed at upgrade time:
+  // startDate = max(now(), user.planExpiry)
+  // endDate   = startDate + months
+  startDate   DateTime
+  endDate     DateTime
+
+  // Optional admin note (e.g. "Extended — Birthday offer")
+  note        String?
+
+  createdAt   DateTime            @default(now())
+}
+
+// MANDAPAM MODELS
+model MandapamPackage {
+  id          String   @id @default(uuid())
+  nameEn      String
+  nameTa      String
+  price       Float
+  featuresEn  String[]
+  featuresTa  String[]
+  isActive    Boolean  @default(true)
+  bookings    MandapamBooking[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MandapamBooking {
+  id               String                @id @default(uuid())
+  serialInt        Int                   @unique @default(autoincrement())
+  eventId          String                @unique // MK-0001 format
+  date             DateTime
+  session          MandapamSession
+  
+  // Event localized titles
+  eventTitleEn     String
+  eventTitleTa     String
+  
+  // Contact details
+  contactNameEn    String
+  contactNameTa    String
+  phone           String
+
+  email           String?
+  addressEn       String?
+  addressTa       String?
+  
+  // Package Snapshot
+  package          MandapamPackage       @relation(fields: [packageId], references: [id])
+  packageId        String
+  packageNameEn    String
+  packageNameTa    String
+  packageSnapshotPrice Float
+
+  // Booking status
+  status           MandapamBookingStatus @default(UPCOMING)
+
+  // Payment details
+  paymentMode      MandapamPaymentMode   @default(NONE)
+  paymentStatus    MandapamPaymentStatus @default(NOT_PAID)
+  totalAmount      Float
+  paidAmount       Float
+  balance          Float
+  
+  createdBy        String                // admin id
+  admin            Admin                 @relation("AdminBookings", fields: [createdBy], references: [id])
+
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@unique([date, session])
+  @@index([date])
+  @@index([paymentStatus])
+  @@index([createdBy])
+}
+
+model BlockedDate {
+  id        String   @id @default(uuid())
+  date      DateTime @unique
+  reasonEn  String
+  reasonTa  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+model RegistrationCounter {
+  districtCode String @id 
+  count        Int    @default(0)
+}
+
+model AppSettings {
+  key       String @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

@@ -1,0 +1,21 @@
+import React from 'react';
+import { AuthLayout } from '@/layout/auth/Layout';
+import { AdminLoginFormWrapper } from '@/components/features/auth/AdminLogin';
+
+/**
+ * Focused Admin Login Page
+ * minimalist, centered design for administrative access
+ */
+const AdminLoginPage: React.FC = () => {
+    return (
+        <AuthLayout>
+            <div className="flex items-center justify-center relative overflow-hidden">
+                <div className="relative z-10 w-full flex justify-center">
+                    <AdminLoginFormWrapper />
+                </div>
+            </div>
+        </AuthLayout>
+    );
+};
+
+export default AdminLoginPage;

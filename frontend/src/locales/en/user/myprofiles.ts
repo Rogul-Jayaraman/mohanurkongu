@@ -1,0 +1,22 @@
+export const myProfilesEn = {
+    meta: {
+      title: "My Profiles - Mohanur Kongu Manamaalai",
+      desc: "Manage your matrimony profiles",
+    },
+    page_title: "My Profiles",
+    page_desc: "Manage and update profiles you've created. Keep them active to stay visible to potential matches.",
+    search_placeholder: "Search by name or registration number...",
+    create_new: "Create New Profile",
+    no_profiles_title: "No Profiles Created",
+    no_profiles_desc: "You haven't created any marriage profiles yet. Create your first profile to start finding matches.",
+    create_first_profile: "Create My First Profile",
+    status_active: "Active",
+    status_inactive: "Inactive",
+    verification_pending: "Verification Pending",
+    verification_accepted: "Verified",
+    verification_rejected: "Rejected",
+    activate: "Activate",
+    deactivate: "Deactivate",
+    status_updated_success: "Profile status updated successfully",
+    status_updated_error: "Failed to update profile status",
+  };

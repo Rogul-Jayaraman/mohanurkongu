@@ -1,0 +1,122 @@
+import React from 'react';
+import { Input } from '@/components/ui/forms/Input';
+import { EmailField } from '@/components/ui/forms/EmailField';
+import { PasswordField } from '@/components/ui/forms/PasswordField';
+import { Spinner as LoadingSpinner } from '@/components/ui/feedback/Spinner';
+
+/**
+ * ForgotPasswordIdentifyForm – raw email input form.
+ */
+export const ForgotPasswordIdentifyForm: React.FC<{
+    label: string;
+    placeholder?: string;
+    buttonText: string;
+    value: string;
+    error?: string;
+    isPending: boolean;
+    onChange: (value: string) => void;
+    onSubmit: (e: React.FormEvent) => void;
+}> = ({ label, placeholder, buttonText, value, error, isPending, onChange, onSubmit }) => (
+    <form onSubmit={onSubmit} className="space-y-6">
+        <EmailField
+            label={label}
+            name="email"
+            icon="mail"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            error={error}
+            placeholder={placeholder}
+            required
+        />
+        <button
+            type="submit"
+            disabled={isPending}
+            className="w-full h-[60px] bg-rosewood text-gold rounded-xl font-bold text-lg shadow-xl shadow-rosewood/20 hover:bg-rosewood-dark transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0 flex items-center justify-center"
+        >
+            {isPending ? <LoadingSpinner size="sm" color="gold" /> : buttonText}
+        </button>
+    </form>
+);
+
+/**
+ * ForgotPasswordVerifyForm – raw OTP input form.
+ */
+export const ForgotPasswordVerifyForm: React.FC<{
+    label: string;
+    placeholder?: string;
+    buttonText: string;
+    value: string;
+    error?: string;
+    onChange: (value: string) => void;
+    onSubmit: (e: React.FormEvent) => void;
+}> = ({ label, placeholder, buttonText, value, error, onChange, onSubmit }) => (
+    <form onSubmit={onSubmit} className="space-y-6">
+        <Input
+            label={label}
+            name="otp"
+            type="text"
+            icon="verified_user"
+            value={value}
+            onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+            error={error}
+            placeholder={placeholder}
+            required
+        />
+        <button
+            type="submit"
+            className="w-full h-[60px] bg-rosewood text-gold rounded-xl font-bold text-lg shadow-xl shadow-rosewood/20 hover:bg-rosewood-dark transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+        >
+            {buttonText}
+        </button>
+    </form>
+);
+
+/**
+ * ForgotPasswordResetForm – raw password reset form.
+ */
+export const ForgotPasswordResetForm: React.FC<{
+    passwordLabel: string;
+    confirmPasswordLabel: string;
+    passwordPlaceholder?: string;
+    confirmPasswordPlaceholder?: string;
+    buttonText: string;
+    password: string;
+    confirmPassword: string;
+    passwordError?: string;
+    confirmPasswordError?: string;
+    isPending: boolean;
+    onPasswordChange: (value: string) => void;
+    onConfirmPasswordChange: (value: string) => void;
+    onSubmit: (e: React.FormEvent) => void;
+}> = ({ passwordLabel, confirmPasswordLabel, passwordPlaceholder, confirmPasswordPlaceholder, buttonText, password, confirmPassword, passwordError, confirmPasswordError, isPending, onPasswordChange, onConfirmPasswordChange, onSubmit }) => (
+    <form onSubmit={onSubmit} className="space-y-6">
+        <PasswordField
+            label={passwordLabel}
+            name="password"
+            icon="lock"
+            value={password}
+            onChange={(e) => onPasswordChange(e.target.value)}
+            error={passwordError}
+            placeholder={passwordPlaceholder}
+            required
+            showStrength
+        />
+        <PasswordField
+            label={confirmPasswordLabel}
+            name="confirmPassword"
+            icon="lock"
+            value={confirmPassword}
+            onChange={(e) => onConfirmPasswordChange(e.target.value)}
+            error={confirmPasswordError}
+            placeholder={confirmPasswordPlaceholder}
+            required
+        />
+        <button
+            type="submit"
+            disabled={isPending}
+            className="w-full h-[60px] bg-rosewood text-gold rounded-xl font-bold text-lg shadow-xl shadow-rosewood/20 hover:bg-rosewood-dark transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0 flex items-center justify-center"
+        >
+            {isPending ? <LoadingSpinner size="sm" color="gold" /> : buttonText}
+        </button>
+    </form>
+);

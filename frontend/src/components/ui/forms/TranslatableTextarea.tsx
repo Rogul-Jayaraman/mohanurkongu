@@ -1,0 +1,124 @@
+import React, { useState } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
+import { useDualScript } from '@/hooks/useDualScript';
+import { TransliteratingTextarea } from './TransliteratingTextarea';
+import { TamilKeyboard } from './TamilKeyboard';
+
+interface TranslatableTextareaProps {
+    label: string;
+    valueEn: string;
+    valueTa: string;
+    onChangeEn: (val: string) => void;
+    onChangeTa: (val: string) => void;
+    placeholder?: string;
+    required?: boolean;
+    error?: string;
+    icon?: string;
+    autoFormat?: boolean;
+}
+
+const TranslatableTextarea: React.FC<TranslatableTextareaProps> = ({
+    label,
+    valueEn,
+    valueTa,
+    onChangeEn,
+    onChangeTa,
+    placeholder,
+    required,
+    error,
+    icon = 'edit_note',
+    autoFormat = false,
+}) => {
+    const { language } = useLanguage();
+    const [activeScript, setActiveScript] = useState<'en' | 'ta'>(language === 'en' ? 'en' : 'ta');
+    const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+    const {
+        isKeyboardOpen,
+        openKeyboard,
+        closeKeyboard,
+        toggleKeyboard,
+        insertKey,
+        handleBackspace,
+    } = useDualScript({ targetLanguage: activeScript });
+
+    const currentValue = activeScript === 'en' ? valueEn : valueTa;
+
+    const handleKeyboardSelect = (char: string) => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+        const newState = insertKey({ text: currentValue, cursorPosition: textarea.selectionStart || 0 }, char);
+        if (activeScript === 'en') onChangeEn(newState.text);
+        else onChangeTa(newState.text);
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(newState.cursorPosition, newState.cursorPosition);
+        }, 0);
+    };
+
+    const handleKeyboardBackspace = () => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+        const newState = handleBackspace({ text: currentValue, cursorPosition: textarea.selectionStart || 0 });
+        if (activeScript === 'en') onChangeEn(newState.text);
+        else onChangeTa(newState.text);
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(newState.cursorPosition, newState.cursorPosition);
+        }, 0);
+    };
+
+    return (
+        <div className="w-full space-y-3">
+            <div className="flex items-center justify-between px-1">
+                <label className="block text-[11px] sm:text-xs font-bold text-rosewood tracking-tight">
+                    {label}
+                    {required && <span className="text-gold ml-1 text-xs">*</span>}
+                </label>
+                <div className="flex bg-ivory/50 p-1 rounded-lg border border-gold-soft/10">
+                    <button type="button" onClick={() => setActiveScript('en')} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${activeScript === 'en' ? 'bg-rosewood text-white shadow-sm' : 'text-rosewood/60 hover:text-rosewood'}`}>
+                        English
+                    </button>
+                    <button type="button" onClick={() => setActiveScript('ta')} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${activeScript === 'ta' ? 'bg-rosewood text-white shadow-sm' : 'text-rosewood/60 hover:text-rosewood'}`}>
+                        தமிழ்
+                    </button>
+                </div>
+            </div>
+            <div className="relative group">
+                <TransliteratingTextarea
+                    ref={textareaRef}
+                    name={activeScript === 'en' ? 'textEn' : 'textTa'}
+                    value={currentValue}
+                    onChange={(e) => {
+                        if (activeScript === 'en') onChangeEn(e.target.value);
+                        else onChangeTa(e.target.value);
+                    }}
+                    placeholder={placeholder}
+                    targetLanguage={activeScript}
+                    autoFormat={autoFormat}
+                    className={`w-full min-h-[160px] p-4 pr-12 rounded-xl border transition-all text-sm font-input-text placeholder:text-input-placeholder text-input-text resize-none outline-none ${error ? 'border-red-200 focus:border-red-400 focus:ring-4 focus:ring-red-400/5' : 'border-input-border focus:border-input-focus focus:ring-4 focus:ring-input-ring shadow-sm bg-input-bg hover:border-input-border-hover'}`}
+                />
+                {activeScript === 'ta' && (
+                    <button type="button" onClick={toggleKeyboard} className={`absolute right-4 bottom-4 size-8 flex items-center justify-center rounded-lg transition-all z-10 ${isKeyboardOpen ? 'bg-rosewood text-white shadow-lg' : 'bg-gold/5 text-rosewood hover:bg-gold/10 border border-gold/10'}`}>
+                        <span className="material-symbols-outlined text-[18px]">keyboard</span>
+                    </button>
+                )}
+            </div>
+            <TamilKeyboard
+                isOpen={isKeyboardOpen}
+                onClose={closeKeyboard}
+                onKeyPress={handleKeyboardSelect}
+                onBackspace={handleKeyboardBackspace}
+                onSpace={() => handleKeyboardSelect(' ')}
+                onEnter={closeKeyboard}
+            />
+            {error && (
+                <p className="text-[10px] font-bold text-red-500 ml-2 animate-in fade-in slide-in-from-top-1">
+                    {error}
+                </p>
+            )}
+        </div>
+    );
+};
+
+export default TranslatableTextarea;
