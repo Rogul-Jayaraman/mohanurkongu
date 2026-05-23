@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
-import { useProfileDetailQuery } from '@/hooks/queries/useProfiles';
-import { useVerifyProfileMutation, useBlockProfileMutation, useSuspendAccountMutation, useUpdateProfileStatusMutation } from '@/hooks/queries/useAdminMatrimony';
+import { stubFetchAdminProfileDetail, stubVerifyProfile, stubBlockProfile, stubSuspendProfile } from '@/utils/stubs';
 import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
 import { RejectionModal } from '@/modals/admin/RejectionModal';
 import { D1Chart, D9Chart } from '@/components/shared/horoscope';
@@ -11,8 +10,8 @@ import type { PlanetData, HoroscopeResult } from '@/types/horoscope';
 import { getBilingualValue } from '@/utils/bilingual';
 import { toast } from 'sonner';
 import { ArrowLeft, Shield, ShieldBan, Check, X, Phone, Mail, Printer, FileText, Info, User, Users, Briefcase, Heart, Building2, Map, Camera, Eye, EyeOff } from 'lucide-react';
-import { Profile } from '@/types';
-import { getImageUrl } from '@/utils/getImageUrl';
+import { Profile } from '@/types/profile';
+const getImageUrl = (url: string | null | undefined): string | null => { if (!url || typeof url !== 'string') return null; if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url; return null; };
 import { useProfileUtils } from '@/hooks/useProfileUtils';
 import { useDateFormatter } from '@/hooks/useDateFormatter';
 import {
@@ -820,12 +819,11 @@ const AdminProfileView: React.FC = () => {
   const isTamil = language === 'ta';
   const { getEnumLabel, formatSalary, getLocationLabel } = useProfileUtils();
 
-  const verifyMutation = useVerifyProfileMutation();
-  const blockMutation = useBlockProfileMutation();
-  const suspendMutation = useSuspendAccountMutation();
-  const statusMutation = useUpdateProfileStatusMutation();
-
-  const { data: profile, isLoading, isError, refetch } = useProfileDetailQuery(id || '');
+  const [profile, setProfile] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  useEffect(() => { if (id) { setIsLoading(true); stubFetchAdminProfileDetail(id).then(setProfile).catch(() => setIsError(true)).finally(() => setIsLoading(false)); } }, [id]);
+  const refetch = () => {};
 
   const [rejectionModal, setRejectionModal] = React.useState<{ open: boolean; mode: 'REJECT' | 'BLOCK' | 'SUSPEND' }>({ open: false, mode: 'REJECT' });
   const [isPrintingJathagam, setIsPrintingJathagam] = React.useState(false);
@@ -885,19 +883,21 @@ const AdminProfileView: React.FC = () => {
 
   const handleVerify = () => {
     if (!id) return;
-    verifyMutation.mutate({ id, data: { status: 'ACCEPTED' } }, {
-      onSuccess: () => toast.success(t('adminMatrimony.users.verifySuccess')),
-      onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.verifyError'))
-    });
+    stubVerifyProfile({ id, data: { status: 'ACCEPTED' } }).then(
+      () => toast.success(t('adminMatrimony.users.verifySuccess'))
+    ).catch(
+      (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.verifyError'))
+    );
   };
 
   const handleToggleStatus = () => {
     if (!id) return;
     const newStatus = profile?.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    statusMutation.mutate({ id, status: newStatus }, {
-      onSuccess: () => { toast.success(t('adminMatrimony.users.statusUpdated')); refetch(); },
-      onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
-    });
+    stubSuspendProfile({ id, data: { reasonEn: '', reasonTa: '' } }).then(
+      () => { toast.success(t('adminMatrimony.users.statusUpdated')); refetch(); }
+    ).catch(
+      (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
+    );
   };
 
   const handleActionClick = (mode: 'REJECT' | 'BLOCK' | 'SUSPEND') => setRejectionModal({ open: true, mode });
@@ -905,20 +905,23 @@ const AdminProfileView: React.FC = () => {
   const handleConfirmAction = (reasonEn: string, reasonTa: string) => {
     if (!id) return;
     if (rejectionModal.mode === 'REJECT') {
-      verifyMutation.mutate({ id, data: { status: 'REJECTED', reasonEn, reasonTa } }, {
-        onSuccess: () => { toast.success(t('adminMatrimony.users.rejectSuccess')); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); },
-        onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.rejectFailed'))
-      });
+      stubVerifyProfile({ id, data: { status: 'REJECTED', reasonEn, reasonTa } }).then(
+        () => { toast.success(t('adminMatrimony.users.rejectSuccess')); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); }
+      ).catch(
+        (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.rejectFailed'))
+      );
     } else if (rejectionModal.mode === 'BLOCK') {
-      blockMutation.mutate({ id, data: { reasonEn, reasonTa } }, {
-        onSuccess: () => { toast.success(t('adminMatrimony.users.blockSuccess')); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); },
-        onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
-      });
+      stubBlockProfile({ id, data: { reasonEn, reasonTa } }).then(
+        () => { toast.success(t('adminMatrimony.users.blockSuccess')); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); }
+      ).catch(
+        (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
+      );
     } else if (rejectionModal.mode === 'SUSPEND') {
-      suspendMutation.mutate({ id, data: { reasonEn, reasonTa } }, {
-        onSuccess: () => { toast.success(t('adminMatrimony.users.suspendSuccess')); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); },
-        onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.suspendError'))
-      });
+      stubSuspendProfile({ id, data: { reasonEn, reasonTa } }).then(
+        () => { toast.success(t('adminMatrimony.users.suspendSuccess')); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); }
+      ).catch(
+        (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.suspendError'))
+      );
     }
   };
 
@@ -1083,7 +1086,7 @@ const AdminProfileView: React.FC = () => {
               onVerify={handleVerify}
               onToggleStatus={handleToggleStatus}
               onActionClick={handleActionClick}
-              isStatusPending={statusMutation.isPending}
+              isStatusPending={false}
             />
           </div>
         </AnimatedSection>

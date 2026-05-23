@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, X } from 'lucide-react';
-import type { MandapamBooking } from '@/services/mandapamService';
+import type { MandapamBooking } from '@/types/admin-types';
 import { scrollToTop } from '@/components/ui/layout/ScrollToTop';
 
 interface DeleteConfirmationModalProps {

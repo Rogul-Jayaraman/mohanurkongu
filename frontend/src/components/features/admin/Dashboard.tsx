@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 import { useDateFormatter } from '@/hooks/useDateFormatter';
@@ -15,7 +15,8 @@ import { EmptyState } from '@/components/ui/feedback/EmptyState';
 import { ContentCard } from '@/components/ui/cards/ContentCard';
 import { AdminProfileCard } from '@/components/features/admin/matrimony/ProfileCard';
 import { AdminProfileCardSkeleton } from '@/components/features/admin/matrimony/ProfileCardSkeleton';
-import { useAdminStatsQuery, useAdminVerificationQuery } from '@/hooks/queries/useAdminMatrimony';
+import { stubFetchVerificationQueue, stubFetchAdminStats } from '@/utils/stubs';
+import type { AdminManagedProfile } from '@/types/admin-types';
 
 // ═══════════════════════════════════════════════════════════
 // AdminWelcomeHeader
@@ -161,8 +162,10 @@ const VerificationQueuePreview: React.FC = () => {
     const { language } = useLanguage();
     const isTamil = language === 'ta';
     const navigate = useNavigate();
-    const { data, isLoading } = useAdminVerificationQuery({ limit: 4 });
-    const profiles = data?.profiles || [];
+    const [data, setData] = useState<{ profiles: any[] }>({ profiles: [] });
+    const [isLoading, setIsLoading] = useState(true);
+    useEffect(() => { stubFetchVerificationQueue().then(setData).finally(() => setIsLoading(false)); }, []);
+    const profiles = (data as any)?.profiles || [];
 
     const handleAccept = (id: string) => console.log('Accepted:', id);
     const handleReject = (id: any) => console.log('Rejected:', id);
@@ -218,9 +221,14 @@ const QuickActions: React.FC = () => {
 const AdminDashboard: React.FC = () => {
     const { language } = useLanguage();
     const isTamil = language === 'ta';
-    const { data, isLoading: loading, isError, error, refetch } = useAdminStatsQuery();
+    const [statsData, setStatsData] = useState<any>({ stats: { totalUsers: 0, totalProfiles: 0, totalBookings: 0, totalRevenue: 0, newUsers: 0, pendingVerifications: 0 }, recentBookings: [] });
+    const [loading, setLoading] = useState(true);
+    const [isError, setIsError] = useState(false);
+    const [error, setError] = useState<any>(null);
+    const refetch = () => { setLoading(true); stubFetchAdminStats().then(setStatsData).catch((e) => { setError(e); setIsError(true); }).finally(() => setLoading(false)); };
+    useEffect(() => { refetch(); }, []);
 
-    if (isError && !data) {
+    if (isError && !statsData) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
                 <AlertCircle className="w-16 h-16 text-red-500/50" />
@@ -234,8 +242,8 @@ const AdminDashboard: React.FC = () => {
     return (
         <div className="max-w-[1400px] mx-auto space-y-12 animate-fadeIn">
             <AdminWelcomeHeader />
-            <section><GlobalKPIs stats={data?.stats} isLoading={loading} /></section>
-            <section><TodaysBookings recentBookings={data?.recentBookings || []} isLoading={loading} /></section>
+            <section><GlobalKPIs stats={statsData?.stats} isLoading={loading} /></section>
+            <section><TodaysBookings recentBookings={statsData?.recentBookings || []} isLoading={loading} /></section>
             <section><VerificationQueuePreview /></section>
             <section className="space-y-6">
                 <div className="flex items-center gap-4">

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { useAdminLogin } from '@/hooks/auth/useAuth';
+import { useAuth } from '@/hooks/useAuth';
+import { stubAdminLogin } from '@/utils/stubs';
 import { Input } from '@/components/ui/forms/Input';
 import { EmailField } from '@/components/ui/forms/EmailField';
 import { PasswordField } from '@/components/ui/forms/PasswordField';
 import { Spinner as LoadingSpinner } from '@/components/ui/feedback/Spinner';
-import { validateLogin, type LoginData } from '@/utils/validators/auth';
+import { validateLogin, type LoginData } from '@/utils/validation';
 import { toast } from 'sonner';
 import { useTranslations } from '@/hooks/useTranslations';
 import { useInputFormatting } from '@/hooks/useInputFormatting';
@@ -32,9 +32,9 @@ const itemVariants = {
 export const AdminLoginForm: React.FC = () => {
     const navigate = useNavigate();
     const { setUser, setToken } = useAuth();
-    const loginMutation = useAdminLogin();
     const { t, translateError } = useTranslations(['adminLogin', 'errors']);
     const { formatValue } = useInputFormatting();
+    const [isPending, setIsPending] = useState(false);
     const [formData, setFormData] = useState<LoginData>({
         identifier: '',
         password: '',
@@ -62,28 +62,23 @@ export const AdminLoginForm: React.FC = () => {
             return;
         }
 
-        loginMutation.mutate(formData, {
-            onSuccess: (response) => {
-                if (response.success && response.data) {
-                    setToken(response.data.token);
-                    setUser(response.data.user);
-                    toast.success(t('auth:login.success') || 'Login successful');
-                    navigate('/admin/dashboard');
-                } else {
-                    const message = translateError(response.message || 'login_failed');
-                    toast.error(message);
-                    setGeneralError(message);
-                }
-            },
-            onError: (error: any) => {
-                const message = translateError(
-                    error.details || error.message || 'login_failed',
-                    error.code
-                );
+        setIsPending(true);
+        stubAdminLogin(formData).then((response: any) => {
+            if (response.success && response.data) {
+                setToken(response.data.token);
+                setUser(response.data.user);
+                toast.success(t('auth:login.success') || 'Login successful');
+                navigate('/admin/dashboard');
+            } else {
+                const message = (response as any).message || 'login_failed';
                 toast.error(message);
                 setGeneralError(message);
             }
-        });
+        }).catch((error: any) => {
+            const message = error.details || error.message || 'login_failed';
+            toast.error(message);
+            setGeneralError(message);
+        }).finally(() => setIsPending(false));
     };
 
     return (
@@ -127,13 +122,13 @@ export const AdminLoginForm: React.FC = () => {
 
                 <motion.div variants={itemVariants}>
                     <motion.button
-                        whileHover={{ scale: loginMutation.isPending ? 1 : 1.02 }}
-                        whileTap={{ scale: loginMutation.isPending ? 1 : 0.98 }}
-                        disabled={loginMutation.isPending}
-                        className={`w-full py-4 bg-rosewood text-white font-bold rounded-xl shadow-lg shadow-rosewood/20 hover:bg-dark-brown transition-all relative z-10 flex items-center justify-center gap-2 ${loginMutation.isPending ? 'opacity-70 cursor-wait' : ''}`}
+                        whileHover={{ scale: isPending ? 1 : 1.02 }}
+                        whileTap={{ scale: isPending ? 1 : 0.98 }}
+                        disabled={isPending}
+                        className={`w-full py-4 bg-rosewood text-white font-bold rounded-xl shadow-lg shadow-rosewood/20 hover:bg-dark-brown transition-all relative z-10 flex items-center justify-center gap-2 ${isPending ? 'opacity-70 cursor-wait' : ''}`}
                         type="submit"
                     >
-                        {loginMutation.isPending ? (
+                        {isPending ? (
                             <LoadingSpinner size="sm" color="white" />
                         ) : (
                             <>

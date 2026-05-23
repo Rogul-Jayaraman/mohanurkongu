@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { UserProfileCard, UserProfileCardSkeleton } from '@/components/features/user/UserProfileCard';
 import { PageHeader } from '@/components/ui/layout/PageHeader';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
-import { useShortlist } from '@/hooks/useShortlist';
+
 
 // ═══════════════════════════════════════════════════════════
 // ShortlistSkeleton
@@ -63,10 +64,15 @@ const ErrorStateView: React.FC<{
 // Shortlist (Main Orchestrator)
 // ═══════════════════════════════════════════════════════════
 const Shortlist: React.FC = () => {
-    const {
-        profiles, searchQuery, setSearchQuery, loading, error, refetch,
-        isSearching, filteredProfiles, handleToggleShortlist, t
-    } = useShortlist();
+    const { t } = useTranslation();
+    const [searchQuery, setSearchQuery] = useState('');
+    const profiles: any[] = [];
+    const loading = false;
+    const error = null;
+    const refetch = () => {};
+    const isSearching = false;
+    const filteredProfiles: any[] = [];
+    const handleToggleShortlist = () => {};
 
     return (
         <div className="animate-in fade-in duration-700 max-w-7xl mx-auto w-full space-y-8 pb-20 px-2 md:px-4">

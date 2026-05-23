@@ -1,0 +1,20 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
+export const appConfig = {
+  nodeEnv: process.env.NODE_ENV || 'development',
+  port: parseInt(process.env.PORT || '4000', 10),
+  host: process.env.HOST || '0.0.0.0',
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  logLevel: process.env.LOG_LEVEL || 'info',
+  cookieSecret: process.env.COOKIE_SECRET || 'change-me-cookie-secret-min-32-chars',
+  cookieSecure: process.env.COOKIE_SECURE === 'true',
+  accountNoPrefix: process.env.ACCOUNT_NO_PREFIX || 'MKM',
+
+  get isDev() {
+    return this.nodeEnv === 'development';
+  },
+  get isProd() {
+    return this.nodeEnv === 'production';
+  },
+};

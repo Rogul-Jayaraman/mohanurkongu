@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, AlertCircle, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { mandapamService, MandapamBooking } from '@/services/mandapamService';
+import { stubFetchBookings, stubUpdateBooking, stubAddPayment, stubDeleteBooking } from '@/utils/stubs';
 import { NewBookingModal } from '@/modals/admin/NewBookingModal';
 import { CancelRefundModal } from '@/modals/admin/CancelRefundModal';
 import { CompleteBookingModal } from '@/modals/admin/CompleteBookingModal';
@@ -11,7 +11,7 @@ import { ViewDetailsModal } from '@/modals/admin/ViewDetailsModal';
 import { DeleteConfirmationModal } from '@/modals/admin/DeleteConfirmationModal';
 import { BookingsFilter } from '@/components/features/admin/mandapam/bookings/BookingsFilter';
 import { BookingsTable } from '@/components/features/admin/mandapam/bookings/BookingsTable';
-import { useAdminBookingsQuery, useUpdateBookingMutation, useAddPaymentMutation, useDeleteBookingMutation } from '@/hooks/queries/useAdminMandapam';
+import type { MandapamBooking } from '@/types/admin-types';
 import { toast } from 'sonner';
 
 // BookingManagement (Main Orchestrator)
@@ -32,7 +32,11 @@ const BookingManagement: React.FC = () => {
     const [isViewDetailsModalOpen, setIsViewDetailsModalOpen] = React.useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
 
-    const { data: qBookings = [], isLoading, error, refetch } = useAdminBookingsQuery({ search: searchQuery, status: statusFilter === 'All' ? undefined : statusFilter });
+    const [qBookings, setQBookings] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<any>(null);
+    const refetch = () => { setIsLoading(true); stubFetchBookings({ search: searchQuery, status: statusFilter }).then(setQBookings).catch(setError).finally(() => setIsLoading(false)); };
+    useEffect(() => { refetch(); }, [searchQuery, statusFilter]);
 
     const paginationData = React.useMemo(() => {
         const totalItems = qBookings.length;
@@ -41,22 +45,26 @@ const BookingManagement: React.FC = () => {
         return { paginatedBookings: qBookings.slice(startIndex, startIndex + itemsPerPage), totalItems, totalPages };
     }, [qBookings, currentPage, itemsPerPage]);
 
-    const updateBookingMutation = useUpdateBookingMutation();
-    const addPaymentMutation = useAddPaymentMutation();
-    const deleteBookingMutation = useDeleteBookingMutation();
+    const [isUpdatingBooking, setIsUpdatingBooking] = useState(false);
+    const [isAddingPayment, setIsAddingPayment] = useState(false);
+    const [isDeletingBooking, setIsDeletingBooking] = useState(false);
 
     const handleConfirmPayment = (booking: MandapamBooking, paymentType: string, amount: string) => {
         const numAmount = Number(amount.replace?.(/,/g, '') ?? amount);
         if (paymentType === 'paid') {
-            updateBookingMutation.mutate({ id: booking.id, data: { paymentStatus: 'FULLY_PAID', paidAmount: booking.totalAmount, balance: 0 } }, {
-                onSuccess: () => { toast.success('Booking fully settled'); setIsPaymentModalOpen(false); },
-                onError: (err: any) => toast.error(err.message || 'Failed to update payment')
-            });
+            setIsUpdatingBooking(true);
+            stubUpdateBooking({ id: booking.id, data: { paymentStatus: 'FULLY_PAID', paidAmount: booking.totalAmount, balance: 0 } }).then(
+                () => { toast.success('Booking fully settled'); setIsPaymentModalOpen(false); }
+            ).catch(
+                (err: any) => toast.error(err.message || 'Failed to update payment')
+            ).finally(() => setIsUpdatingBooking(false));
         } else {
-            addPaymentMutation.mutate({ bookingId: booking.id, data: { amount: numAmount, paymentMethod: 'CASH' } }, {
-                onSuccess: () => { toast.success('Payment added'); setIsPaymentModalOpen(false); },
-                onError: (err: any) => toast.error(err.message || 'Failed to add payment')
-            });
+            setIsAddingPayment(true);
+            stubAddPayment({ bookingId: booking.id, data: { amount: numAmount, paymentMethod: 'CASH' } }).then(
+                () => { toast.success('Payment added'); setIsPaymentModalOpen(false); }
+            ).catch(
+                (err: any) => toast.error(err.message || 'Failed to add payment')
+            ).finally(() => setIsAddingPayment(false));
         }
     };
 
@@ -75,10 +83,12 @@ const BookingManagement: React.FC = () => {
             data.paidAmount = Math.max(0, booking.paidAmount - refund);
             data.balance = booking.totalAmount - data.paidAmount;
         }
-        updateBookingMutation.mutate({ id: booking.id, data }, {
-            onSuccess: () => { toast.success('Booking cancelled'); setIsCancelModalOpen(false); },
-            onError: (err: any) => toast.error(err.message || 'Failed to cancel booking')
-        });
+        setIsUpdatingBooking(true);
+        stubUpdateBooking({ id: booking.id, data }).then(
+            () => { toast.success('Booking cancelled'); setIsCancelModalOpen(false); }
+        ).catch(
+            (err: any) => toast.error(err.message || 'Failed to cancel booking')
+        ).finally(() => setIsUpdatingBooking(false));
     };
 
     const handleConfirmComplete = (booking: MandapamBooking, paymentStatus: string, amount: string) => {
@@ -94,18 +104,22 @@ const BookingManagement: React.FC = () => {
             data.balance = 0;
             data.paymentStatus = 'FULLY_PAID';
         }
-        updateBookingMutation.mutate({ id: booking.id, data }, {
-            onSuccess: () => { toast.success('Booking completed'); setIsCompleteModalOpen(false); },
-            onError: (err: any) => toast.error(err.message || 'Failed to complete booking')
-        });
+        setIsUpdatingBooking(true);
+        stubUpdateBooking({ id: booking.id, data }).then(
+            () => { toast.success('Booking completed'); setIsCompleteModalOpen(false); }
+        ).catch(
+            (err: any) => toast.error(err.message || 'Failed to complete booking')
+        ).finally(() => setIsUpdatingBooking(false));
     };
 
     const handleConfirmDelete = () => {
         if (!selectedBooking) return;
-        deleteBookingMutation.mutate(selectedBooking.id, {
-            onSuccess: () => { toast.success('Booking deleted permanently'); setIsDeleteModalOpen(false); refetch(); },
-            onError: (err: any) => toast.error(err.message || 'Failed to delete booking')
-        });
+        setIsDeletingBooking(true);
+        stubDeleteBooking(selectedBooking.id).then(
+            () => { toast.success('Booking deleted permanently'); setIsDeleteModalOpen(false); refetch(); }
+        ).catch(
+            (err: any) => toast.error(err.message || 'Failed to delete booking')
+        ).finally(() => setIsDeletingBooking(false));
     };
 
     const handleBookingSuccess = () => { setIsBookingModalOpen(false); refetch(); };

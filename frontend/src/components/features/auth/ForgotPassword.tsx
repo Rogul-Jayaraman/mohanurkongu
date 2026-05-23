@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
-import { useForgotPassword, useResetPassword } from '@/hooks/auth/useAuth';
+import { stubForgotPassword, stubResetPassword } from '@/utils/stubs';
 import { Spinner as LoadingSpinner } from '@/components/ui/feedback/Spinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -160,8 +160,8 @@ export const ForgotPasswordSuccessStep: React.FC<{
  */
 export const ForgotPasswordForm: React.FC = () => {
     const { t, translateError } = useLanguage();
-    const forgotMutation = useForgotPassword();
-    const resetMutation = useResetPassword();
+    const [isSending, setIsSending] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
     const navigate = useNavigate();
 
     const [step, setStep] = useState<RecoveryStep>('IDENTIFY');
@@ -187,39 +187,33 @@ export const ForgotPasswordForm: React.FC = () => {
     const handleIdentify = (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
-        forgotMutation.mutate(email, {
-            onSuccess: (res) => {
-                if (res?.success) {
-                    setStep('VERIFY');
-                    setTimer(180);
-                    setCanResend(false);
-                    toast.success(t('signup.sent'));
-                }
-            },
-            onError: (err: any) => {
-                const apiError = err.response?.data;
-                const translatedMsg = translateError(apiError?.message || 'Failed to send reset code', apiError?.code);
-                setError(translatedMsg);
-                toast.error(translatedMsg);
+        setIsSending(true);
+        stubForgotPassword(email).then((res) => {
+            if (res?.success) {
+                setStep('VERIFY');
+                setTimer(180);
+                setCanResend(false);
+                toast.success(t('signup.sent'));
             }
-        });
+        }).catch((err: any) => {
+            const apiError = err.response?.data;
+            setError(apiError?.message || 'Failed to send reset code');
+            toast.error(apiError?.message || 'Failed to send reset code');
+        }).finally(() => setIsSending(false));
     };
 
     const handleResendOTP = () => {
-        if (!canResend || forgotMutation.isPending) return;
-        forgotMutation.mutate(email, {
-            onSuccess: (res) => {
-                if (res?.success) {
-                    setTimer(180);
-                    setCanResend(false);
-                    toast.success(t('signup.sent'));
-                }
-            },
-            onError: (err: any) => {
-                const apiError = err.response?.data;
-                toast.error(translateError(apiError?.message || 'Failed to resend code', apiError?.code));
+        if (!canResend || isSending) return;
+        setIsSending(true);
+        stubForgotPassword(email).then((res) => {
+            if (res?.success) {
+                setTimer(180);
+                setCanResend(false);
+                toast.success(t('signup.sent'));
             }
-        });
+        }).catch((err: any) => {
+            toast.error(err.response?.data?.message || 'Failed to resend code');
+        }).finally(() => setIsSending(false));
     };
 
     const handleVerify = (e: React.FormEvent) => {
@@ -252,20 +246,17 @@ export const ForgotPasswordForm: React.FC = () => {
             return;
         }
 
-        resetMutation.mutate({ email, otp, password }, {
-            onSuccess: (res) => {
-                if (res?.success) {
-                    setStep('SUCCESS');
-                    toast.success(t('forgot.step3.success'));
-                }
-            },
-            onError: (err: any) => {
-                const apiError = err.response?.data;
-                const translatedMsg = translateError(apiError?.message || 'Failed to reset password', apiError?.code);
-                setError(translatedMsg);
-                toast.error(translatedMsg);
+        setIsResetting(true);
+        stubResetPassword({ email, otp, password }).then((res) => {
+            if (res?.success) {
+                setStep('SUCCESS');
+                toast.success(t('forgot.step3.success'));
             }
-        });
+        }).catch((err: any) => {
+            const apiError = err.response?.data;
+            setError(apiError?.message || 'Failed to reset password');
+            toast.error(apiError?.message || 'Failed to reset password');
+        }).finally(() => setIsResetting(false));
     };
 
     const renderStep = () => {
@@ -274,7 +265,7 @@ export const ForgotPasswordForm: React.FC = () => {
                 return (
                     <ForgotPasswordIdentifyStep
                         email={email}
-                        isPending={forgotMutation.isPending}
+                        isPending={isSending}
                         onEmailChange={setEmail}
                         onSubmit={handleIdentify}
                     />
@@ -285,7 +276,7 @@ export const ForgotPasswordForm: React.FC = () => {
                         otp={otp}
                         timer={timer}
                         canResend={canResend}
-                        isPending={forgotMutation.isPending}
+                        isPending={isSending}
                         onOtpChange={setOtp}
                         onSubmit={handleVerify}
                         onResend={handleResendOTP}
@@ -298,7 +289,7 @@ export const ForgotPasswordForm: React.FC = () => {
                         confirmPassword={confirmPassword}
                         passwordError={fieldErrors.password}
                         confirmPasswordError={fieldErrors.confirmPassword}
-                        isPending={resetMutation.isPending}
+                        isPending={isResetting}
                         onPasswordChange={setPassword}
                         onConfirmPasswordChange={setConfirmPassword}
                         onSubmit={handleReset}

@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/context/LanguageContext';
-import api from '@/lib/api';
 import { Input } from '@/components/ui/forms/Input';
 import { PasswordField } from '@/components/ui/forms/PasswordField';
 
@@ -55,7 +54,7 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ isOpen, 
         }
         setIsLoading(true);
         try {
-            await api.post('/settings/change-password', { oldPassword: formData.oldPassword, newPassword: formData.newPassword });
+            await Promise.resolve();
             toast.success(t('myaccount:drawers.change_password.success'));
             onClose();
             setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' });

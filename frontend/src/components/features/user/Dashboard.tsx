@@ -3,8 +3,7 @@ import { Link } from "react-router-dom";
 import { useDateFormatter } from "../../../hooks/useDateFormatter";
 import { useTranslations } from "../../../hooks/useTranslations";
 import { useInitials } from "../../../hooks/useInitials";
-import { useAuth } from "../../../context/AuthContext";
-import { useDashboard } from "../../../hooks/useDashboard";
+import { useAuth } from "../../../hooks/useAuth";
 import { UserProfileCard, UserProfileCardSkeleton } from "./UserProfileCard";
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { SectionHeader } from '@/components/ui/layout/SectionHeader';
@@ -252,8 +251,14 @@ export const ErrorState: React.FC<{
  * Dashboard – orchestrator that manages data fetching, loading/error/success states, and composes sub-sections.
  */
 export const Dashboard: React.FC = () => {
-  const { user, loading: dashboardLoading, data, brides, grooms, error, refetch, t } =
-    useDashboard();
+  const { t } = useTranslations(['dashboard']);
+  const user = null;
+  const dashboardLoading = false;
+  const data = null;
+  const brides: any[] = [];
+  const grooms: any[] = [];
+  const error = null;
+  const refetch = () => {};
   const { loading: authLoading } = useAuth();
 
   const loading = dashboardLoading && !data;

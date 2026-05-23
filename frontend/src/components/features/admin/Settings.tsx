@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/context/LanguageContext';
 import { User, Mail, Phone, Shield, Key, Check, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';

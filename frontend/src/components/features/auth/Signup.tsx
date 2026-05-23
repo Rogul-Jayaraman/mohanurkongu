@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import signupHeroImg from '@/assets/images/auth/signup_hero.jpeg';
 import { useLanguage } from '@/context/LanguageContext';
-import type { SignupData } from '@/types/auth';
-import { validateSignupStep } from '@/utils/validators/auth';
+import type { SignupData } from '@/utils/validation';
+import { validateSignupStep } from '@/utils/validation';
 import {
     SignupNameForm,
     SignupEmailForm,
@@ -13,7 +13,7 @@ import {
     SignupTermsForm,
     SignupSubmitForm
 } from '@/components/forms/auth/SignupForm';
-import { useSignup, useSendRegistrationOtp, useVerifyRegistrationOtp } from '@/hooks/auth/useAuth';
+import { stubSignup, stubSendRegistrationOtp, stubVerifyRegistrationOtp } from '@/utils/stubs';
 import { OtpVerificationModal } from '@/components/modals/auth/OtpVerificationModal';
 
 export const signupContainerVariants = {
@@ -119,9 +119,9 @@ export const SignupFormWrapper: React.FC = () => {
     const navigate = useNavigate();
     const { t, language, translateError } = useLanguage();
 
-    const signupMutation = useSignup();
-    const sendOtpMutation = useSendRegistrationOtp();
-    const verifyOtpMutation = useVerifyRegistrationOtp();
+    const [isSigningUp, setIsSigningUp] = useState(false);
+    const [isSendingOtp, setIsSendingOtp] = useState(false);
+    const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
     const [isOTPSent, setIsOTPSent] = useState(false);
     const [isOTPVerified, setIsOTPVerified] = useState(false);
@@ -152,33 +152,29 @@ export const SignupFormWrapper: React.FC = () => {
     const handleSendOTP = () => {
         if (!isValidEmail) return;
         setGeneralError(null);
-        sendOtpMutation.mutate(formData.email, {
-            onSuccess: (response: any) => {
-                if (response.success) {
-                    setIsOTPSent(true);
-                    setIsOTPVerified(false);
-                    setIsOtpModalOpen(true);
-                    setGeneralError(null);
-                }
-            },
-            onError: (error: any) => {
-                setGeneralError(translateError(error?.message || 'Failed to send OTP', error?.code));
+        setIsSendingOtp(true);
+        stubSendRegistrationOtp(formData.email).then((response: any) => {
+            if (response.success) {
+                setIsOTPSent(true);
+                setIsOTPVerified(false);
+                setIsOtpModalOpen(true);
+                setGeneralError(null);
             }
-        });
+        }).catch((error: any) => {
+            setGeneralError(translateError(error?.message || 'Failed to send OTP', error?.code));
+        }).finally(() => setIsSendingOtp(false));
     };
 
     const handleResendOTP = () => {
         setGeneralError(null);
-        sendOtpMutation.mutate(formData.email, {
-            onSuccess: (response: any) => {
-                if (response.success) {
-                    setGeneralError(null);
-                }
-            },
-            onError: (error: any) => {
-                setGeneralError(translateError(error?.message || 'Failed to send OTP', error?.code));
+        setIsSendingOtp(true);
+        stubSendRegistrationOtp(formData.email).then((response: any) => {
+            if (response.success) {
+                setGeneralError(null);
             }
-        });
+        }).catch((error: any) => {
+            setGeneralError(translateError(error?.message || 'Failed to send OTP', error?.code));
+        }).finally(() => setIsSendingOtp(false));
     };
 
     const handleCloseOtpModal = () => {
@@ -192,20 +188,18 @@ export const SignupFormWrapper: React.FC = () => {
 
     const handleVerifyOTP = () => {
         if (!otpValue || otpValue.length !== 6) return;
-        verifyOtpMutation.mutate({ email: formData.email, otp: otpValue }, {
-            onSuccess: (response: any) => {
-                if (response.success && response.data?.verificationToken) {
-                    setVerificationToken(response.data.verificationToken);
-                    setIsOTPVerified(true);
-                    setIsOtpModalOpen(false);
-                    setGeneralError(null);
-                    setOtpError(null);
-                }
-            },
-            onError: (error: any) => {
-                setOtpError(translateError(error?.message || 'Invalid OTP', error?.code));
+        setIsVerifyingOtp(true);
+        stubVerifyRegistrationOtp({ email: formData.email, otp: otpValue }).then((response: any) => {
+            if (response.success && response.data?.verificationToken) {
+                setVerificationToken(response.data.verificationToken);
+                setIsOTPVerified(true);
+                setIsOtpModalOpen(false);
+                setGeneralError(null);
+                setOtpError(null);
             }
-        });
+        }).catch((error: any) => {
+            setOtpError(translateError(error?.message || 'Invalid OTP', error?.code));
+        }).finally(() => setIsVerifyingOtp(false));
     };
 
     const handleFieldChange = (field: keyof SignupData, value: string | boolean) => {
@@ -264,21 +258,19 @@ export const SignupFormWrapper: React.FC = () => {
         setErrors(translatedErrors);
         if (Object.keys(newErrors).length === 0) {
             const { confirmPassword, termsAccepted, ...cleanData } = formData;
-            signupMutation.mutate({ ...cleanData, verificationToken: verificationToken! } as SignupData, {
-                onSuccess: (response: any) => {
-                    if (response.success && response.data) {
-                        navigate('/manamaalai/login', { state: { message: 'Signup successful. Please login to continue.' } });
-                    }
-                },
-                onError: (error: any) => {
-                    const apiError = error;
-                    if (apiError?.fieldErrors && typeof apiError.fieldErrors === 'object') {
-                        setErrors(apiError.fieldErrors);
-                    } else {
-                        setGeneralError(translateError(apiError?.message || 'Signup failed', apiError?.code));
-                    }
+            setIsSigningUp(true);
+            stubSignup({ ...cleanData, verificationToken: verificationToken! } as SignupData).then((response: any) => {
+                if (response.success && response.data) {
+                    navigate('/manamaalai/login', { state: { message: 'Signup successful. Please login to continue.' } });
                 }
-            });
+            }).catch((error: any) => {
+                const apiError = error;
+                if (apiError?.fieldErrors && typeof apiError.fieldErrors === 'object') {
+                    setErrors(apiError.fieldErrors);
+                } else {
+                    setGeneralError(translateError(apiError?.message || 'Signup failed', apiError?.code));
+                }
+            }).finally(() => setIsSigningUp(false));
         }
     };
 
@@ -366,8 +358,8 @@ export const SignupFormWrapper: React.FC = () => {
                             error={errors.email}
                             isValidEmail={isValidEmail}
                             isOTPVerified={isOTPVerified}
-                            sendIsPending={sendOtpMutation.isPending}
-                            verifyIsPending={verifyOtpMutation.isPending}
+                            sendIsPending={isSendingOtp}
+                            verifyIsPending={isVerifyingOtp}
                             sendButtonText={sendButtonText}
                             resendText={t('signup.resend')}
                             verifyText={t('common.verify')}
@@ -384,8 +376,8 @@ export const SignupFormWrapper: React.FC = () => {
                         email={formData.email}
                         otp={otpValue}
                         error={otpError ?? undefined}
-                        verifyIsPending={verifyOtpMutation.isPending}
-                        sendIsPending={sendOtpMutation.isPending}
+                        verifyIsPending={isVerifyingOtp}
+                        sendIsPending={isSendingOtp}
                         otpBtnText={t('signup.otpBtn')}
                         verifyingText={t('signup.verifying')}
                         otpVerifySuccessText={t('signup.otpVerifySuccess')}
@@ -424,7 +416,7 @@ export const SignupFormWrapper: React.FC = () => {
                     <motion.div variants={signupItemVariants}>
                         <SignupTermsForm
                             termsText={t('signup.terms')}
-                            checked={formData.termsAccepted}
+                            checked={formData.termsAccepted ?? false}
                             error={errors.termsAccepted}
                             onChange={(checked: boolean) => handleFieldChange('termsAccepted', checked)}
                         />
@@ -438,8 +430,8 @@ export const SignupFormWrapper: React.FC = () => {
                             alreadyText={t('signup.already')}
                             isOTPVerified={isOTPVerified}
                             isOTPSent={isOTPSent}
-                                signupIsPending={signupMutation.isPending}
-                                verifyIsPending={verifyOtpMutation.isPending}
+                                signupIsPending={isSigningUp}
+                                verifyIsPending={isVerifyingOtp}
                             onSubmit={handleSubmit}
                         />
                     </motion.div>

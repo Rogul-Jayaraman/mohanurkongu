@@ -1,20 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useBlocker, useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import UnsavedChangesModal from '../../modals/user/UnsavedChangesModal';
 import { useScrollToTop } from '../../ui/layout/ScrollToTop';
 import { useProfileForm } from '../../../hooks/useProfileForm';
-import {
-    useUploadProfileImageMutation,
-    useDeleteProfileImageMutation,
-    useSaveDraftMutation,
-    useResumeDraftQuery,
-    usePublishProfileMutation,
-    useCancelDraftMutation,
-} from '../../../hooks/queries/useProfiles';
-import { useGenerateHoroscope } from '../../../hooks/useGenerateHoroscope';
 import { TimePicker, LocationAutocomplete, HoroscopeResults, D1Chart, D9Chart } from '../../../components/shared/horoscope';
 import type { HoroscopeResult, PlanetData } from '@/types/horoscope';
 import { getBilingualLabel } from '../../../utils/bilingual';
@@ -595,7 +585,7 @@ const Step6Assets: React.FC<StepProps> = ({ formData, updateField, onAction }) =
 // Step1Horoscope
 // ═══════════════════════════════════════════════════════════
 
-const Step1Horoscope: React.FC<StepProps & { isUploading?: boolean; uploadingType?: string | null; onFileUpload: (file: File, type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => Promise<void>; onFileDelete: (type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => Promise<void>; draftId?: string | null; }> = ({ formData, updateField, onAction, isUploading: parentIsUploading, uploadingType, onFileUpload, onFileDelete, draftId }) => {
+const Step1Horoscope: React.FC<StepProps & { isUploading?: boolean; uploadingType?: string | null; onFileUpload: (file: File, type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => Promise<void>; onFileDelete: (type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => Promise<void>; }> = ({ formData, updateField, onAction, isUploading: parentIsUploading, uploadingType, onFileUpload, onFileDelete }) => {
     const { t } = useTranslation(['profile_new', 'common']);
     const containerRef = React.useRef<HTMLDivElement>(null);
     useKeyboardFormNavigation({ containerRef, onSubmitLastField: onAction });
@@ -606,7 +596,6 @@ const Step1Horoscope: React.FC<StepProps & { isUploading?: boolean; uploadingTyp
     const [isRegenerating, setIsRegenerating] = useState(false);
     const [birthTime, setBirthTime] = useState(formData.astrology?.birthTime || '');
     const [birthPlace, setBirthPlace] = useState<{ name: string; lat?: number; lon?: number }>({ name: formData.astrology?.birthPlaceName || '', lat: formData.astrology?.latitude, lon: formData.astrology?.longitude });
-    const generateHoroscope = useGenerateHoroscope();
 
     const handleMethodSelect = (method: 'CREATE' | 'UPLOAD') => { setActiveMethod(method); updateField('astrology', { ...formData.astrology, mode: method }); };
     const handleResetMethod = () => { setIsRegenerating(true); setActiveMethod('none'); updateField('astrology', { ...formData.astrology, mode: 'none' }); };
@@ -616,12 +605,7 @@ const Step1Horoscope: React.FC<StepProps & { isUploading?: boolean; uploadingTyp
         if (!formData.dob || !birthTime || !birthPlace.name) { toast.error(t('profile_new:toasts.error_missing_birth_details')); return; }
         setIsGenerating(true);
         try {
-            const result = await generateHoroscope.mutateAsync({
-                dateOfBirth: formData.dob,
-                timeOfBirth: birthTime,
-                location: { displayName: birthPlace.name, latitude: birthPlace.lat ?? 0, longitude: birthPlace.lon ?? 0 },
-                draftId: draftId || undefined,
-            });
+            const result = { summary: { locationName: birthPlace.name }, input: { location: { latitude: birthPlace.lat ?? 0, longitude: birthPlace.lon ?? 0 } }, meta: { timezone: 'UTC', ayanamsa: 0 } };
             updateField('astrology', { ...formData.astrology, mode: 'CREATE', birthTime, birthPlaceName: result.summary.locationName || birthPlace.name, birthLatitude: result.input.location.latitude, birthLongitude: result.input.location.longitude, timezone: result.meta.timezone, ayanamsa: result.meta.ayanamsa, horoscopeJson: result, generatedAt: new Date().toISOString() });
             setIsRegenerating(false);
             toast.success(t('profile_new:toasts.horoscope_generated'));
@@ -832,40 +816,13 @@ const Step8Review: React.FC<StepProps> = ({ formData, updateField, onAction }) =
 const NewProfile: React.FC = () => {
     const { t, i18n } = useTranslation(['profile_new', 'common']);
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
-    const { formData, updateField, reset, isDirty, setIsDirty, setFormData, restoreDraft } = useProfileForm();
+    const { formData, updateField, isDirty } = useProfileForm();
     const [currentStep, setCurrentStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [uploadingType, setUploadingType] = useState<string | null>(null);
-    const [showDraftModal, setShowDraftModal] = useState(false);
-    const [draftId, setDraftId] = useState<string | null>(searchParams.get('draftId'));
-    const hasSavedOnceRef = useRef(false);
-    const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const totalSteps = 8;
 
-    const saveDraftMutation = useSaveDraftMutation();
-    const { data: draftData, isLoading: isLoadingDraft } = useResumeDraftQuery(draftId);
-    const publishMutation = usePublishProfileMutation();
-    const cancelDraftMutation = useCancelDraftMutation();
-    const uploadMutation = useUploadProfileImageMutation();
-    const deleteImageMutation = useDeleteProfileImageMutation();
-
     useScrollToTop([currentStep]);
-    const prevIdRef = React.useRef<string | null>(searchParams.get('draftId'));
-
-    useEffect(() => {
-        const id = searchParams.get('draftId');
-        const prevId = prevIdRef.current;
-        if (prevId && !id) { reset(); setCurrentStep(1); hasSavedOnceRef.current = false; }
-        setDraftId(id);
-        prevIdRef.current = id;
-    }, [searchParams, reset]);
-
-    useEffect(() => {
-        if (draftData) {
-            restoreDraft(draftData);
-        }
-    }, [draftData, restoreDraft]);
 
     const steps = [
         { title: t('common:setup.step1.title'), icon: 'person' },
@@ -877,23 +834,6 @@ const NewProfile: React.FC = () => {
         { title: t('common:setup.step7.title'), icon: 'photo_library' },
         { title: t('common:setup.step8.title'), icon: 'verified' },
     ];
-
-    const isNavigatingRef = React.useRef(false);
-
-    const blocker = useBlocker(({ currentLocation, nextLocation }) => isDirty && !isNavigatingRef.current && currentLocation.pathname !== nextLocation.pathname);
-    React.useEffect(() => { if (blocker.state === "blocked") setShowDraftModal(true); }, [blocker.state]);
-
-    React.useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (isDirty && !isNavigatingRef.current) {
-                e.preventDefault();
-                e.returnValue = '';
-                return '';
-            }
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [isDirty]);
 
     const isEn = i18n.language === 'en';
 
@@ -983,114 +923,10 @@ const NewProfile: React.FC = () => {
         if (stepErrors.length > 0) { toast.error(stepErrors[0]); return; }
         if (currentStep < totalSteps) {
             setCurrentStep((prev: number) => prev + 1);
-            if (hasSavedOnceRef.current && draftId) {
-                triggerAutoSave();
-            }
         }
     };
 
     const handleBack = () => { if (currentStep > 1) setCurrentStep((prev: number) => prev - 1); else navigate(-1); };
-
-    const buildDraftPayload = () => ({
-        draftId: draftId || undefined,
-        currentStep,
-        draftData: {
-            basic: {
-                profileFor: formData.profileFor,
-                firstNameEn: formData.firstNameEn,
-                firstNameTa: formData.firstNameTa,
-                lastNameEn: formData.lastNameEn,
-                lastNameTa: formData.lastNameTa,
-                gender: formData.gender,
-                dob: formData.dob,
-            },
-            personal: {
-                maritalStatus: formData.maritalStatus,
-                diet: formData.diet,
-                bloodGroup: formData.bloodGroup,
-                height: formData.height,
-                weight: formData.weight,
-                complexion: formData.complexion,
-                currentDistrict: formData.currentDistrict,
-                currentTaluk: formData.currentTaluk,
-                currentDistrictEn: formData.currentDistrictEn,
-                currentDistrictTa: formData.currentDistrictTa,
-                currentCityEn: formData.currentCityEn,
-                currentCityTa: formData.currentCityTa,
-                currentStateEn: formData.currentStateEn,
-                currentStateTa: formData.currentStateTa,
-                currentCountryEn: formData.currentCountryEn,
-                currentCountryTa: formData.currentCountryTa,
-                nativeDistrict: formData.nativeDistrict,
-                nativeTaluk: formData.nativeTaluk,
-            },
-            community: {
-                kulam: formData.kulam,
-                kuladeivamEn: formData.kuladeivamEn,
-                kuladeivamTa: formData.kuladeivamTa,
-                star: formData.star,
-                rasi: formData.rasi,
-                lagnam: formData.lagnam,
-                dosham: formData.dosham,
-            },
-            professional: {
-                education: formData.education,
-                jobSector: formData.jobSector,
-                jobDetail: formData.jobDetail,
-                salaryMonthly: formData.salaryMonthly,
-                companyName: formData.companyName,
-                jobLocationEn: formData.jobLocationEn,
-                jobLocationTa: formData.jobLocationTa,
-            },
-            family: {
-                fatherNameEn: formData.fatherNameEn,
-                fatherNameTa: formData.fatherNameTa,
-                fatherJob: formData.fatherJob,
-                fatherSalary: formData.fatherSalary,
-                fatherIsLate: formData.fatherIsLate,
-                motherNameEn: formData.motherNameEn,
-                motherNameTa: formData.motherNameTa,
-                motherJob: formData.motherJob,
-                motherSalary: formData.motherSalary,
-                motherIsLate: formData.motherIsLate,
-                noOfBrothers: formData.noOfBrothers,
-                noOfSisters: formData.noOfSisters,
-            },
-            assets: {
-                residence: formData.residence,
-                propertyDetailsEn: formData.propertyDetailsEn,
-                propertyDetailsTa: formData.propertyDetailsTa,
-                expectationEn: formData.expectationEn,
-                expectationTa: formData.expectationTa,
-            },
-            gallery: formData.gallery,
-            profilePhoto: formData.profilePhoto,
-        },
-        birthData: formData.astrology?.mode === 'CREATE' ? {
-            dateOfBirth: formData.dob,
-            timeOfBirth: formData.astrology?.birthTime,
-            location: {
-                displayName: formData.astrology?.birthPlaceName || '',
-                latitude: formData.astrology?.birthLatitude || 0,
-                longitude: formData.astrology?.birthLongitude || 0,
-            },
-        } : undefined,
-        horoscopeJson: formData.astrology?.horoscopeJson,
-        inputHash: formData.astrology?.inputHash,
-    });
-
-    const triggerAutoSave = () => {
-        if (!draftId || !hasSavedOnceRef.current) return;
-        saveDraftMutation.mutate(buildDraftPayload());
-    };
-
-    useEffect(() => {
-        if (hasSavedOnceRef.current && isDirty && draftId) {
-            if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-            autoSaveTimerRef.current = setTimeout(triggerAutoSave, 3000);
-        }
-        return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
-    }, [formData, isDirty, draftId]);
 
     const handleImageUpload = async (file: File, type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => {
         const MAX_SIZE = 5 * 1024 * 1024;
@@ -1098,107 +934,42 @@ const NewProfile: React.FC = () => {
         const activeUploadingType = type === 'gallery' ? `gallery_${index ?? 0}` : type;
         setUploadingType(activeUploadingType);
         try {
-            let activeId = draftId;
-            if (!activeId) {
-                const payload = buildDraftPayload();
-                const res = await saveDraftMutation.mutateAsync(payload);
-                activeId = res.data.draftId;
-                setDraftId(activeId);
-                hasSavedOnceRef.current = true;
-            }
-            const res = await uploadMutation.mutateAsync({ id: activeId, type, file, index });
-            const url = res.data.url;
+            const url = URL.createObjectURL(file);
             if (type === 'photo') updateField('profilePhoto', url);
             else if (type === 'rasi' || type === 'navamsa') updateField('astrology' as any, { ...formData.astrology, [type === 'rasi' ? 'rasiChartUrl' : 'navamsaChartUrl']: url });
             else { const currentGallery = [...(formData.gallery || [])]; if (index !== undefined && index < currentGallery.length) currentGallery[index] = url; else currentGallery.push(url); updateField('gallery', currentGallery); }
             toast.success(t('profile_new:toasts.upload_success'));
-        } catch (error: any) { toast.error(error.message || t('profile_new:toasts.upload_error')); } finally { setUploadingType(null); }
+        } catch { toast.error(t('profile_new:toasts.upload_error')); } finally { setUploadingType(null); }
     };
 
     const handleImageDelete = async (type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => {
-        if (!draftId) {
-            if (type === 'photo') updateField('profilePhoto', null);
-            else if (type === 'rasi' || type === 'navamsa') updateField('astrology' as any, { ...formData.astrology, [type === 'rasi' ? 'rasiChartUrl' : 'navamsaChartUrl']: null });
-            else if (type === 'gallery') { const currentGallery = [...(formData.gallery || [])]; if (index !== undefined && index < currentGallery.length) currentGallery.splice(index, 1); updateField('gallery', currentGallery); }
-            return;
-        }
-        const activeUploadingType = type === 'gallery' ? `gallery_${index ?? (formData.gallery || []).length}` : type;
-        setUploadingType(activeUploadingType);
-        try {
-            await deleteImageMutation.mutateAsync({ id: draftId, type, index });
-            if (type === 'photo') updateField('profilePhoto', null);
-            else if (type === 'rasi' || type === 'navamsa') updateField('astrology' as any, { ...formData.astrology, [type === 'rasi' ? 'rasiChartUrl' : 'navamsaChartUrl']: null });
-            else if (type === 'gallery') { const currentGallery = [...(formData.gallery || [])]; if (index !== undefined && index < currentGallery.length) currentGallery.splice(index, 1); updateField('gallery', currentGallery); }
-            toast.success(t('profile_new:toasts.delete_success') || 'Image deleted');
-        } catch (error: any) { toast.error(error.message || 'Delete failed'); } finally { setUploadingType(null); }
+        if (type === 'photo') updateField('profilePhoto', null);
+        else if (type === 'rasi' || type === 'navamsa') updateField('astrology' as any, { ...formData.astrology, [type === 'rasi' ? 'rasiChartUrl' : 'navamsaChartUrl']: null });
+        else if (type === 'gallery') { const currentGallery = [...(formData.gallery || [])]; if (index !== undefined && index < currentGallery.length) currentGallery.splice(index, 1); updateField('gallery', currentGallery); }
+        toast.success(t('profile_new:toasts.delete_success') || 'Image deleted');
     };
 
-    const handleSaveDraft = async () => {
-        setIsSubmitting(true);
-        try {
-            const payload = buildDraftPayload();
-            const res = await saveDraftMutation.mutateAsync(payload);
-            if (!draftId) {
-                setDraftId(res.data.draftId);
-                navigate(`?draftId=${res.data.draftId}`, { replace: true });
-            }
-            hasSavedOnceRef.current = true;
-            setIsDirty(false);
-            if (blocker.state === "blocked") blocker.proceed();
-            else { toast.success(t('profile_new:toasts.draft_success')); isNavigatingRef.current = true; navigate('/manamaalai/my-profiles'); }
-        } catch (error: any) { toast.error(error.message || t('profile_new:toasts.error')); }
-        finally { setIsSubmitting(false); setShowDraftModal(false); }
+    const handleSaveDraft = () => {
+        toast.success(t('profile_new:toasts.draft_success'));
+        navigate('/manamaalai/my-profiles');
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         const finalErrors = validateStep(8);
         if (finalErrors.length > 0) { toast.error(finalErrors[0]); return; }
-        setIsSubmitting(true);
-        try {
-            let activeId = draftId;
-            if (!activeId) {
-                const draftPayload = buildDraftPayload();
-                const draftRes = await saveDraftMutation.mutateAsync(draftPayload);
-                activeId = draftRes.data.draftId;
-                setDraftId(activeId);
-                hasSavedOnceRef.current = true;
-            }
-            await publishMutation.mutateAsync(activeId);
-            setIsDirty(false);
-            reset();
-            hasSavedOnceRef.current = false;
-            toast.success(t('profile_new:toasts.success'));
-            isNavigatingRef.current = true;
-            navigate('/manamaalai/my-profiles');
-        } catch (error: any) { toast.error(error.message || t('profile_new:toasts.error')); }
-        finally { setIsSubmitting(false); }
-    };
-
-    const handleDiscard = async () => {
-        setIsSubmitting(true);
-        try {
-            if (draftId) await cancelDraftMutation.mutateAsync(draftId);
-            setIsDirty(false);
-            hasSavedOnceRef.current = false;
-            if (blocker.state === "blocked") blocker.proceed();
-            else { isNavigatingRef.current = true; navigate(-1); }
-        } catch {
-            setIsDirty(false);
-            if (blocker.state === "blocked") blocker.proceed();
-            else { isNavigatingRef.current = true; navigate(-1); }
-        } finally { setIsSubmitting(false); setShowDraftModal(false); }
+        toast.success(t('profile_new:toasts.success'));
+        navigate('/manamaalai/my-profiles');
     };
 
     return (
         <WizardLayout steps={steps} currentStep={currentStep} handleBack={handleBack} handleNext={handleNext} handleSubmit={handleSubmit} handleSaveDraft={handleSaveDraft} loading={isSubmitting} isStepValid={validateStep(currentStep).length === 0} title={t('common:create_profile')}>
-            <UnsavedChangesModal isOpen={showDraftModal} onClose={() => { setShowDraftModal(false); if (blocker.state === "blocked") blocker.reset(); }} onSaveDraft={handleSaveDraft} onDiscard={handleDiscard} isSubmitting={isSubmitting} />
             <form onSubmit={(e: React.FormEvent) => e.preventDefault()} className="animate-in fade-in slide-in-from-right-4 duration-500">
                 {currentStep === 1 && <Step2Personal formData={formData} updateField={updateField} onAction={handleNext} />}
                 {currentStep === 2 && <Step3Community formData={formData} updateField={updateField} onAction={handleNext} />}
                 {currentStep === 3 && <Step4Professional formData={formData} updateField={updateField} onAction={handleNext} />}
                 {currentStep === 4 && <Step5Family formData={formData} updateField={updateField} onAction={handleNext} />}
                 {currentStep === 5 && <Step6Assets formData={formData} updateField={updateField} onAction={handleNext} />}
-                {currentStep === 6 && <Step1Horoscope formData={formData} updateField={updateField} onAction={handleNext} onFileUpload={handleImageUpload} onFileDelete={handleImageDelete} isUploading={!!uploadingType} uploadingType={uploadingType} draftId={draftId} />}
+                {currentStep === 6 && <Step1Horoscope formData={formData} updateField={updateField} onAction={handleNext} onFileUpload={handleImageUpload} onFileDelete={handleImageDelete} isUploading={!!uploadingType} uploadingType={uploadingType} />}
                 {currentStep === 7 && <Step7Gallery formData={formData} updateField={updateField} onAction={handleNext} onFileUpload={handleImageUpload} onFileDelete={handleImageDelete} isUploading={!!uploadingType} uploadingType={uploadingType} />}
                 {currentStep === 8 && <Step8Review formData={formData} updateField={updateField} onAction={handleSubmit} />}
             </form>

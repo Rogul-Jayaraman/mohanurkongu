@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from
 import { motion } from 'framer-motion';
 import { ProfileShowcaseCard } from './ProfileShowcaseCard';
 import { useTranslations } from '@/hooks/useTranslations';
-import { useFeaturedProfiles } from '@/hooks/useFeaturedProfiles';
+
 
 const GAP = 12;
 const BP_XS = 400;
@@ -34,7 +34,8 @@ const interleave = (a: any[], b: any[]) => {
 
 export const MatrimonialProfiles: React.FC = () => {
   const { t, language } = useTranslations(['auth']);
-  const { brides, grooms } = useFeaturedProfiles();
+  const brides: any[] = [];
+  const grooms: any[] = [];
   const isTamil = language === 'ta';
 
   const profiles = React.useMemo(() => interleave(brides, grooms), [brides, grooms]);

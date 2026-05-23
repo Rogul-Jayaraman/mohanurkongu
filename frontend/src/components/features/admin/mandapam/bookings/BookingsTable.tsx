@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle2, XCircle, CreditCard, Eye, CalendarX, Trash2 } from 'lucide-react';
-import type { MandapamBooking } from '@/services/mandapamService';
+import type { MandapamBooking } from '@/types/admin-types';
 import { TableActionDropdown } from '@/components/ui/table/TableActionDropdown';
 import { DataTable, Column } from '@/components/ui/table/DataTable';
 import { format } from 'date-fns';

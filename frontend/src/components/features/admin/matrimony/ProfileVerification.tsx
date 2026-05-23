@@ -5,9 +5,9 @@ import { useLanguage } from '@/context/LanguageContext';
 import { SearchAndSort } from '@/components/ui/table/SearchAndSort';
 import { AdminProfileCard } from '@/components/features/admin/matrimony/ProfileCard';
 import { RejectionModal } from '@/modals/admin/RejectionModal';
-import * as adminService from '@/services/adminMatrimony.service';
+import { stubFetchVerificationQueue, stubVerifyProfile } from '@/utils/stubs';
 import { toast } from 'sonner';
-import { useAdminVerificationQuery, useVerifyProfileMutation } from '@/hooks/queries/useAdminMatrimony';
+import type { AdminManagedProfile } from '@/types/admin-types';
 import { Loader2, UserX, Shield } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════
@@ -55,13 +55,15 @@ const ProfileVerification: React.FC = () => {
     const [nameSort, setNameSort] = React.useState<'asc' | 'desc' | null>(null);
     const [rejectionModal, setRejectionModal] = React.useState<{ open: boolean; profileId: string | null }>({ open: false, profileId: null });
 
-    const { data: qData, isLoading } = useAdminVerificationQuery({ page: 1, limit: 100, search: searchQuery });
-    const verifyMutation = useVerifyProfileMutation();
+    const [qData, setQData] = React.useState<{ profiles: any[] }>({ profiles: [] });
+    const [isLoading, setIsLoading] = React.useState(true);
+    React.useEffect(() => { setIsLoading(true); stubFetchVerificationQueue().then(setQData).finally(() => setIsLoading(false)); }, [searchQuery]);
 
     const handleAccept = (id: string) => {
-        verifyMutation.mutate(
-            { id, data: { status: 'ACCEPTED' } },
-            { onSuccess: () => toast.success(t('adminMatrimony.users.verifySuccess')), onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.verifyError')) }
+        stubVerifyProfile({ id, data: { status: 'ACCEPTED' } }).then(
+            () => toast.success(t('adminMatrimony.users.verifySuccess'))
+        ).catch(
+            (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.verifyError'))
         );
     };
 
@@ -69,16 +71,17 @@ const ProfileVerification: React.FC = () => {
 
     const handleConfirmReject = (reasonEn: string, reasonTa: string) => {
         if (!rejectionModal.profileId) return;
-        verifyMutation.mutate(
-            { id: rejectionModal.profileId, data: { status: 'REJECTED', reasonEn, reasonTa } },
-            { onSuccess: () => { toast.success(t('adminMatrimony.users.rejectSuccess')); setRejectionModal({ open: false, profileId: null }); }, onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.rejectFailed')) }
+        stubVerifyProfile({ id: rejectionModal.profileId, data: { status: 'REJECTED', reasonEn, reasonTa } }).then(
+            () => { toast.success(t('adminMatrimony.users.rejectSuccess')); setRejectionModal({ open: false, profileId: null }); }
+        ).catch(
+            (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.rejectFailed'))
         );
     };
 
     const handleReset = () => { setDateSort('desc'); setNameSort(null); setSearchQuery(''); };
 
-    const sortedAndFiltered = (qData?.profiles || [])
-        .filter((p: adminService.AdminManagedProfile) => {
+    const sortedAndFiltered: AdminManagedProfile[] = (qData?.profiles || [])
+        .filter((p: any) => {
             const name = isTamil ? ([p.firstNameTa, p.lastNameTa].filter(Boolean).join(' ') || [p.firstNameEn, p.lastNameEn].filter(Boolean).join(' ')) : ([p.firstNameEn, p.lastNameEn].filter(Boolean).join(' '));
             const searchLower = searchQuery.toLowerCase().trim();
             if (!searchLower) return true;
@@ -88,7 +91,7 @@ const ProfileVerification: React.FC = () => {
                 p.regNo.toLowerCase().includes(searchLower)
             );
         })
-        .sort((a: adminService.AdminManagedProfile, b: adminService.AdminManagedProfile) => {
+        .sort((a: any, b: any) => {
             if (nameSort) {
                 const nameA = isTamil ? ([a.firstNameTa, a.lastNameTa].filter(Boolean).join(' ') || [a.firstNameEn, a.lastNameEn].filter(Boolean).join(' ')) : ([a.firstNameEn, a.lastNameEn].filter(Boolean).join(' '));
                 const nameB = isTamil ? ([b.firstNameTa, b.lastNameTa].filter(Boolean).join(' ') || [b.firstNameEn, b.lastNameEn].filter(Boolean).join(' ')) : ([b.firstNameEn, b.lastNameEn].filter(Boolean).join(' '));

@@ -1,16 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { UserProfileCard, UserProfileCardSkeleton } from '@/components/features/user/UserProfileCard';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
-import {
-    useMyProfilesQuery,
-    useToggleProfileStatusMutation,
-    useDeleteProfileMutation
-} from '@/hooks/queries/useProfiles';
 import { useTranslation } from 'react-i18next';
+import { stubFetchMyProfiles, stubToggleProfileStatus, stubDeleteProfile } from '@/utils/stubs';
 import { ConfirmationModal } from '@/modals/user/ConfirmationModal';
 import { toast } from 'sonner';
 
@@ -75,9 +71,11 @@ const EmptyStateView: React.FC<{
 const MyProfiles: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation(['myprofiles', 'common']);
-    const { data: profiles, isLoading: loading } = useMyProfilesQuery();
-    const toggleMutation = useToggleProfileStatusMutation();
-    const deleteMutation = useDeleteProfileMutation();
+    const [profiles, setProfiles] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [togglePending, setTogglePending] = useState(false);
+    const [deletePending, setDeletePending] = useState(false);
+    useEffect(() => { stubFetchMyProfiles().then(setProfiles).finally(() => setLoading(false)); }, []);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [profileToDelete, setProfileToDelete] = useState<string | null>(null);
@@ -97,15 +95,13 @@ const MyProfiles: React.FC = () => {
 
     const confirmDelete = () => {
         if (profileToDelete) {
-            deleteMutation.mutate(profileToDelete, {
-                onSuccess: () => {
-                    toast.success(t('common:delete_success') || 'Profile deleted successfully');
-                    setProfileToDelete(null);
-                },
-                onError: () => {
-                    toast.error(t('common:delete_error') || 'Failed to delete profile');
-                }
-            });
+            setDeletePending(true);
+            stubDeleteProfile(profileToDelete).then(() => {
+                toast.success(t('common:delete_success') || 'Profile deleted successfully');
+                setProfileToDelete(null);
+            }).catch(() => {
+                toast.error(t('common:delete_error') || 'Failed to delete profile');
+            }).finally(() => setDeletePending(false));
         }
     };
 
@@ -156,7 +152,8 @@ const MyProfiles: React.FC = () => {
                                                 variant="myprofiles"
                                                 onToggleStatus={async (id: string, newStatus: string) => {
                                                     try {
-                                                        await toggleMutation.mutateAsync({ id, status: newStatus });
+                                                        setTogglePending(true);
+                                                        await stubToggleProfileStatus({ id, status: newStatus }).finally(() => setTogglePending(false));
                                                         toast.success(newStatus === 'ACTIVE' ? 'Profile activated' : 'Profile deactivated');
                                                     } catch {
                                                         toast.error('Failed to update profile status');
@@ -190,7 +187,7 @@ const MyProfiles: React.FC = () => {
                 isOpen={!!profileToDelete}
                 onClose={() => setProfileToDelete(null)}
                 onConfirm={confirmDelete}
-                isLoading={deleteMutation.isPending}
+                isLoading={deletePending}
                 title={t('common:confirm_delete_title') || t('common:confirm_delete')}
                 message={t('common:confirm_delete_message') || 'Are you sure you want to delete this profile? This action cannot be undone.'}
                 confirmText={t('common:delete') || 'Delete'}

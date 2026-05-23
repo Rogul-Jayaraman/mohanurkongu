@@ -6,7 +6,7 @@ import { AdminProfileCard } from '@/components/features/admin/matrimony/ProfileC
 import { useNavigate } from 'react-router-dom';
 import { SectionHeader } from '@/components/ui/layout/SectionHeader';
 import { EmptyState } from '@/components/ui/feedback/EmptyState';
-import { useAdminVerificationQuery } from '@/hooks/queries/useAdminMatrimony';
+import { stubFetchVerificationQueue } from '@/utils/stubs';
 import { AdminProfileCardSkeleton } from '@/components/features/admin/matrimony/ProfileCardSkeleton';
 
 const VerificationQueuePreview: React.FC = () => {
@@ -14,8 +14,10 @@ const VerificationQueuePreview: React.FC = () => {
     const isTamil = language === 'ta';
     const navigate = useNavigate();
 
-    const { data, isLoading } = useAdminVerificationQuery({ limit: 4 });
-    const profiles = data?.profiles || [];
+    const [data, setData] = React.useState<{ profiles: any[] }>({ profiles: [] });
+    const [isLoading, setIsLoading] = React.useState(true);
+    React.useEffect(() => { stubFetchVerificationQueue().then(setData).finally(() => setIsLoading(false)); }, []);
+    const profiles = (data as any)?.profiles || [];
 
     const handleAccept = (id: string) => console.log('Accepted:', id);
     const handleReject = (id: any) => console.log('Rejected:', id);

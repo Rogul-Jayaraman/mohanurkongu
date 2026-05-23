@@ -9,8 +9,7 @@ import { SouthIndianChart } from '@/components/shared/horoscope';
 import type { PlanetData, HoroscopeResult } from '@/types/horoscope';
 import { getBilingualValue } from '@/utils/bilingual';
 import logo from '@/assets/images/logo.png';
-import { getImageUrl } from '@/utils/getImageUrl';
-const safeGetImageUrl = (url: string) => getImageUrl(url) ?? '';
+const safeGetImageUrl = (url: string) => (url && /^https?:\/\//i.test(url)) ? url : '';
 
 
 /* ---------- Shared helpers ---------- */
@@ -339,8 +338,7 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
     const getImageUrl = (url: string) => {
         if (!url) return '';
         if (url.startsWith('http') || url.startsWith('data:')) return url;
-        const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
-        return `${base}${url.startsWith('/') ? url : '/' + url}`;
+        return '';
     };
 
     const parseHoroscopeData = (data: any) => {

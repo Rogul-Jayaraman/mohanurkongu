@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { Edit2, Trash2, Power, Check, Package as PackageIcon } from 'lucide-react';
-import { MandapamPackage } from '@/services/mandapamService';
+import type { MandapamPackage } from '@/types/admin-types';
 
 interface PackageCardProps {
     t: any;
@@ -48,7 +48,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({ t, pkg, onEdit, onTogg
 
             {/* Feature List */}
             <div className="grow space-y-3 mb-4 px-2">
-                {features.map((feature, i) => (
+                {features.map((feature: any, i: number) => (
                     <div key={i} className="flex items-start gap-3 group/item">
                         <div className="mt-0.5 w-4 h-4 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 border border-emerald-100">
                             <Check size={10} className="text-emerald-500" strokeWidth={4} />

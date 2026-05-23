@@ -1,0 +1,16 @@
+{
+  "REQUIRED": "This field is required",
+  "INVALID_EMAIL": "Invalid email address",
+  "INVALID_PHONE": "Invalid phone number",
+  "PASSWORD_TOO_SHORT": "Password must be at least 8 characters",
+  "PASSWORD_WEAK": "Password must contain uppercase, lowercase, number, and special character",
+  "PASSWORD_MISMATCH": "Passwords do not match",
+  "INVALID_OTP": "OTP must be 6 digits",
+  "INVALID_TOKEN": "Invalid token format",
+  "EMAIL_EXISTS": "Email already in use",
+  "PHONE_EXISTS": "Phone already in use",
+  "TERMS_REQUIRED": "You must accept the terms and conditions",
+  "FIRST_NAME_REQUIRED": "First name is required",
+  "LAST_NAME_REQUIRED": "Last name is required",
+  "INVALID_IDENTIFIER": "Please provide a valid email or phone number"
+}

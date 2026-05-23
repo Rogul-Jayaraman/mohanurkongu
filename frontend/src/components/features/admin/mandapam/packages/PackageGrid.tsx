@@ -1,5 +1,5 @@
 import React from 'react';
-import { MandapamPackage } from '@/services/mandapamService';
+import type { MandapamPackage } from '@/types/admin-types';
 import { PackageCard } from './PackageCard';
 
 interface PackageGridProps {

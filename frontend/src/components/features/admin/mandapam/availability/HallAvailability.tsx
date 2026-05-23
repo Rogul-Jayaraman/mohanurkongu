@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 import { ActionPanel } from '@/components/features/admin/mandapam/ActionPanel';
-import { mandapamService } from '@/services/mandapamService';
 import { Loader2, CalendarDays } from 'lucide-react';
-import { useAdminCalendarQuery } from '@/hooks/queries/useAdminMandapam';
+import { stubFetchCalendarData } from '@/utils/stubs';
 
 // ═══════════════════════════════════════════════════════════
 // SharedCalendar Subcomponent
@@ -328,7 +327,9 @@ const HallAvailability: React.FC = () => {
     const [currentDate, setCurrentDate] = React.useState(new Date());
     const [selectedDay, setSelectedDay] = React.useState<number | null>(null);
 
-    const { data: bookedDates = [], isLoading } = useAdminCalendarQuery();
+    const [bookedDates, setBookedDates] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    useEffect(() => { stubFetchCalendarData().then(setBookedDates).finally(() => setIsLoading(false)); }, []);
 
     const bookedDays = React.useMemo(() => {
         const currentMonth = currentDate.getMonth() + 1;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { LazyImage } from '@/components/ui/atoms/LazyImage';
-import { getImageUrl } from '@/utils/getImageUrl';
+
 
 interface ProfileShowcaseCardProps {
   profile: {
@@ -43,7 +43,7 @@ export const ProfileShowcaseCard: React.FC<ProfileShowcaseCardProps> = React.mem
     ? [profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' ') || [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ') || 'Profile'
     : [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ') || [profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' ') || 'Profile';
 
-  const imageUrl = getImageUrl(profile.profilePhoto) || renderPlaceholderSVG(fullName, isTamil);
+  const imageUrl = (profile.profilePhoto && /^https?:\/\//i.test(profile.profilePhoto)) ? profile.profilePhoto : renderPlaceholderSVG(fullName, isTamil);
 
   return (
     <div className="

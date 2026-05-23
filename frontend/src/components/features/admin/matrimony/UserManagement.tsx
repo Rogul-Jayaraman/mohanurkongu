@@ -7,9 +7,9 @@ import { TableActionDropdown } from '@/components/ui/table/TableActionDropdown';
 import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
 import { RejectionModal } from '@/modals/admin/RejectionModal';
 import { DataTable, Column } from '@/components/ui/table/DataTable';
-import * as adminService from '@/services/adminMatrimony.service';
+import { stubFetchAdminAccounts, stubSuspendAccount, stubRevokeAccount } from '@/utils/stubs';
 import { useDateFormatter } from '@/hooks/useDateFormatter';
-import { useAdminAccountsQuery, useSuspendAccountMutation, useRevokeSuspensionMutation } from '@/hooks/queries/useAdminMatrimony';
+import type { AdminAccount } from '@/types/admin-types';
 import { toast } from 'sonner';
 
 // ═══════════════════════════════════════════════════════════
@@ -23,33 +23,30 @@ const UserManagement: React.FC = () => {
     const itemsPerPage = 8;
     const [searchQuery, setSearchQuery] = React.useState('');
 
-    const { data, isLoading } = useAdminAccountsQuery({
-        page: currentPage,
-        limit: itemsPerPage,
-        search: searchQuery
-    });
-
-    const suspendMutation = useSuspendAccountMutation();
-    const revokeMutation = useRevokeSuspensionMutation();
+    const [data, setData] = React.useState<any>({ accounts: [], meta: { total: 0, totalPages: 1, page: 1, limit: itemsPerPage } });
+    const [isLoading, setIsLoading] = React.useState(true);
+    React.useEffect(() => { setIsLoading(true); stubFetchAdminAccounts({ page: currentPage, search: searchQuery }).then(setData).finally(() => setIsLoading(false)); }, [currentPage, searchQuery]);
 
     const [suspensionModal, setSuspensionModal] = React.useState<{ open: boolean; userId: string | null }>({ open: false, userId: null });
 
     const handleSuspend = (reasonEn: string, reasonTa: string) => {
         if (!suspensionModal.userId) return;
-        suspendMutation.mutate(
-            { id: suspensionModal.userId, data: { reasonEn, reasonTa } },
-            { onSuccess: () => { toast.success(t('adminMatrimony.users.suspendSuccess')); setSuspensionModal({ open: false, userId: null }); }, onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.suspendError')) }
+        stubSuspendAccount({ id: suspensionModal.userId, data: { reasonEn, reasonTa } }).then(
+            () => { toast.success(t('adminMatrimony.users.suspendSuccess')); setSuspensionModal({ open: false, userId: null }); }
+        ).catch(
+            (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.suspendError'))
         );
     };
 
     const handleRevoke = (id: string) => {
-        revokeMutation.mutate(id, {
-            onSuccess: () => toast.success(t('adminMatrimony.users.revokeSuccess')),
-            onError: (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.revokeError'))
-        });
+        stubRevokeAccount(id).then(
+            () => toast.success(t('adminMatrimony.users.revokeSuccess'))
+        ).catch(
+            (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.revokeError'))
+        );
     };
 
-    const columns: Column<adminService.AdminAccount>[] = [
+    const columns: Column<AdminAccount>[] = [
         {
             header: t('adminMatrimony.users.table.user') || 'User Profile',
             render: (user) => (

@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, ShieldCheck, Users, TrendingUp, DollarSign, Calendar, BarChart3, Filter, Package, Clock } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Legend } from 'recharts';
 import CentralToggleButton from '@/components/ui/forms/CentralToggleButton';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTranslation } from 'react-i18next';
-import { useAdminAnalyticsQuery, useAdminBasicStatsQuery } from '@/hooks/queries/useAdminAnalytics';
+import { stubFetchAnalyticsData, stubFetchBasicStats } from '@/utils/stubs';
+import type { AnalyticsData, BasicStats } from '@/types/admin-types';
 
 const CHART_COLORS = ['#D4AF37', '#8B1D3D', '#819683', '#e2a5a5', '#6b0028'];
 
@@ -350,8 +351,14 @@ const Analytics: React.FC = () => {
     const { language } = useLanguage();
     const { t } = useTranslation(['analytics', 'common', 'profile_new']);
     const [activeTab, setActiveTab] = useState<'matrimony' | 'mandapam'>('matrimony');
-    const { data: fullData, isLoading, isError, refetch } = useAdminAnalyticsQuery();
-    const { data: basicStats, isLoading: statsLoading } = useAdminBasicStatsQuery();
+    const [fullData, setFullData] = useState<any>({ matrimony: { total: 0, verified: 0, premium: 0 }, revenue: { trends: { matrimony: [], mandapam: [] }, highlights: { matrimony: 0, bookings: 0 } }, bookings: { total: 0, trend: [], slots_utilization: [] }, users: { total: 0, newThisMonth: 0 }, distributions: { gender: [], district: [], plan: { basic: 0, premium: 0 } }, funnels: { matrimony: [], booking: [] }, packages: { distribution: [] }, topPackages: [], recentActivity: [] });
+    const [isLoading, setIsLoading] = useState(true);
+    const [isError, setIsError] = useState(false);
+    const refetch = () => { setIsLoading(true); stubFetchAnalyticsData().then(setFullData).catch(() => setIsError(true)).finally(() => setIsLoading(false)); };
+    useEffect(() => { refetch(); }, []);
+    const [basicStats, setBasicStats] = useState<any>({ totalUsers: 0, totalProfiles: 0, totalBookings: 0, totalRevenue: 0, recentUsers: 0, pendingVerifications: 0, matrimony: { total: 0, verified: 0, premium: 0 }, mandapam: { total: 0, completed: 0 }, revenue: { matrimony: 0, mandapam: 0 } });
+    const [statsLoading, setStatsLoading] = useState(true);
+    useEffect(() => { stubFetchBasicStats().then(setBasicStats).finally(() => setStatsLoading(false)); }, []);
 
     if (isError && !fullData) {
         return (
@@ -376,8 +383,8 @@ const Analytics: React.FC = () => {
     const packageData = useMemo(() => (fullData?.packages?.distribution || []).sort((a: any, b: any) => b.count - a.count).map((p: any) => ({ name: language === 'ta' ? p.nameTa || p.label : p.label, value: p.count })), [fullData?.packages?.distribution, language]);
     const slotData = useMemo(() => (fullData?.bookings?.slots_utilization || []).map((s: any) => ({ name: s.label, value: s.count, color: s.label === 'Booked' ? '#D4AF37' : '#8B1D3D' })), [fullData?.bookings?.slots_utilization]);
 
-    const matriStats = basicStats?.matrimony ?? fullData?.matrimony;
-    const mandapamStats = basicStats?.mandapam ?? fullData?.bookings;
+    const matriStats: any = basicStats?.matrimony ?? fullData?.matrimony;
+    const mandapamStats: any = basicStats?.mandapam ?? fullData?.bookings;
     const matriRevenue = basicStats?.revenue?.matrimony ?? fullData?.revenue?.highlights?.matrimony ?? 0;
     const mandapamRevenue = basicStats?.revenue?.mandapam ?? fullData?.revenue?.highlights?.bookings ?? 0;
     const statLoading = statsLoading && isLoading;

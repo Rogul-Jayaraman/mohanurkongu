@@ -7,8 +7,8 @@ import { TransliteratedInputPreview } from '@/components/ui/forms/Transliterated
 import { Input } from '@/components/ui/forms/Input';
 import { EmailField } from '@/components/ui/forms/EmailField';
 import { PhoneInput } from '@/components/ui/forms/PhoneInput';
-import { mandapamService, MandapamPackage as Package } from '@/services/mandapamService';
-import { useCreateBookingMutation } from '@/hooks/queries/useAdminMandapam';
+import { stubCreateBooking, stubFetchPackages } from '@/utils/stubs';
+import type { MandapamPackage as Package } from '@/types/admin-types';
 import { useLanguage } from '@/context/LanguageContext';
 import { TFunction } from 'i18next';
 
@@ -27,7 +27,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
     const [packages, setPackages] = useState<Package[]>([]);
     const [loadingPackages, setLoadingPackages] = useState(false);
     const [paymentType, setPaymentType] = useState<'FULL' | 'ADVANCE' | 'NOT_PAID'>('FULL');
-    const createBookingMutation = useCreateBookingMutation();
+    const [isCreating, setIsCreating] = useState(false);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -58,14 +58,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
 
     const fetchPackages = async () => {
         setLoadingPackages(true);
-        try {
-            const data = await mandapamService.getPackages();
-            setPackages(data.filter(p => p.isActive));
-        } catch (err) {
-            toast.error('Failed to load packages');
-        } finally {
-            setLoadingPackages(false);
-        }
+        stubFetchPackages().then(setPackages).finally(() => setLoadingPackages(false));
     };
 
     const updateForm = (field: string, value: any) => {
@@ -80,7 +73,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
         const paidAmount = paymentType === 'ADVANCE'
             ? Number(formData.advance.replace(/,/g, ''))
             : (paymentType === 'FULL' ? (packages.find(p => p.id === formData.packageId)?.price || 0) : 0);
-        createBookingMutation.mutate({
+        setIsCreating(true);
+        stubCreateBooking({
             contactNameEn: isTamil ? transliteratedData.name : formData.name,
             contactNameTa: isTamil ? formData.name : transliteratedData.name,
             phone: formData.phone,
@@ -95,14 +89,12 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
             paymentStatus: paymentType === 'FULL' ? 'FULLY_PAID' : (paymentType === 'ADVANCE' ? 'ADVANCE' : 'NOT_PAID'),
             paymentMode: paymentType === 'NOT_PAID' ? 'CASH' : formData.paymentMode,
             paidAmount,
-        }, {
-            onSuccess: () => {
-                toast.success(t('adminMandapam.bookings.createSuccess') || 'Booking created successfully');
-                onSuccess?.();
-                onClose();
-            },
-            onError: (err: any) => toast.error(err.message || 'Failed to create booking'),
-        });
+        }).then(() => {
+            toast.success(t('adminMandapam.bookings.createSuccess') || 'Booking created successfully');
+            onSuccess?.();
+            onClose();
+        }).catch((err: any) => toast.error(err.message || 'Failed to create booking'))
+        .finally(() => setIsCreating(false));
     };
 
     const nextStep = () => setStep(s => Math.min(s + 1, 5));
@@ -341,12 +333,12 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
                                                         </div>
                                                     </div>
                                                     <div className={`mt-4 pt-4 border-t ${formData.packageId === pkg.id ? 'border-white/10' : 'border-rosewood/5'} flex flex-wrap gap-2`}>
-                                                        {(isTamil ? pkg.featuresTa : pkg.featuresEn).slice(0, 3).map((f, i) => (
+                                                        {(isTamil ? pkg.featuresTa : pkg.featuresEn).slice(0, 3).map((f: any, i: number) => (
                                                             <span key={i} className={`text-[9px] px-2.5 py-1 rounded-full font-bold uppercase tracking-widest ${formData.packageId === pkg.id ? 'bg-white/10 text-white/70' : 'bg-rosewood/5 text-rosewood/40'}`}>
                                                                 {f}
                                                             </span>
                                                         ))}
-                                                        {pkg.featuresEn.length > 3 && <span className="text-[9px] font-black text-gold/60 self-center">+{pkg.featuresEn.length - 3} MORE</span>}
+                                                        {(pkg.featuresEn?.length ?? 0) > 3 && <span className="text-[9px] font-black text-gold/60 self-center">+{(pkg.featuresEn?.length ?? 0) - 3} MORE</span>}
                                                     </div>
                                                 </button>
                                             ))}
@@ -492,10 +484,10 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
                             {step === 5 ? (
                                 <button
                                     onClick={handleConfirmBooking}
-                                    disabled={createBookingMutation.isPending}
+                                    disabled={isCreating}
                                     className="flex items-center gap-3 bg-rosewood px-10 py-4 rounded-full text-white font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-rosewood/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
                                 >
-                                    {createBookingMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : (
+                                    {isCreating ? <Loader2 className="animate-spin" size={16} /> : (
                                         <>
                                             {t('adminMandapam.bookings.confirmBooking') || 'Confirm Booking'}
                                             <ChevronRight size={16} strokeWidth={3} />

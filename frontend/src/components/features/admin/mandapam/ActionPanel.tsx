@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { stubFetchCalendarData, stubBlockDate, stubUnblockDate, stubFetchBookingsByDate, stubFetchBlockedDetails } from '@/utils/stubs';
 import { 
     Calendar as CalendarIcon, 
     Info, 
@@ -50,13 +50,6 @@ const getTamilDateInfo = (date: Date) => {
     return { nameTa: TAMIL_MONTHS[currentTamilMonthIndex].nameTa, tDate: daysSinceTamilMonthStart };
 };
 import TranslatableTextarea from '@/components/ui/forms/TranslatableTextarea';
-import { 
-    useBlockDateMutation, 
-    useUnblockDateMutation, 
-    useAdminCalendarQuery,
-    useAdminBookingByDateQuery,
-    useAdminBlockedDetailsQuery
-} from '@/hooks/queries/useAdminMandapam';
 import { toast } from 'sonner';
 import { NewBookingModal } from '@/modals/admin/NewBookingModal';
 
@@ -71,10 +64,11 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ t, language, selectedD
     const [reasonEn, setReasonEn] = useState('');
     const [reasonTa, setReasonTa] = useState('');
 
-    const { data: calendarData = [] } = useAdminCalendarQuery();
-    const queryClient = useQueryClient();
-    const blockMutation = useBlockDateMutation();
-    const unblockMutation = useUnblockDateMutation();
+    const [calendarData, setCalendarData] = useState<any[]>([]);
+    const [isBlocking, setIsBlocking] = useState(false);
+    const [isUnblocking, setIsUnblocking] = useState(false);
+    
+    useEffect(() => { stubFetchCalendarData().then(setCalendarData); }, []);
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
     
     // Normalize selected date to string for reliable comparison and queries
@@ -84,12 +78,13 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ t, language, selectedD
     const dateStatus = calendarData.find((item: any) => item.date === selectedDateStr)?.type || 'AVAILABLE';
 
     // Conditionally enable queries based on the date status
-    const { data: bookingDetails = [], isLoading: isLoadingBookings } = useAdminBookingByDateQuery(
-        dateStatus === 'BOOKED' ? selectedDateStr : null
-    );
-    const { data: blockedDetails, isLoading: isLoadingBlocked } = useAdminBlockedDetailsQuery(
-        dateStatus === 'BLOCKED' ? selectedDateStr : null
-    );
+    const [bookingDetails, setBookingDetails] = useState<any[]>([]);
+    const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+    const [blockedDetails, setBlockedDetails] = useState<any>(null);
+    const [isLoadingBlocked, setIsLoadingBlocked] = useState(false);
+    
+    useEffect(() => { if (dateStatus === 'BOOKED' && selectedDateStr) { setIsLoadingBookings(true); stubFetchBookingsByDate(selectedDateStr).then(setBookingDetails).finally(() => setIsLoadingBookings(false)); } }, [selectedDateStr, dateStatus]);
+    useEffect(() => { if (dateStatus === 'BLOCKED' && selectedDateStr) { setIsLoadingBlocked(true); stubFetchBlockedDetails(selectedDateStr).then(setBlockedDetails).finally(() => setIsLoadingBlocked(false)); } }, [selectedDateStr, dateStatus]);
 
     const isDateAvailable = dateStatus === 'AVAILABLE';
     const isDateBooked = dateStatus === 'BOOKED';
@@ -169,27 +164,31 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ t, language, selectedD
     const handleBlock = () => {
         if (!selectedDate) return;
         const dateStr = selectedDate.toLocaleDateString('en-CA');
-        blockMutation.mutate({
+        setIsBlocking(true);
+        stubBlockDate({
             date: dateStr,
             reasonEn: reasonEn || 'Administrative Reasons',
             reasonTa: reasonTa || 'நிர்வாக காரணங்கள்'
-        }, {
-            onSuccess: () => {
+        }).then(
+            () => {
                 toast.success(t('adminMandapam.calendar.blockSuccess') || 'Date blocked successfully');
                 setReasonEn('');
                 setReasonTa('');
-            },
-            onError: (err: any) => toast.error(err.message || 'Failed to block date')
-        });
+            }
+        ).catch(
+            (err: any) => toast.error(err.message || 'Failed to block date')
+        ).finally(() => setIsBlocking(false));
     };
 
     const handleUnblock = () => {
         if (!selectedDate) return;
         const dateStr = selectedDate.toLocaleDateString('en-CA');
-        unblockMutation.mutate(dateStr, {
-            onSuccess: () => toast.success(t('adminMandapam.calendar.unblockSuccess') || 'Date unblocked successfully'),
-            onError: (err: any) => toast.error(err.message || 'Failed to unblock date')
-        });
+        setIsUnblocking(true);
+        stubUnblockDate(dateStr).then(
+            () => toast.success(t('adminMandapam.calendar.unblockSuccess') || 'Date unblocked successfully')
+        ).catch(
+            (err: any) => toast.error(err.message || 'Failed to unblock date')
+        ).finally(() => setIsUnblocking(false));
     };
 
     return (
@@ -346,10 +345,10 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ t, language, selectedD
                         {isDateBlocked && (
                             <button 
                                 onClick={handleUnblock}
-                                disabled={unblockMutation.isPending}
+                                disabled={isUnblocking}
                                 className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-rosewood-gradient border-2 border-gold/20 text-rosewood hover:shadow-md hover:border-gold/40 transition-all shadow-sm"
                             >
-                                {unblockMutation.isPending ? <div className="w-4 h-4 border-2 border-rosewood border-t-transparent rounded-full animate-spin" /> : <Trash2 size={16} />}
+                                {isUnblocking ? <div className="w-4 h-4 border-2 border-rosewood border-t-transparent rounded-full animate-spin" /> : <Trash2 size={16} />}
                                 {t('adminMandapam.calendar.unblockDate') || 'Unblock Date'}
                             </button>
                         )}
@@ -373,10 +372,10 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ t, language, selectedD
                                 </button>
                                 <button 
                                     onClick={handleBlock}
-                                    disabled={blockMutation.isPending}
+                                    disabled={isBlocking}
                                     className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 bg-rosewood-gradient border-2 border-gold/20 text-rosewood hover:shadow-md hover:border-gold/40 shadow-sm"
                                 >
-                                    {blockMutation.isPending ? <div className="w-4 h-4 border-2 border-rosewood border-t-transparent rounded-full animate-spin" /> : <CheckCircle size={16} />}
+                                    {isBlocking ? <div className="w-4 h-4 border-2 border-rosewood border-t-transparent rounded-full animate-spin" /> : <CheckCircle size={16} />}
                                     {t('adminMandapam.calendar.blockFullDay') || 'Block Full Day'}
                                 </button>
                             </>
@@ -390,12 +389,7 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({ t, language, selectedD
                 onClose={() => setIsBookingModalOpen(false)}
                 t={t}
                 initialDate={selectedDateStr || ''}
-                onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ['admin-calendar'] });
-                    if (selectedDateStr) {
-                        queryClient.invalidateQueries({ queryKey: ['admin-bookings', selectedDateStr] });
-                    }
-                }}
+                onSuccess={() => {}}
             />
             </div>
         </div>

@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Loader2, AlertCircle, Package as PackageIcon, CheckCircle2, XCircle, Settings2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { MandapamPackage } from '@/services/mandapamService';
+import { stubFetchPackages, stubTogglePackageStatus } from '@/utils/stubs';
 import { NewPackageModal } from '@/modals/admin/NewPackageModal';
 import { PackageGrid } from '@/components/features/admin/mandapam/packages/PackageGrid';
 import { toast } from 'sonner';
-import { useAdminPackagesQuery, useTogglePackageStatusMutation } from '@/hooks/queries/useAdminMandapam';
+import type { MandapamPackage } from '@/types/admin-types';
 
 // ═══════════════════════════════════════════════════════════
 // PackagesHeader
@@ -77,8 +77,11 @@ const PackageManagement: React.FC = () => {
     const [isPackageModalOpen, setIsPackageModalOpen] = React.useState(false);
     const [selectedPackage, setSelectedPackage] = React.useState<MandapamPackage | null>(null);
 
-    const { data: packages = [], isLoading, error, refetch } = useAdminPackagesQuery();
-    const toggleStatusMutation = useTogglePackageStatusMutation();
+    const [packages, setPackages] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<any>(null);
+    const refetch = () => { setIsLoading(true); stubFetchPackages().then(setPackages).catch(setError).finally(() => setIsLoading(false)); };
+    useEffect(() => { refetch(); }, []);
 
     const stats = React.useMemo(() => {
         const active = packages.filter(p => p.isActive).length;
@@ -86,10 +89,11 @@ const PackageManagement: React.FC = () => {
     }, [packages]);
 
     const handleToggleStatus = (id: string, currentStatus: boolean) => {
-        toggleStatusMutation.mutate({ id, isActive: !currentStatus }, {
-            onSuccess: () => toast.success(t('adminMandapam.packages.updateSuccess') || 'Package status updated'),
-            onError: (err: any) => toast.error(err.message || t('adminMandapam.packages.somethingWentWrong'))
-        });
+        stubTogglePackageStatus({ id, isActive: !currentStatus }).then(
+            () => toast.success(t('adminMandapam.packages.updateSuccess') || 'Package status updated')
+        ).catch(
+            (err: any) => toast.error(err.message || t('adminMandapam.packages.somethingWentWrong'))
+        );
     };
 
     const handleSavePackage = () => { setIsPackageModalOpen(false); refetch(); };

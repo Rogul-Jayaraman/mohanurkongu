@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/context/LanguageContext';
-import { useQuery } from '@tanstack/react-query';
+import { stubFetchPurchaseHistory } from '@/utils/stubs';
 import { format } from 'date-fns';
 import {
     ShieldCheck,
@@ -29,7 +29,6 @@ import Card from '@/components/ui/shared/Card';
 import { ComingSoonOverlay } from '@/components/ui/ComingSoonOverlay';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { scrollToTop } from '@/components/ui/layout/ScrollToTop';
-import api from '@/lib/api';
 import { formatFullName } from '@/utils/formatName';
 
 
@@ -722,13 +721,10 @@ const PurchaseHistorySection: React.FC = () => {
     const isTamil = language === 'ta';
     const [showAllHistory, setShowAllHistory] = useState(false);
 
-    const { data: history, isLoading: historyLoading, isError: historyError } = useQuery<any[]>({
-        queryKey: ['plan-history'],
-        queryFn: async () => {
-            const res = await api.get('/settings/plan-history');
-            return res.data;
-        },
-    });
+    const [history, setHistory] = useState<any[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(true);
+    const [historyError, setHistoryError] = useState(false);
+    useEffect(() => { stubFetchPurchaseHistory().then(setHistory).catch(() => setHistoryError(true)).finally(() => setHistoryLoading(false)); }, []);
 
     const displayedHistory = showAllHistory ? history : history?.slice(0, 3);
 

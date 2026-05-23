@@ -13,3 +13,4 @@ export function getBilingualValue(options: any[], value: string | null | undefin
   if (!label || typeof label !== 'object') return value;
   return getBilingualLabel(label, lang);
 }
+  

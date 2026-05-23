@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CreditCard, CheckCircle2, X } from 'lucide-react';
 import { Input } from '@/components/ui/forms/Input';
-import type { MandapamBooking } from '@/services/mandapamService';
+import type { MandapamBooking } from '@/types/admin-types';
 import { useLanguage } from '@/context/LanguageContext';
 import { scrollToTop } from '@/components/ui/layout/ScrollToTop';
 

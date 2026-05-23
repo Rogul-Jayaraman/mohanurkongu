@@ -2,7 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Calendar, User, Phone, Package, CreditCard, X } from 'lucide-react';
-import type { MandapamBooking } from '@/services/mandapamService';
+import type { MandapamBooking } from '@/types/admin-types';
 import { getBookingStatusColor, getPaymentStatusColor } from '@/constants/admin/statusColors';
 import { format } from 'date-fns';
 import { ta } from 'date-fns/locale';

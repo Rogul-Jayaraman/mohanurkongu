@@ -10,7 +10,7 @@ import {
     HEIGHT_OPTIONS, KULAM_OPTIONS, RESIDENCE_OPTIONS, DOSHAM_OPTIONS
 } from '@/constants/index';
 import logo from '@/assets/images/logo.png';
-import { getImageUrl } from '@/utils/getImageUrl';
+const getImageUrl = (url: string | null | undefined): string | null => { if (!url || typeof url !== 'string') return null; if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url; return null; };
 
 /* ---------- Shared helpers ---------- */
 

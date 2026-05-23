@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Profile } from '../types';
+import { Profile } from '../types/profile';
 import { useInputFormatting, type InputFormattingMode } from './useInputFormatting';
 
 const DEFAULT_FORM_DATA = {

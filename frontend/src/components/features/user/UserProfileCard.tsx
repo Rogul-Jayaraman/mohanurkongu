@@ -18,8 +18,7 @@ import { useProfileUtils } from "@/hooks/useProfileUtils";
 import { KULAM_OPTIONS } from "@/constants/options";
 import { StatusBadge } from "@/components/ui/feedback/StatusBadge";
 import { useInitials } from "@/hooks/useInitials";
-import { useToggleShortlist } from "@/hooks/useToggleShortlist";
-import { getImageUrl } from "@/utils/getImageUrl";
+import { stubToggleShortlist } from '@/utils/stubs';
 import { formatFullName } from "@/utils/formatName";
 
 interface UserProfileCardProps {
@@ -54,9 +53,9 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
       !!profile.isShortlisted,
     );
     const [isToggling, setIsToggling] = React.useState(false);
+    const [shortlistPending, setShortlistPending] = React.useState(false);
 
     const { getInitials } = useInitials();
-    const { mutateAsync: toggleShortlistMutation } = useToggleShortlist();
     const isTamil = i18n.language === "ta";
 
     const fullName = isTamil
@@ -123,11 +122,9 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
       setIsShortlisted(!previousState);
 
       try {
-        const responseData: any = await toggleShortlistMutation(profile.id);
-        const newState =
-          responseData?.data?.shortlisted ??
-          responseData?.shortlisted ??
-          !previousState;
+        setShortlistPending(true);
+        await stubToggleShortlist({ profileId: profile.id }).finally(() => setShortlistPending(false));
+        const newState = !previousState;
         setIsShortlisted(newState);
 
         if (newState) {
@@ -171,7 +168,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
     };
 
     const resolveImageUrl = (url: string | null | undefined) => {
-      return getImageUrl(url) || renderPlaceholderImage();
+      return (url && /^https?:\/\//i.test(url)) ? url : renderPlaceholderImage();
     };
 
     const handleViewProfile = () => {

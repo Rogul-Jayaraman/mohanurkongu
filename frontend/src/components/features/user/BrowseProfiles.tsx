@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { useBrowseProfiles } from '@/hooks/useBrowseProfiles';
+
 import { UserProfileCard, UserProfileCardSkeleton } from '@/components/features/user/UserProfileCard';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { QuickFilters } from '@/components/ui/table/QuickFilters';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { BrowseProfileFilters, ActiveFilterChips } from '@/components/forms/user/BrowseProfileFilters';
 
 // ═══════════════════════════════════════════════════════════
@@ -204,11 +204,20 @@ const NoResultsView: React.FC<NoResultsViewProps> = ({ isSearching, selectedGend
 // ═══════════════════════════════════════════════════════════
 const BrowseProfiles: React.FC = () => {
     const { user } = useAuth();
-    const {
-        selectedGender, searchQuery, setSearchQuery, showFilters, setShowFilters,
-        filters, setFilters, loading, data, error, refetch, fetchNextPage,
-        hasNextPage, isFetchingNextPage, isSearching, handleGenderChange, t
-    } = useBrowseProfiles();
+    const { t } = useTranslation();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
+    const [filters, setFilters] = useState<Record<string, any>>({});
+    const [selectedGender, setSelectedGender] = React.useState<'MALE' | 'FEMALE'>('FEMALE');
+    const loading = false;
+    const data: any[] = [];
+    const error = null;
+    const refetch = () => {};
+    const fetchNextPage = () => {};
+    const hasNextPage = false;
+    const isFetchingNextPage = false;
+    const isSearching = false;
+    const handleGenderChange = () => {};
 
     const handleFilterChange = (key: string, value: any) => {
         setFilters((prev: any) => {

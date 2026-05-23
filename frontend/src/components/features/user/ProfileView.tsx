@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { useProfileDetailQuery } from "@/hooks/queries/useProfiles";
-import { useAuth } from "@/context/AuthContext";
+import { stubFetchProfile } from '@/utils/stubs';
+import { useAuth } from "@/hooks/useAuth";
 import { useProfileUtils } from "@/hooks/useProfileUtils";
 import { useDateFormatter } from "@/hooks/useDateFormatter";
 import { getBilingualValue } from "@/utils/bilingual";
-import { getImageUrl } from "@/utils/getImageUrl";
+const getImageUrl = (url: string | null | undefined): string | null => { if (!url || typeof url !== 'string') return null; if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url; return null; };
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { toast } from "sonner";
 import {
@@ -914,7 +914,10 @@ const ProfileView: React.FC = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation(["common"]);
   const isTamil = i18n.language === "ta";
-  const { data: profile, isLoading, isError } = useProfileDetailQuery(id || "");
+  const [profile, setProfile] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  useEffect(() => { if (id) { stubFetchProfile(id).then(setProfile).catch(() => setIsError(true)).finally(() => setIsLoading(false)); } }, [id]);
 
   const [isPrintingJathagam, setIsPrintingJathagam] = useState(false);
   const [isPrintingBiodata, setIsPrintingBiodata] = useState(false);

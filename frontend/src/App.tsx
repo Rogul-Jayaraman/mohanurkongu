@@ -45,25 +45,14 @@ import HallAvailability from '@/pages/admin/mandapam/Availability';
 import Packages from '@/pages/admin/mandapam/Packages';
 import Bookings from '@/pages/admin/mandapam/Bookings';
 
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider } from './hooks/useAuth';
 import { LanguageProvider } from './context/LanguageContext';
-import { setupScreenshotDetection } from './utils/screenshotDetection';
 import Login from '@/pages/auth/Login';
 import AdminLogin from '@/pages/auth/AdminLogin';
 import Signup from '@/pages/auth/Signup';
 import ForgotPassword from '@/pages/auth/ForgotPassword';
 
 import { Toaster } from 'sonner';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: false,
-    },
-  },
-});
 
 const RootLayout = () => (
   <>
@@ -157,14 +146,8 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  React.useEffect(() => {
-    const cleanup = setupScreenshotDetection();
-    return cleanup;
-  }, []);
-
   return (
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
+    <LanguageProvider>
         <AuthProvider>
           <Toaster
             position="top-right"
@@ -176,7 +159,6 @@ function App() {
           <RouterProvider router={router} />
         </AuthProvider>
       </LanguageProvider>
-    </QueryClientProvider>
   );
 }
 

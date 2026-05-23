@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, CreditCard, Calendar, Check, Loader2, ShieldCheck, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { scrollToTop } from '@/components/ui/layout/ScrollToTop';
-import { usePremiumPriceQuery } from '@/hooks/queries/useAdminMatrimony';
+import { stubFetchPremiumPrice } from '@/utils/stubs';
 
 interface PlanUpgradeModalProps {
     isOpen: boolean;
@@ -24,7 +24,9 @@ export const PlanUpgradeModal: React.FC<PlanUpgradeModalProps> = ({
     const { t } = useTranslation(['adminMatrimony', 'common']);
     const [months, setMonths] = useState(1);
     const [amount, setAmount] = useState(0);
-    const { data: premiumPriceData, isLoading: isLoadingPrice } = usePremiumPriceQuery();
+    const [premiumPriceData, setPremiumPriceData] = useState(0);
+    const [isLoadingPrice, setIsLoadingPrice] = useState(true);
+    useEffect(() => { stubFetchPremiumPrice().then(setPremiumPriceData).finally(() => setIsLoadingPrice(false)); }, []);
     const unitPrice = premiumPriceData || 0;
     const [paymentMode, setPaymentMode] = useState('CASH');
 

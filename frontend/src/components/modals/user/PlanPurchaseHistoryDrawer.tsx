@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { stubFetchPurchaseHistory } from '@/utils/stubs';
 import {
     CreditCard,
     Calendar,
@@ -10,7 +10,6 @@ import {
     Receipt,
     X
 } from 'lucide-react';
-import api from '@/lib/api';
 import { format } from 'date-fns';
 import { scrollToTop } from '@/components/ui/layout/ScrollToTop';
 
@@ -34,14 +33,10 @@ interface PlanTransaction {
 export const PlanPurchaseHistoryDrawer: React.FC<PlanPurchaseHistoryDrawerProps> = ({ isOpen, onClose }) => {
     const { t } = useTranslation(['myaccount', 'common']);
 
-    const { data, isLoading, isError } = useQuery({
-        queryKey: ['plan-history'],
-        queryFn: async () => {
-            const res = await api.get('/settings/plan-history');
-            return res.data as PlanTransaction[];
-        },
-        enabled: isOpen,
-    });
+    const [data, setData] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isError, setIsError] = useState(false);
+    useEffect(() => { stubFetchPurchaseHistory().then(setData).catch(() => setIsError(true)).finally(() => setIsLoading(false)); }, []);
 
     useEffect(() => {
         if (isOpen) {

@@ -9,7 +9,7 @@ import { KULAM_OPTIONS } from '@/constants/options';
 import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
 import { useInitials } from '@/hooks/useInitials';
 import { formatFullName } from '@/utils/formatName';
-import { getImageUrl } from '@/utils/getImageUrl';
+
 
 interface AdminActions {
     onAccept?: (id: string) => void;
@@ -96,7 +96,7 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
     };
 
     const resolveImageUrl = (url: string | null | undefined) => {
-        return getImageUrl(url) || renderPlaceholderImage();
+        return (url && /^https?:\/\//i.test(url)) ? url : renderPlaceholderImage();
     };
 
     return (

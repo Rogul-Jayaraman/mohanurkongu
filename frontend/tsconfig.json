@@ -16,10 +16,9 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@/modals/*": ["src/components/modals/*"]
+      "@/*": ["./src/*"],
+      "@/modals/*": ["./src/components/modals/*"]
     }
   },
   "include": ["src"]

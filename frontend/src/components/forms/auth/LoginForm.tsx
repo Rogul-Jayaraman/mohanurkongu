@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/forms/Input';
 import { EmailField } from '@/components/ui/forms/EmailField';
 import { PasswordField } from '@/components/ui/forms/PasswordField';
 import { Spinner as LoadingSpinner } from '@/components/ui/feedback/Spinner';
-import { validateLogin, type LoginData } from '@/utils/validators/auth';
+import { validateLogin, type LoginData } from '@/utils/validation';
 import { toast } from 'sonner';
 import { useTranslations } from '@/hooks/useTranslations';
-import { useLogin } from '@/hooks/auth/useAuth';
+import { stubLogin } from '@/utils/stubs';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -31,7 +31,7 @@ export const LoginForm: React.FC = () => {
     const navigate = useNavigate();
     const { setToken, setUser } = useAuth();
     const { t, translateError } = useTranslations(['auth', 'errors']);
-    const loginMutation = useLogin();
+    const [isPending, setIsPending] = useState(false);
     const [formData, setFormData] = useState<LoginData>({
         identifier: '',
         password: ''
@@ -58,36 +58,31 @@ export const LoginForm: React.FC = () => {
             return;
         }
 
-        loginMutation.mutate(formData, {
-            onSuccess: (response: any) => {
-                if (response.success && response.data) {
-                    const { token, user } = response.data;
+        setIsPending(true);
+        stubLogin(formData).then((response: any) => {
+            if (response.success && response.data) {
+                const { token, user } = response.data;
 
-                    if (user.role === 'ADMIN') {
-                        toast.error(t('errors:unauthorized'));
-                        setGeneralError(t('errors:unauthorized'));
-                        return;
-                    }
+                if (user.role === 'ADMIN') {
+                    toast.error(t('errors:unauthorized'));
+                    setGeneralError(t('errors:unauthorized'));
+                    return;
+                }
 
-                    setToken(token);
-                    setUser(user);
-                    toast.success(t('auth:login.success'));
-                    navigate('/manamaalai/dashboard');
-                }
-            },
-            onError: (error: any) => {
-                if (error.fieldErrors) {
-                    setErrors(error.fieldErrors);
-                } else {
-                    const translatedMsg = translateError(
-                        error.details || error.message || 'Login failed',
-                        error.code
-                    );
-                    toast.error(translatedMsg);
-                    setGeneralError(translatedMsg);
-                }
+                setToken(token);
+                setUser(user);
+                toast.success(t('auth:login.success'));
+                navigate('/manamaalai/dashboard');
             }
-        });
+        }).catch((error: any) => {
+            if (error.fieldErrors) {
+                setErrors(error.fieldErrors);
+            } else {
+                const translatedMsg = (error.details || error.message || 'Login failed');
+                toast.error(translatedMsg);
+                setGeneralError(translatedMsg);
+            }
+        }).finally(() => setIsPending(false));
     };
 
     return (
@@ -154,13 +149,13 @@ export const LoginForm: React.FC = () => {
 
             <motion.div variants={itemVariants}>
                 <motion.button
-                    whileHover={{ scale: loginMutation.isPending ? 1 : 1.02 }}
-                    whileTap={{ scale: loginMutation.isPending ? 1 : 0.98 }}
-                    disabled={loginMutation.isPending}
-                    className={`w-full py-3.5 sm:py-4 text-white bg-linear-to-r from-rosewood/90 via-rosewood to-rosewood/90 font-bold rounded-xl shadow-lg shadow-rosewood/20 hover:opacity-95 transition-all relative z-10 cursor-pointer text-sm sm:text-base btn-shine flex items-center justify-center ${loginMutation.isPending ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    whileHover={{ scale: isPending ? 1 : 1.02 }}
+                    whileTap={{ scale: isPending ? 1 : 0.98 }}
+                    disabled={isPending}
+                    className={`w-full py-3.5 sm:py-4 text-white bg-linear-to-r from-rosewood/90 via-rosewood to-rosewood/90 font-bold rounded-xl shadow-lg shadow-rosewood/20 hover:opacity-95 transition-all relative z-10 cursor-pointer text-sm sm:text-base btn-shine flex items-center justify-center ${isPending ? 'opacity-70 cursor-not-allowed' : ''}`}
                     type="submit"
                 >
-                    {loginMutation.isPending ? <LoadingSpinner size="sm" color="white" /> : t('login.submit')}
+                    {isPending ? <LoadingSpinner size="sm" color="white" /> : t('login.submit')}
                 </motion.button>
             </motion.div>
         </motion.form>
