@@ -1,0 +1,68 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+
+export interface Step {
+  label: string;
+  key: string;
+}
+
+interface StepIndicatorProps {
+  steps: Step[];
+  currentStep: number;
+  className?: string;
+}
+
+export const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep, className = '' }) => {
+  return (
+    <div className={`w-full ${className}`}>
+      <div className="flex items-center justify-between relative">
+        {steps.map((step, index) => {
+          const isCompleted = index < currentStep;
+          const isCurrent = index === currentStep;
+          const isLast = index === steps.length - 1;
+
+          return (
+            <React.Fragment key={step.key}>
+              <div className="flex flex-col items-center relative z-10">
+                <motion.div
+                  initial={false}
+                  animate={{
+                    scale: isCurrent ? 1 : 0.9,
+                    backgroundColor: isCompleted || isCurrent ? '#5C1A1B' : '#e2e8f0',
+                  }}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                    isCompleted || isCurrent ? 'text-white' : 'text-slate-400'
+                  }`}
+                >
+                  {isCompleted ? (
+                    <span className="material-symbols-outlined text-sm">check</span>
+                  ) : (
+                    <span>{index + 1}</span>
+                  )}
+                </motion.div>
+                <span
+                  className={`text-[10px] font-bold mt-1.5 whitespace-nowrap transition-colors ${
+                    isCurrent ? 'text-rosewood' : isCompleted ? 'text-slate-500' : 'text-slate-300'
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </div>
+              {!isLast && (
+                <div className="flex-1 h-px mx-2 relative -mt-5">
+                  <div className="absolute inset-0 bg-slate-200 rounded-full" />
+                  <motion.div
+                    initial={{ width: '0%' }}
+                    animate={{ width: isCompleted ? '100%' : '0%' }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute inset-0 bg-rosewood rounded-full"
+                  />
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+};

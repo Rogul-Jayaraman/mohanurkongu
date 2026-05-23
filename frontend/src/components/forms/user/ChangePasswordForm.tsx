@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/context/LanguageContext';
 import { Input } from '@/components/ui/forms/Input';
 import { PasswordField } from '@/components/ui/forms/PasswordField';
+import * as authApi from '@/api/auth.api';
 
 interface ChangePasswordFormProps {
     isOpen: boolean;
@@ -54,7 +55,10 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ isOpen, 
         }
         setIsLoading(true);
         try {
-            await Promise.resolve();
+            await authApi.changePassword({
+                currentPassword: formData.oldPassword,
+                newPassword: formData.newPassword,
+            });
             toast.success(t('myaccount:drawers.change_password.success'));
             onClose();
             setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' });

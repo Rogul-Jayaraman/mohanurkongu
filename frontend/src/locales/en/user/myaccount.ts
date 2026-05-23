@@ -36,6 +36,46 @@ export const myAccountEn = {
             restricted: "Account deactivation is currently restricted. Please contact support.",
         },
     },
+    drawers: {
+        change_password: {
+            title: "Change Password",
+            subtitle: "Secure your account with a new password",
+            fields: {
+                old_password: "Current Password",
+                new_password: "New Password",
+                confirm_password: "Confirm New Password",
+                placeholders: {
+                    old: "Enter current password",
+                    new: "Enter new password",
+                    confirm: "Re-enter new password",
+                },
+            },
+            strength: {
+                label: "Strength: {{label}}",
+                score: "{{percent}}% Strong",
+                levels: {
+                    very_weak: "Very Weak",
+                    weak: "Weak",
+                    fair: "Fair",
+                    good: "Good",
+                    strong: "Strong",
+                    unbreakable: "Unbreakable",
+                },
+                requirements: {
+                    length: "At least 8 characters",
+                    uppercase: "One uppercase letter (A-Z)",
+                    number: "One number (0-9)",
+                },
+            },
+            errors: {
+                mismatch: "Passwords do not match",
+                too_weak: "Password is too weak. Please choose a stronger one.",
+                failed: "Failed to change password. Please try again.",
+            },
+            success: "Password changed successfully!",
+            submit: "Change Password",
+        },
+    },
     membership: {
         title: "Membership Status",
         description: "Current Plan & Privileges",

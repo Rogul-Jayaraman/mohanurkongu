@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ta" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>Welcome to Mohanur Kongu</title>
+  {{> _styles}}
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8F6F1; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F8F6F1; min-width: 100%;">
+    <tr>
+      <td align="center" style="padding: 40px 10px;">
+        <!--[if mso]>
+        <table width="600" cellpadding="0" cellspacing="0" border="0" align="center">
+          <tr><td>
+        <![endif]-->
+        <table width="100%" class="container" style="max-width: 600px; background-color: #FCFAF6; border-radius: 12px; box-shadow: 0 2px 12px rgba(74,64,56,0.06);" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td>
+              {{> header}}
+
+              {{> greeting
+                  icon='<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="16" fill="#C9A227" opacity="0.15"/><path d="M20 10C20 10 15 16 15 20C15 23.5 17.5 26 20 26C22.5 26 25 23.5 25 20C25 16 20 10 20 10Z" fill="#C9A227" opacity="0.6"/><path d="M20 14C20 14 17 18 17 20.5C17 22.5 18.5 24 20 24C21.5 24 23 22.5 23 20.5C23 18 20 14 20 14Z" fill="#C9A227"/></svg>'
+                  taHeading='வரவேற்கிறோம்!'
+                  enHeading='Welcome!'
+              }}
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="content card" style="padding: 0 40px 32px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FCFAF6; border: 1px solid #E2D4B4; border-radius: 12px;">
+                      <tr>
+                        <td class="card" style="padding: 32px;">
+                          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td class="ta-body" style="padding-bottom: 12px;">
+                                உங்கள் கணக்கு வெற்றிகரமாக உருவாக்கப்பட்டது. உங்கள் திருமணப் பயணத்தைத் தொடங்க இப்போது நீங்கள் தயார்.
+                              </td>
+                            </tr>
+                            <tr>
+                              <td class="en-body" style="padding-bottom: 20px;">
+                                Your account has been created successfully. You are now ready to begin your matrimonial journey.
+                              </td>
+                            </tr>
+                            <tr>
+                              <td class="ta-body" style="padding-bottom: 12px;">
+                                உங்கள் சுயவிவரத்தை முழுமையாக்கி, எங்கள் சமூகத்தில் உங்கள் வாழ்க்கைத் துணையைத் தேடத் தொடங்குங்கள்.
+                              </td>
+                            </tr>
+                            <tr>
+                              <td class="en-body" style="padding-bottom: 4px;">
+                                Complete your profile and start finding your perfect match from our community of trusted families.
+                              </td>
+                            </tr>
+                          </table>
+
+                          {{> cta-button
+                              taText='சுயவிவரத்தை முழுமையாக்கு'
+                              enText='Complete Your Profile'
+                              href=profileUrl
+                          }}
+
+                          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center" style="padding-top: 16px;">
+                                <a href="{{exploreUrl}}" style="font-family: 'Poppins', 'Noto Sans Tamil', Arial, sans-serif; font-size: 14px; font-weight: 400; color: #C9A227; text-decoration: underline;">
+                                  இயங்குதளத்தை ஆராயுங்கள் / Explore Platform
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              {{> footer}}
+            </td>
+          </tr>
+        </table>
+        <!--[if mso]>
+          </td></tr>
+        </table>
+        <![endif]-->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

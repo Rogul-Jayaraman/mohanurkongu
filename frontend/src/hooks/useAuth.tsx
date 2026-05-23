@@ -1,67 +1,163 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { User, Admin } from '../types/user';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import type { User, Admin } from '../types/user';
+import { storeSession, clearSession } from '../adapters/auth.adapter';
+import * as authApi from '../api/auth.api';
+import type { BackendAccount } from '../api/auth.api';
+import { setAccessToken, getAccessToken, clearAccessToken } from '../lib/session';
 
-interface AuthContextType {
-    user: User | Admin | null;
-    token: string | null;
-    setUser: (user: User | Admin | null) => void;
-    setToken: (token: string | null) => void;
-    logout: () => void;
-    isAuthenticated: boolean;
-    loading: boolean;
+export type AuthStatus = 'anonymous' | 'otp_pending' | 'register_pending' | 'authenticated' | 'expired';
+
+interface AuthState {
+  status: AuthStatus;
+  user: User | Admin | null;
+  token: string | null;
+}
+
+interface AuthContextType extends AuthState {
+  isAuthenticated: boolean;
+  loading: boolean;
+  setUser: (user: User | Admin | null) => void;
+  setToken: (token: string | null) => void;
+  logout: () => Promise<void>;
+  login: (accessToken: string, account: BackendAccount) => User | Admin;
+  restoreSession: () => Promise<boolean>;
+  refreshSession: () => Promise<boolean>;
+  setAuthStatus: (status: AuthStatus) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUserState] = useState<User | Admin | null>(() => {
-        const storedUser = localStorage.getItem('user');
-        return storedUser ? JSON.parse(storedUser) : null;
-    });
-    const [token, setTokenState] = useState<string | null>(localStorage.getItem('token'));
-    const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<AuthState>({
+    status: 'anonymous',
+    user: null,
+    token: null,
+  });
+  const [loading, setLoading] = useState(true);
+  const restoringRef = useRef(false);
 
-    const setToken = useCallback((newToken: string | null) => {
-        setTokenState(newToken);
-        if (newToken) {
-            localStorage.setItem('token', newToken);
-        } else {
-            localStorage.removeItem('token');
+  const setToken = useCallback((newToken: string | null) => {
+    setState((prev) => ({ ...prev, token: newToken }));
+    if (newToken) setAccessToken(newToken);
+    else clearAccessToken();
+  }, []);
+
+  const setUser = useCallback((newUser: User | Admin | null) => {
+    setState((prev) => ({ ...prev, user: newUser }));
+  }, []);
+
+  const setAuthStatus = useCallback((status: AuthStatus) => {
+    setState((prev) => ({ ...prev, status }));
+  }, []);
+
+  const login = useCallback((accessToken: string, account: BackendAccount): User | Admin => {
+    setAccessToken(accessToken);
+    const user = storeSession(accessToken, account);
+    setState({ status: 'authenticated', user, token: accessToken });
+    return user;
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Graceful — token may already be invalid
+    }
+    clearAccessToken();
+    clearSession();
+    setState({ status: 'anonymous', user: null, token: null });
+    window.location.href = '/manamaalai/login';
+  }, []);
+
+  const refreshSession = useCallback(async (): Promise<boolean> => {
+    try {
+      const result = await authApi.refresh();
+      if (result?.accessToken) {
+        setAccessToken(result.accessToken);
+        setState((prev) => ({ ...prev, token: result.accessToken }));
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const restoreSession = useCallback(async (): Promise<boolean> => {
+    if (restoringRef.current) return false;
+    restoringRef.current = true;
+    setLoading(true);
+    try {
+      // Try silent refresh first (uses httpOnly cookie)
+      const existingToken = getAccessToken();
+      if (!existingToken) {
+        const refreshed = await refreshSession();
+        if (!refreshed) {
+          setState({ status: 'anonymous', user: null, token: null });
+          return false;
         }
-    }, []);
+      }
 
-    const setUser = useCallback((newUser: User | Admin | null) => {
-        setUserState(newUser);
-        if (newUser) {
-            localStorage.setItem('user', JSON.stringify(newUser));
-        } else {
-            localStorage.removeItem('user');
+      const account = await authApi.getProfile();
+      const token = getAccessToken()!;
+      const user = storeSession(token, account);
+      setState({ status: 'authenticated', user, token });
+      return true;
+    } catch {
+      // Token invalid — try silent refresh
+      const refreshed = await refreshSession();
+      if (refreshed) {
+        try {
+          const newToken = getAccessToken()!;
+          const account = await authApi.getProfile();
+          const user = storeSession(newToken, account);
+          setState({ status: 'authenticated', user, token: newToken });
+          return true;
+        } catch {
+          clearAccessToken();
+          setState({ status: 'expired', user: null, token: null });
+          return false;
         }
-    }, []);
+      }
+      clearAccessToken();
+      setState({ status: 'expired', user: null, token: null });
+      return false;
+    } finally {
+      restoringRef.current = false;
+      setLoading(false);
+    }
+  }, [refreshSession]);
 
-    const logout = useCallback(() => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        setTokenState(null);
-        setUserState(null);
-        window.location.href = '/manamaalai/login';
-    }, []);
+  useEffect(() => {
+    restoreSession();
+  }, []);
 
-    useEffect(() => {
-        setLoading(false);
-    }, []);
+  const isAuthenticated = state.status === 'authenticated' && !!state.token;
 
-    return (
-        <AuthContext.Provider value={{ user, token, setUser, setToken, logout, isAuthenticated: !!token, loading }}>
-            {children}
-        </AuthContext.Provider>
-    );
+  return (
+    <AuthContext.Provider
+      value={{
+        ...state,
+        isAuthenticated,
+        loading,
+        setUser,
+        setToken,
+        logout,
+        login,
+        restoreSession,
+        refreshSession,
+        setAuthStatus,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return context;
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

@@ -77,44 +77,19 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     /**
      * Helper to translate errors from API or forms
+     * Backend now localizes messages — frontend passes them through.
      */
     const translateError = useCallback((error: any, code?: string) => {
         if (!error) return '';
-        
-        // If we have a standardized code, use it first
-        if (code && i18n.exists(`errors:${code}`)) {
-            return i18n.t(`errors:${code}`) as string;
+
+        if (typeof error === 'string') {
+          if (i18n.exists(`errors:${error}`)) {
+            return i18n.t(`errors:${error}`) as string;
+          }
+          return error;
         }
 
-        // Check if error itself is a code
-        const errorStr = typeof error === 'string' ? error : (error.message || '');
-        if (errorStr.startsWith('ERR_') && i18n.exists(`errors:${errorStr}`)) {
-            return i18n.t(`errors:${errorStr}`) as string;
-        }
-
-        // Map common error strings to keys if no code is present
-        const commonErrors: Record<string, string> = {
-            'Invalid or expired verification code': 'ERR_AUTH_004',
-            'Invalid verification code': 'otpInvalid',
-            'Verification code has expired': 'otpExpired',
-            'Invalid password': 'invalidCredentials',
-            'User already exists': 'userExists',
-            'Network Error': 'networkError',
-            'Internal server error': 'serverError',
-            'Failed to send verification code': 'otpSendFailed',
-            'Failed to send OTP': 'otpSendFailed',
-            'Failed to send reset code': 'otpSendFailed',
-            'Login failed': 'loginFailed',
-            'Signup failed': 'signupFailed',
-            'Failed to reset password': 'resetFailed'
-        };
-
-        const mappedKey = commonErrors[errorStr];
-        if (mappedKey) {
-            return i18n.t(`errors:${mappedKey}`) as string;
-        }
-
-        return errorStr;
+        return error.message || error.details || '';
     }, []);
 
     return (

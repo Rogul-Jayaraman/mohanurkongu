@@ -54,6 +54,7 @@ export const commonEn = {
     subtitle: "",
     appName: "Kongu Manamaalai",
     logout: "Logout",
+    capsLockOn: "Caps Lock is on",
     nav: {
       dashboard: "Dashboard",
       browse_profiles: "Browse Profiles",
@@ -88,6 +89,7 @@ export const commonEn = {
     verify: "Verify",
     verified: "Verified",
     pending: "Pending",
+    verifying: "Verifying...",
     basic_info: "Basic Info",
     filters: "Filters",
     personal_info: "Personal Information",

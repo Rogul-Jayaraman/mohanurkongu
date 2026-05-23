@@ -1,0 +1,29 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+interface CapsLockContextType {
+  capsLock: boolean;
+}
+
+const CapsLockContext = createContext<CapsLockContextType>({ capsLock: false });
+
+export const CapsLockProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [capsLock, setCapsLock] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.getModifierState) {
+        setCapsLock(e.getModifierState('CapsLock'));
+      }
+    };
+    document.addEventListener('keyup', handler);
+    return () => document.removeEventListener('keyup', handler);
+  }, []);
+
+  return (
+    <CapsLockContext.Provider value={{ capsLock }}>
+      {children}
+    </CapsLockContext.Provider>
+  );
+};
+
+export const useCapsLock = () => useContext(CapsLockContext);

@@ -1,0 +1,61 @@
+services:
+  postgres:
+    extends:
+      file: docker-compose.yml
+      service: postgres
+    networks:
+      - mkm-network
+
+  redis:
+    extends:
+      file: docker-compose.yml
+      service: redis
+    networks:
+      - mkm-network
+
+  mailpit:
+    extends:
+      file: docker-compose.yml
+      service: mailpit
+    networks:
+      - mkm-network
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../docker/backend/Dockerfile
+    container_name: mkm-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - ../backend/.env
+    environment:
+      DATABASE_URL: postgresql://mohanurkongu:mohanurkongu@postgres:5432/mohanurkongu?schema=public
+      REDIS_HOST: redis
+      SMTP_HOST: mailpit
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - mkm-network
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/frontend/Dockerfile
+    container_name: mkm-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - mkm-network
+
+networks:
+  mkm-network:
+    driver: bridge

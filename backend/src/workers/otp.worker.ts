@@ -1,5 +1,6 @@
 import { Worker } from 'bullmq';
 import { queueConfig } from '../config/queue.config.js';
+import { logger } from '../common/utils/logger.js';
 
 export function createOtpWorker(): Worker {
   const connection = { host: queueConfig.redis.host, port: queueConfig.redis.port };
@@ -7,8 +8,8 @@ export function createOtpWorker(): Worker {
   const worker = new Worker(
     'otp',
     async (job) => {
-      const { email, otp, purpose } = job.data;
-      console.log(`[OTP Worker] ${purpose} OTP for ${email}: ${otp}`);
+      const { email, purpose } = job.data;
+      logger.info({ purpose, email }, 'OTP generated');
 
       await job.updateProgress(100);
     },

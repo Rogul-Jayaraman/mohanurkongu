@@ -72,9 +72,8 @@ model AccountTranslation {
   id         String       @id @default(uuid())
   accountId  String       @db.Uuid
   language   LanguageCode
-  firstName  String
-  middleName String?
-  lastName   String?
+  firstName String
+  lastName  String?
   isDefault  Boolean      @default(false)
 
   createdAt DateTime @default(now())

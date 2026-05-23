@@ -252,14 +252,13 @@ export const ErrorState: React.FC<{
  */
 export const Dashboard: React.FC = () => {
   const { t } = useTranslations(['dashboard']);
-  const user = null;
+  const { user, loading: authLoading } = useAuth();
   const dashboardLoading = false;
   const data = null;
   const brides: any[] = [];
   const grooms: any[] = [];
   const error = null;
   const refetch = () => {};
-  const { loading: authLoading } = useAuth();
 
   const loading = dashboardLoading && !data;
   const isHeaderLoading = authLoading || (loading && !user);

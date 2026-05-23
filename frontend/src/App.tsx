@@ -47,6 +47,7 @@ import Bookings from '@/pages/admin/mandapam/Bookings';
 
 import { AuthProvider } from './hooks/useAuth';
 import { LanguageProvider } from './context/LanguageContext';
+import { CapsLockProvider } from './context/CapsLockContext';
 import Login from '@/pages/auth/Login';
 import AdminLogin from '@/pages/auth/AdminLogin';
 import Signup from '@/pages/auth/Signup';
@@ -148,6 +149,7 @@ const router = createBrowserRouter([
 function App() {
   return (
     <LanguageProvider>
+        <CapsLockProvider>
         <AuthProvider>
           <Toaster
             position="top-right"
@@ -158,6 +160,7 @@ function App() {
           />
           <RouterProvider router={router} />
         </AuthProvider>
+        </CapsLockProvider>
       </LanguageProvider>
   );
 }

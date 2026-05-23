@@ -2,15 +2,13 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { stubAdminLogin } from '@/utils/stubs';
+import * as authApi from '@/api/auth.api';
 import { Input } from '@/components/ui/forms/Input';
-import { EmailField } from '@/components/ui/forms/EmailField';
 import { PasswordField } from '@/components/ui/forms/PasswordField';
 import { Spinner as LoadingSpinner } from '@/components/ui/feedback/Spinner';
 import { validateLogin, type LoginData } from '@/utils/validation';
 import { toast } from 'sonner';
 import { useTranslations } from '@/hooks/useTranslations';
-import { useInputFormatting } from '@/hooks/useInputFormatting';
 
 const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -31,9 +29,8 @@ const itemVariants = {
  */
 export const AdminLoginForm: React.FC = () => {
     const navigate = useNavigate();
-    const { setUser, setToken } = useAuth();
+    const { login } = useAuth();
     const { t, translateError } = useTranslations(['adminLogin', 'errors']);
-    const { formatValue } = useInputFormatting();
     const [isPending, setIsPending] = useState(false);
     const [formData, setFormData] = useState<LoginData>({
         identifier: '',
@@ -63,22 +60,24 @@ export const AdminLoginForm: React.FC = () => {
         }
 
         setIsPending(true);
-        stubAdminLogin(formData).then((response: any) => {
-            if (response.success && response.data) {
-                setToken(response.data.token);
-                setUser(response.data.user);
+        (async () => {
+            try {
+                const response = await authApi.login({
+                    identifier: formData.identifier,
+                    password: formData.password,
+                    portal: 'ADMIN',
+                });
+                login(response.accessToken, response.account);
                 toast.success(t('auth:login.success') || 'Login successful');
                 navigate('/admin/dashboard');
-            } else {
-                const message = (response as any).message || 'login_failed';
+            } catch (error: any) {
+                const message = error.details || error.message || 'login_failed';
                 toast.error(message);
                 setGeneralError(message);
+            } finally {
+                setIsPending(false);
             }
-        }).catch((error: any) => {
-            const message = error.details || error.message || 'login_failed';
-            toast.error(message);
-            setGeneralError(message);
-        }).finally(() => setIsPending(false));
+        })();
     };
 
     return (

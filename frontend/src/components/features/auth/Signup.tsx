@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import signupHeroImg from '@/assets/images/auth/signup_hero.jpeg';
 import { useLanguage } from '@/context/LanguageContext';
 import type { SignupData } from '@/utils/validation';
@@ -13,8 +13,10 @@ import {
     SignupTermsForm,
     SignupSubmitForm
 } from '@/components/forms/auth/SignupForm';
-import { stubSignup, stubSendRegistrationOtp, stubVerifyRegistrationOtp } from '@/utils/stubs';
 import { OtpVerificationModal } from '@/components/modals/auth/OtpVerificationModal';
+import * as authApi from '@/api/auth.api';
+import { getErrorMessage, isAppError } from '@/lib/errors';
+import { toast } from 'sonner';
 
 export const signupContainerVariants = {
     hidden: { opacity: 0 },
@@ -29,9 +31,6 @@ export const signupItemVariants = {
     visible: { y: 0, opacity: 1, transition: { duration: 0.4 } }
 };
 
-/**
- * SignupHero – visual hero section for the signup page (45% width).
- */
 export const SignupHero: React.FC = () => {
     const { t, language } = useLanguage();
 
@@ -42,12 +41,12 @@ export const SignupHero: React.FC = () => {
                 className="absolute inset-0 object-cover h-full w-full"
                 src={signupHeroImg}
             />
-            <div className="absolute inset-0 bg-linear-to-br from-gold/20 to-rosewood/70 opacity-90 backdrop-blur-[1px]"></div>
+            <div className="absolute inset-0 bg-linear-to-br from-gold/20 to-rosewood/70 opacity-90 backdrop-blur-[1px]" />
 
-            <div className="ornament-corner absolute top-6 left-6 opacity-80"></div>
-            <div className="ornament-corner absolute top-6 right-6 rotate-90 opacity-80"></div>
-            <div className="ornament-corner absolute bottom-6 right-6 rotate-180 opacity-80"></div>
-            <div className="ornament-corner absolute bottom-6 left-6 -rotate-90 opacity-80"></div>
+            <div className="ornament-corner absolute top-6 left-6 opacity-80" />
+            <div className="ornament-corner absolute top-6 right-6 rotate-90 opacity-80" />
+            <div className="ornament-corner absolute bottom-6 right-6 rotate-180 opacity-80" />
+            <div className="ornament-corner absolute bottom-6 left-6 -rotate-90 opacity-80" />
 
             <div className="relative z-10 text-center space-y-6 max-w-md">
                 <motion.div
@@ -74,7 +73,7 @@ export const SignupHero: React.FC = () => {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.6 }}
                     className="h-[2px] w-full bg-linear-to-r from-transparent via-gold/40 to-transparent my-4"
-                ></motion.div>
+                />
 
                 <motion.p
                     initial={{ y: 20, opacity: 0 }}
@@ -112,9 +111,6 @@ export const SignupHero: React.FC = () => {
     );
 };
 
-/**
- * SignupFormWrapper – orchestrates state, mutations, and composes sub-forms.
- */
 export const SignupFormWrapper: React.FC = () => {
     const navigate = useNavigate();
     const { t, language, translateError } = useLanguage();
@@ -146,35 +142,60 @@ export const SignupFormWrapper: React.FC = () => {
     const [otpError, setOtpError] = useState<string | null>(null);
     const [generalError, setGeneralError] = useState<string | null>(null);
     const [isNameFocused, setIsNameFocused] = useState<'first' | 'last' | null>(null);
+    const [otpTimer, setOtpTimer] = useState(0);
+    const [canResend, setCanResend] = useState(false);
 
     const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+    const abortRef = useRef<AbortController | null>(null);
 
-    const handleSendOTP = () => {
+    useEffect(() => {
+        if (otpTimer <= 0) {
+            setCanResend(true);
+            return;
+        }
+        const interval = setInterval(() => setOtpTimer((t) => t - 1), 1000);
+        return () => clearInterval(interval);
+    }, [otpTimer]);
+
+    useEffect(() => {
+        return () => abortRef.current?.abort();
+    }, []);
+
+    const handleSendOTP = async () => {
         if (!isValidEmail) return;
         setGeneralError(null);
         setIsSendingOtp(true);
-        stubSendRegistrationOtp(formData.email).then((response: any) => {
-            if (response.success) {
-                setIsOTPSent(true);
-                setIsOTPVerified(false);
-                setIsOtpModalOpen(true);
-                setGeneralError(null);
-            }
-        }).catch((error: any) => {
-            setGeneralError(translateError(error?.message || 'Failed to send OTP', error?.code));
-        }).finally(() => setIsSendingOtp(false));
+        abortRef.current?.abort();
+        abortRef.current = new AbortController();
+
+        try {
+            await authApi.sendRegistrationOtp({ email: formData.email });
+            setIsOTPSent(true);
+            setIsOTPVerified(false);
+            setIsOtpModalOpen(true);
+            setOtpTimer(60);
+            setCanResend(false);
+            setGeneralError(null);
+        } catch (err) {
+            setGeneralError(getErrorMessage(err, t('signup.otpSendFailed')));
+        } finally {
+            setIsSendingOtp(false);
+        }
     };
 
-    const handleResendOTP = () => {
-        setGeneralError(null);
+    const handleResendOTP = async () => {
+        if (!canResend || isSendingOtp) return;
+        setOtpError(null);
         setIsSendingOtp(true);
-        stubSendRegistrationOtp(formData.email).then((response: any) => {
-            if (response.success) {
-                setGeneralError(null);
-            }
-        }).catch((error: any) => {
-            setGeneralError(translateError(error?.message || 'Failed to send OTP', error?.code));
-        }).finally(() => setIsSendingOtp(false));
+        try {
+            await authApi.sendRegistrationOtp({ email: formData.email });
+            setOtpTimer(60);
+            setCanResend(false);
+        } catch (err) {
+            setOtpError(getErrorMessage(err));
+        } finally {
+            setIsSendingOtp(false);
+        }
     };
 
     const handleCloseOtpModal = () => {
@@ -186,20 +207,27 @@ export const SignupFormWrapper: React.FC = () => {
         }
     };
 
-    const handleVerifyOTP = () => {
+    const handleVerifyOTP = async () => {
         if (!otpValue || otpValue.length !== 6) return;
         setIsVerifyingOtp(true);
-        stubVerifyRegistrationOtp({ email: formData.email, otp: otpValue }).then((response: any) => {
-            if (response.success && response.data?.verificationToken) {
-                setVerificationToken(response.data.verificationToken);
-                setIsOTPVerified(true);
-                setIsOtpModalOpen(false);
-                setGeneralError(null);
-                setOtpError(null);
+        try {
+            const result = await authApi.verifyRegistrationOtp({ email: formData.email, otp: otpValue });
+            setVerificationToken(result.verificationToken);
+            setIsOTPVerified(true);
+            setIsOtpModalOpen(false);
+            setGeneralError(null);
+            setOtpError(null);
+            toast.success(t('common.verified'));
+        } catch (err) {
+            if (isAppError(err) && err.code === 'AUTH_VERIFICATION_EXPIRED') {
+                setOtpError(t('signup.codeExpired'));
+                setCanResend(true);
+            } else {
+                setOtpError(getErrorMessage(err));
             }
-        }).catch((error: any) => {
-            setOtpError(translateError(error?.message || 'Invalid OTP', error?.code));
-        }).finally(() => setIsVerifyingOtp(false));
+        } finally {
+            setIsVerifyingOtp(false);
+        }
     };
 
     const handleFieldChange = (field: keyof SignupData, value: string | boolean) => {
@@ -243,7 +271,7 @@ export const SignupFormWrapper: React.FC = () => {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setGeneralError(null);
         if (!isOTPVerified) {
@@ -257,20 +285,25 @@ export const SignupFormWrapper: React.FC = () => {
         });
         setErrors(translatedErrors);
         if (Object.keys(newErrors).length === 0) {
-            const { confirmPassword, termsAccepted, ...cleanData } = formData;
             setIsSigningUp(true);
-            stubSignup({ ...cleanData, verificationToken: verificationToken! } as SignupData).then((response: any) => {
-                if (response.success && response.data) {
-                    navigate('/manamaalai/login', { state: { message: 'Signup successful. Please login to continue.' } });
-                }
-            }).catch((error: any) => {
-                const apiError = error;
-                if (apiError?.fieldErrors && typeof apiError.fieldErrors === 'object') {
-                    setErrors(apiError.fieldErrors);
+            try {
+                const { confirmPassword: _cf, termsAccepted: _ta, ...cleanData } = formData;
+                await authApi.signup({ ...cleanData, verificationToken: verificationToken! });
+                navigate('/manamaalai/login', { state: { message: t('signup.successInfo') } });
+            } catch (err) {
+                if (isAppError(err) && err.details && Array.isArray(err.details)) {
+                    const fieldErrs: Partial<Record<keyof SignupData, string>> = {};
+                    for (const d of err.details as Array<{ field: string; message: string }>) {
+                        if (d.field in fieldErrs) fieldErrs[d.field as keyof SignupData] = d.message;
+                    }
+                    if (Object.keys(fieldErrs).length > 0) setErrors(fieldErrs);
+                    else setGeneralError(getErrorMessage(err, t('signup.failed')));
                 } else {
-                    setGeneralError(translateError(apiError?.message || 'Signup failed', apiError?.code));
+                    setGeneralError(getErrorMessage(err, t('signup.failed')));
                 }
-            }).finally(() => setIsSigningUp(false));
+            } finally {
+                setIsSigningUp(false);
+            }
         }
     };
 
@@ -288,7 +321,7 @@ export const SignupFormWrapper: React.FC = () => {
 
     return (
         <section className="w-full lg:w-[55%] bg-white p-6 sm:p-10 lg:p-12 overflow-hidden relative flex flex-col items-center justify-center min-h-[calc(100vh-140px)] lg:min-h-[750px]">
-            <div className="absolute inset-0 kolam-watermark pointer-events-none opacity-[0.25]"></div>
+            <div className="absolute inset-0 kolam-watermark pointer-events-none opacity-[0.25]" />
 
             <motion.div
                 variants={signupContainerVariants}
@@ -430,8 +463,8 @@ export const SignupFormWrapper: React.FC = () => {
                             alreadyText={t('signup.already')}
                             isOTPVerified={isOTPVerified}
                             isOTPSent={isOTPSent}
-                                signupIsPending={isSigningUp}
-                                verifyIsPending={isVerifyingOtp}
+                            signupIsPending={isSigningUp}
+                            verifyIsPending={isVerifyingOtp}
                             onSubmit={handleSubmit}
                         />
                     </motion.div>

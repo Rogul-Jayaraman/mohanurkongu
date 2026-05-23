@@ -43,6 +43,11 @@ export const signupEn = {
     verifyContactFirst: "Verify at least one contact method to continue",
     verifyEmailFirst: "Verify your email to continue",
     success: "Registration successful!",
+    otpSendFailed: "Failed to send verification code. Please try again.",
+    codeExpired: "Verification code expired. Please request a new one.",
+    failed: "Registration failed. Please try again.",
+    successInfo: "Your account has been created successfully. Please login to continue.",
+    continueToLogin: "Continue to Login",
     hero: {
       tags: "Heritage • Culture • Union",
       title: "Join Thousands of Happy Families",

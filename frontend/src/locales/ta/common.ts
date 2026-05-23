@@ -45,6 +45,7 @@ export const commonTa = {
     subtitle: "",
     appName: "கொங்கு மணமாலை",
     logout: "வெளியேறு",
+    capsLockOn: "Caps Lock இயக்கத்தில் உள்ளது",
     nav: {
       dashboard: "முகப்பு",
       browse_profiles: "துணை தேடல்",
@@ -94,6 +95,7 @@ export const commonTa = {
     verify: "சரிபார்க்கவும்",
     verified: "சரிபார்க்கப்பட்டது",
     pending: "காத்திருப்பில் உள்ளது",
+    verifying: "சரிபார்க்கப்படுகிறது...",
     basic_info: "அடிப்படை விவரங்கள்",
     personal_info: "தனிப்பட்ட விவரங்கள்",
     section_nav: {

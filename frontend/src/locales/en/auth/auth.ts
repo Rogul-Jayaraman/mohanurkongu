@@ -63,7 +63,10 @@ export const authEn = {
         success: "Password reset successfully!",
         backToLogin: "Back to Login",
         resendIn: "Resend in {{time}}"
-      }
+      },
+      passwordReq: "Password must be at least 8 characters with an uppercase letter and number.",
+      sessionExpired: "Session expired. Please start the password reset process again.",
+      successInfo: "Your password has been reset successfully! You can now login with your new password."
     },
     transliterate: {
       tamilLabel: "Tamil:",

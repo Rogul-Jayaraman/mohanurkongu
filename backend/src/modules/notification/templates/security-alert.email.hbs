@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ta" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>Security Alert</title>
+  {{> _styles}}
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8F6F1; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F8F6F1; min-width: 100%;">
+    <tr>
+      <td align="center" style="padding: 40px 10px;">
+        <!--[if mso]>
+        <table width="600" cellpadding="0" cellspacing="0" border="0" align="center">
+          <tr><td>
+        <![endif]-->
+        <table width="100%" class="container" style="max-width: 600px; background-color: #FCFAF6; border-radius: 12px; box-shadow: 0 2px 12px rgba(74,64,56,0.06);" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td>
+              {{> header}}
+
+              {{> greeting
+                  icon='<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="16" fill="#A63B3B" opacity="0.1"/><path d="M20 8l11 5v7c0 6-4.5 11.5-11 13-6.5-1.5-11-7-11-13v-7l11-5z" fill="#A63B3B" opacity="0.15" stroke="#A63B3B" stroke-width="0.5"/><path d="M20 16v6m0 4v-2" stroke="#A63B3B" stroke-width="2" stroke-linecap="round"/><path d="M20 12l7 3.5v5c0 4-3 8-7 9-4-1-7-5-7-9v-5l7-3.5z" fill="#A63B3B" opacity="0.5"/><path d="M20 14l5 2.5v3.5c0 3-2 5.5-5 6.5-3-1-5-3.5-5-6.5v-3.5l5-2.5z" fill="#FCFAF6"/></svg>'
+                  taHeading='பாதுகாப்பு எச்சரிக்கை'
+                  enHeading='Security Alert'
+              }}
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="content card" style="padding: 0 40px 32px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FCFAF6; border: 1px solid #E2D4B4; border-radius: 12px;">
+                      <tr>
+                        <td class="card" style="padding: 32px;">
+                          {{> info-note
+                              borderColor='#A63B3B'
+                              textColor='#A63B3B'
+                              taText='🛡️ உங்கள் கணக்கில் புதிய உள்நுழைவு கண்டறியப்பட்டது'
+                              enText='A new login was detected on your account.'
+                          }}
+
+                          {{> device-table
+                              time=deviceTime
+                              device=deviceName
+                              location=deviceLocation
+                          }}
+
+                          {{> cta-button
+                              taText='செயல்பாட்டை மதிப்பாய்வு செய்ய'
+                              enText='Review Activity'
+                              href=reviewUrl
+                          }}
+
+                          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center" style="padding-top: 16px;">
+                                <a href="{{secureUrl}}" style="font-family: 'Poppins', 'Noto Sans Tamil', Arial, sans-serif; font-size: 14px; font-weight: 400; color: #C9A227; text-decoration: underline;">
+                                  கணக்கைப் பாதுகாக்க / Secure Account
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+
+                          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center" style="padding-top: 16px;">
+                                <span class="small-text text-alert" style="font-family: 'Poppins', 'Noto Sans Tamil', Arial, sans-serif;">
+                                  <span style="font-family: 'Noto Sans Tamil', Arial, sans-serif;">இது நீங்கள் அல்ல எனில், உடனடியாக உங்கள் கணக்கு செயல்பாட்டை மதிப்பாய்வு செய்யவும்.</span><br>
+                                  If this wasn\'t you, please review your account activity immediately.
+                                </span>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              {{> footer}}
+            </td>
+          </tr>
+        </table>
+        <!--[if mso]>
+          </td></tr>
+        </table>
+        <![endif]-->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
