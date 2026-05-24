@@ -4,6 +4,8 @@ import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
 import { hashPassword, verifyPassword } from '../../common/utils/crypto.js';
 import type { ChangePasswordDto } from '../auth/dto/change-password.dto.js';
 import { prisma } from '../../database/prisma.js';
+import { enqueueAuditEvent } from '../../common/utils/audit.js';
+import { appConfig } from '../../config/app.config.js';
 
 export class AccountService {
   constructor(private repo: AccountRepository) {}
@@ -19,7 +21,6 @@ export class AccountService {
     const activeMembership = account.memberships[0];
 
     return {
-      id: account.id,
       accountNo: account.accountNo,
       firstNameEn: enTranslation?.firstName || '',
       lastNameEn: enTranslation?.lastName || '',
@@ -27,21 +28,13 @@ export class AccountService {
       lastNameTa: taTranslation?.lastName || '',
       email: account.credential?.email || '',
       phone: account.credential?.phone || '',
-      emailVerified: account.credential?.emailVerified || false,
-      phoneVerified: account.credential?.phoneVerified || false,
-      roles: account.roles.map((r) => r.role.code),
       membership: activeMembership
         ? {
             planCode: activeMembership.planCode,
-            planName: activeMembership.planName,
-            status: activeMembership.status,
             expiresAt: activeMembership.expiresAt,
-            currency: activeMembership.currency,
-            price: activeMembership.planPrice,
           }
         : null,
-      currentState: account.currentState,
-      createdAt: account.createdAt,
+      createdAt: account.createdAt.toISOString(),
     };
   }
 
@@ -59,11 +52,79 @@ export class AccountService {
     }
 
     const newHash = await hashPassword(dto.newPassword);
-    await this.repo.updatePassword(accountId, newHash);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.accountCredential.update({
+        where: { accountId },
+        data: { passwordHash: newHash },
+      });
+
+      await tx.account.update({
+        where: { id: accountId },
+        data: { tokenVersion: { increment: 1 } },
+      });
+
+      await tx.accountSession.updateMany({
+        where: { accountId, revokedAt: null },
+        data: { revokedAt: new Date(), revokedReason: 'password_changed' },
+      });
+    });
+
+    await enqueueAuditEvent('PASSWORD_CHANGE', accountId, {});
   }
 
-  async generateAccountNo(): Promise<string> {
-    const prefix = 'MKM';
-    return `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  async updateProfile(accountId: string, data: Record<string, any>) {
+    const updates: any[] = [];
+
+    if (data.firstNameEn !== undefined || data.lastNameEn !== undefined) {
+      updates.push(
+        prisma.accountTranslation.update({
+          where: { accountId_language: { accountId, language: 'EN' } },
+          data: {
+            ...(data.firstNameEn !== undefined && { firstName: data.firstNameEn }),
+            ...(data.lastNameEn !== undefined && { lastName: data.lastNameEn }),
+          },
+        }),
+      );
+    }
+
+    if (data.firstNameTa !== undefined || data.lastNameTa !== undefined) {
+      updates.push(
+        prisma.accountTranslation.update({
+          where: { accountId_language: { accountId, language: 'TA' } },
+          data: {
+            ...(data.firstNameTa !== undefined && { firstName: data.firstNameTa }),
+            ...(data.lastNameTa !== undefined && { lastName: data.lastNameTa }),
+          },
+        }),
+      );
+    }
+
+    if (data.phone !== undefined) {
+      updates.push(
+        prisma.accountCredential.update({
+          where: { accountId },
+          data: { phone: data.phone },
+        }),
+      );
+    }
+
+    if (updates.length > 0) {
+      await Promise.all(updates);
+    }
+
+    return this.getProfile(accountId);
+  }
+
+  async generateAccountNo(tx?: any): Promise<string> {
+    const client = tx || prisma;
+    const prefix = appConfig.accountNoPrefix;
+    const updated = await client.accountNoCounter.upsert({
+      where: { prefix },
+      create: { prefix, counter: 1 },
+      update: { counter: { increment: 1 } },
+    });
+    const digits = Math.max(4, Math.floor(Math.log10(updated.counter)) + 1);
+    return `${prefix}-${updated.counter.toString().padStart(digits, '0')}`;
   }
 }

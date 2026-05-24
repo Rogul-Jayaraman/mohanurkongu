@@ -1,0 +1,16 @@
+import { Router } from 'express';
+import type { AccountController } from './account.controller.js';
+import { requireSession } from '../../common/middleware/requireAuth.js';
+import { validate } from '../../common/middleware/validate.js';
+import { changePasswordSchema } from '../../common/validators/auth.validator.js';
+import { updateProfileSchema } from '../../common/validators/account.validator.js';
+
+export function createAccountRoutes(controller: AccountController): Router {
+  const router = Router();
+
+  router.get('/account/me', requireSession, controller.getProfile);
+  router.patch('/account/me', requireSession, validate(updateProfileSchema), controller.updateProfile);
+  router.post('/auth/change-password', requireSession, validate(changePasswordSchema), controller.changePassword);
+
+  return router;
+}

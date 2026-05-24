@@ -15,7 +15,8 @@ import {
 } from '@/components/forms/auth/SignupForm';
 import { OtpVerificationModal } from '@/components/modals/auth/OtpVerificationModal';
 import * as authApi from '@/api/auth.api';
-import { getErrorMessage, isAppError } from '@/lib/errors';
+import { useAuth } from '@/hooks/useAuth';
+import { isAppError } from '@/lib/errors';
 import { toast } from 'sonner';
 
 export const signupContainerVariants = {
@@ -113,6 +114,7 @@ export const SignupHero: React.FC = () => {
 
 export const SignupFormWrapper: React.FC = () => {
     const navigate = useNavigate();
+    const auth = useAuth();
     const { t, language, translateError } = useLanguage();
 
     const [isSigningUp, setIsSigningUp] = useState(false);
@@ -177,7 +179,8 @@ export const SignupFormWrapper: React.FC = () => {
             setCanResend(false);
             setGeneralError(null);
         } catch (err) {
-            setGeneralError(getErrorMessage(err, t('signup.otpSendFailed')));
+            const translated = isAppError(err) ? translateError(err, err.code) : translateError(err);
+            setGeneralError(translated || t('signup.otpSendFailed'));
         } finally {
             setIsSendingOtp(false);
         }
@@ -192,7 +195,7 @@ export const SignupFormWrapper: React.FC = () => {
             setOtpTimer(60);
             setCanResend(false);
         } catch (err) {
-            setOtpError(getErrorMessage(err));
+            setOtpError(isAppError(err) ? translateError(err, err.code) : translateError(err));
         } finally {
             setIsSendingOtp(false);
         }
@@ -223,7 +226,7 @@ export const SignupFormWrapper: React.FC = () => {
                 setOtpError(t('signup.codeExpired'));
                 setCanResend(true);
             } else {
-                setOtpError(getErrorMessage(err));
+                setOtpError(isAppError(err) ? translateError(err, err.code) : translateError(err));
             }
         } finally {
             setIsVerifyingOtp(false);
@@ -288,18 +291,19 @@ export const SignupFormWrapper: React.FC = () => {
             setIsSigningUp(true);
             try {
                 const { confirmPassword: _cf, termsAccepted: _ta, ...cleanData } = formData;
-                await authApi.signup({ ...cleanData, verificationToken: verificationToken! });
-                navigate('/manamaalai/login', { state: { message: t('signup.successInfo') } });
+                const result = await authApi.register({ ...cleanData, verificationToken: verificationToken! });
+                await auth.login(result.accessToken);
+                navigate('/manamaalai/dashboard');
             } catch (err) {
                 if (isAppError(err) && err.details && Array.isArray(err.details)) {
                     const fieldErrs: Partial<Record<keyof SignupData, string>> = {};
                     for (const d of err.details as Array<{ field: string; message: string }>) {
-                        if (d.field in fieldErrs) fieldErrs[d.field as keyof SignupData] = d.message;
+                        fieldErrs[d.field as keyof SignupData] = translateError(d.message);
                     }
                     if (Object.keys(fieldErrs).length > 0) setErrors(fieldErrs);
-                    else setGeneralError(getErrorMessage(err, t('signup.failed')));
+                    else setGeneralError(isAppError(err) ? translateError(err, err.code) : translateError(err));
                 } else {
-                    setGeneralError(getErrorMessage(err, t('signup.failed')));
+                    setGeneralError(isAppError(err) ? translateError(err, err.code) : translateError(err));
                 }
             } finally {
                 setIsSigningUp(false);

@@ -1,106 +1,190 @@
-import { VerificationService } from '../verification/verification.service.js';
 import { SessionService } from '../session/session.service.js';
 import { AccountRepository } from '../account/account.repository.js';
 import { AccountService } from '../account/account.service.js';
+import { NotificationService } from '../notification/notification.service.js';
 import { authConfig } from '../../config/auth.config.js';
-import { hashPassword, verifyPassword, dummyHashVerify } from '../../common/utils/crypto.js';
-import { signAccessToken, type AccessTokenPayload } from '../../common/utils/jwt.js';
-import { sha256 } from '../../common/utils/hash.js';
+import { hashPassword, verifyPassword } from '../../common/utils/crypto.js';
+import {
+  signVerificationToken,
+  verifyVerificationToken,
+  signResetToken,
+  verifyResetToken,
+} from '../../common/utils/jwt.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
-import type { SendRegistrationOtpDto } from './dto/send-registration-otp.dto.js';
-import type { VerifyRegistrationOtpDto } from './dto/verify-registration-otp.dto.js';
 import type { SignupDto } from './dto/signup.dto.js';
 import type { LoginDto } from './dto/login.dto.js';
-import type { ForgotPasswordOtpDto } from './dto/forgot-password-otp.dto.js';
-import type { VerifyResetOtpDto } from './dto/verify-reset-otp.dto.js';
 import type { ResetPasswordDto } from './dto/reset-password.dto.js';
 import type { DeviceInfo } from '../../common/utils/device.js';
 import { prisma } from '../../database/prisma.js';
+import { enqueueAuditEvent } from '../../common/utils/audit.js';
 
 export class AuthService {
   constructor(
-    private verificationService: VerificationService,
     private sessionService: SessionService,
     private accountRepo: AccountRepository,
     private accountService: AccountService,
+    private notificationService: NotificationService,
   ) {}
 
-  async sendRegistrationOtp(dto: SendRegistrationOtpDto) {
-    const otp = await this.verificationService.sendOtp('EMAIL', dto.email, 'REGISTER');
-    return otp;
-  }
-
-  async verifyRegistrationOtp(dto: VerifyRegistrationOtpDto) {
-    const record = await this.verificationService.verifyOtp('EMAIL', dto.email, dto.otp, 'REGISTER');
-
-    const token = signAccessToken({ sub: record.id, roles: ['SESSION'] });
-
-    await prisma.registrationSession.create({
-      data: {
-        verificationId: record.id,
-        snapshotTarget: dto.email,
-        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-      },
-    });
-
-    return { verificationToken: token };
-  }
-
-  async signup(dto: SignupDto) {
-    let payload: any;
+  async register(dto: SignupDto) {
+    let payload;
     try {
-      payload = await import('../../common/utils/jwt.js').then((m) => m.verifyAccessToken(dto.verificationToken));
+      payload = verifyVerificationToken(dto.verificationToken);
     } catch {
       throw new AppError(400, ErrorCodes.AUTH_REGISTRATION_SESSION_INVALID, 'AUTH_REGISTRATION_SESSION_INVALID');
     }
 
-    const regSession = await prisma.registrationSession.findFirst({
-      where: {
-        verificationId: payload.sub,
-        usedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-    });
-
-    if (!regSession) {
+    if (payload.type !== 'verification' || payload.purpose !== 'register') {
       throw new AppError(400, ErrorCodes.AUTH_REGISTRATION_SESSION_INVALID, 'AUTH_REGISTRATION_SESSION_INVALID');
     }
 
-    const emailExists = await this.accountRepo.existsByEmail(dto.email);
-    if (emailExists) {
-      throw new AppError(409, ErrorCodes.AUTH_EMAIL_EXISTS, 'AUTH_EMAIL_EXISTS');
-    }
+    const verificationId = payload.sub;
 
-    if (dto.phone) {
-      const phoneExists = await this.accountRepo.existsByPhone(dto.phone);
-      if (phoneExists) {
-        throw new AppError(409, ErrorCodes.AUTH_PHONE_EXISTS, 'AUTH_PHONE_EXISTS');
+    return prisma.$transaction(async (tx) => {
+      const regSession = await tx.registrationSession.findFirst({
+        where: {
+          verificationId,
+          usedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (!regSession) {
+        throw new AppError(400, ErrorCodes.AUTH_REGISTRATION_SESSION_INVALID, 'AUTH_REGISTRATION_SESSION_INVALID');
       }
-    }
 
-    const passwordHash = await hashPassword(dto.password);
-    const accountNo = await this.accountService.generateAccountNo();
+      const verificationRecord = await tx.accountVerification.findUnique({
+        where: { id: verificationId },
+        select: { type: true, target: true },
+      });
 
-    await this.accountRepo.create({
-      accountNo,
-      firstNameEn: dto.firstNameEn,
-      lastNameEn: dto.lastNameEn,
-      firstNameTa: dto.firstNameTa,
-      lastNameTa: dto.lastNameTa,
-      email: dto.email,
-      phone: dto.phone,
-      passwordHash,
+      if (!verificationRecord) {
+        throw new AppError(400, ErrorCodes.AUTH_REGISTRATION_SESSION_INVALID, 'AUTH_REGISTRATION_SESSION_INVALID');
+      }
+
+      if (verificationRecord.target !== regSession.snapshotTarget) {
+        throw new AppError(400, ErrorCodes.AUTH_REGISTRATION_SESSION_INVALID, 'AUTH_REGISTRATION_SESSION_INVALID');
+      }
+
+      const passwordHash = await hashPassword(dto.password);
+      const accountNo = await this.accountService.generateAccountNo(tx);
+
+      let account;
+      try {
+        account = await tx.account.create({
+          data: {
+            accountNo,
+            translations: {
+              create: [
+                {
+                  language: 'EN',
+                  firstName: dto.firstNameEn,
+                  lastName: dto.lastNameEn,
+                  isDefault: true,
+                },
+                {
+                  language: 'TA',
+                  firstName: dto.firstNameTa,
+                  lastName: dto.lastNameTa,
+                },
+              ],
+            },
+            credential: {
+              create: {
+                email: regSession.snapshotTarget,
+                phone: dto.phone,
+                passwordHash,
+              },
+            },
+            statusHistory: {
+              create: {
+                state: 'ACTIVE',
+                reason: 'Account created',
+                changedBy: 'system',
+              },
+            },
+          },
+          include: {
+            translations: true,
+            credential: true,
+            statusHistory: true,
+          },
+        });
+      } catch (err: any) {
+        if (err?.code === 'P2002') {
+          const target = err.meta?.target as string[] | undefined;
+          if (target?.includes('email')) {
+            throw new AppError(409, ErrorCodes.AUTH_EMAIL_EXISTS, 'AUTH_EMAIL_EXISTS');
+          }
+          if (target?.includes('phone')) {
+            throw new AppError(409, ErrorCodes.AUTH_PHONE_EXISTS, 'AUTH_PHONE_EXISTS');
+          }
+        }
+        throw err;
+      }
+
+      const userRole = await tx.role.findUnique({ where: { code: 'USER' } });
+      if (!userRole) {
+        throw new AppError(500, ErrorCodes.INTERNAL_ERROR, 'Default role not configured');
+      }
+      await tx.accountRole.create({
+        data: { accountId: account.id, roleId: userRole.id },
+      });
+
+      const basicPlan = await tx.membershipPlan.findUnique({ where: { code: 'BASIC' } });
+      if (basicPlan) {
+        await tx.accountMembership.create({
+          data: {
+            accountId: account.id,
+            planId: basicPlan.id,
+            planCode: basicPlan.code,
+            planName: basicPlan.displayName,
+            planPrice: basicPlan.price,
+            currency: basicPlan.currency,
+            startsAt: new Date(),
+            status: 'ACTIVE',
+          },
+        });
+      }
+
+      await tx.registrationSession.update({
+        where: { id: regSession.id },
+        data: { usedAt: new Date() },
+      });
+
+      await tx.accountVerification.update({
+        where: { id: verificationId },
+        data: { state: 'ARCHIVED', consumedAt: new Date() },
+      });
+
+      await tx.accountCredential.update({
+        where: { accountId: account.id },
+        data: {
+          emailVerified: verificationRecord.type === 'EMAIL',
+          phoneVerified: verificationRecord.type === 'PHONE',
+        },
+      });
+
+      await this.notificationService.sendWelcomeEmail(regSession.snapshotTarget, dto.firstNameEn, '');
+
+      const roles = ['USER'];
+      const session = await this.sessionService.createSession(
+        account.id,
+        roles,
+        account.tokenVersion,
+        undefined,
+        tx,
+      );
+
+      return {
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+        accountId: account.id,
+        role: 'USER' as const,
+        sessionId: session.sessionId,
+      };
     });
-
-    await this.verificationService.consumeVerification(payload.sub);
-
-    await prisma.registrationSession.update({
-      where: { id: regSession.id },
-      data: { usedAt: new Date() },
-    });
-
-    return { message: 'Account created successfully' };
   }
 
   async login(dto: LoginDto, device?: DeviceInfo) {
@@ -114,21 +198,23 @@ export class AuthService {
     }
 
     if (!credential) {
-      await dummyHashVerify();
+      const identifier = dto.identifier.includes('@') ? dto.identifier.toLowerCase() : dto.identifier;
+      await enqueueAuditEvent('LOGIN_FAILED', undefined, { identifier, reason: 'account_not_found' });
       throw new AppError(401, ErrorCodes.AUTH_INVALID_CREDENTIALS, 'AUTH_INVALID_CREDENTIALS');
     }
 
     if (credential.account.currentState === 'DELETED') {
-      await dummyHashVerify();
+      await enqueueAuditEvent('LOGIN_FAILED', credential.accountId, { reason: 'deleted' });
       throw new AppError(401, ErrorCodes.AUTH_INVALID_CREDENTIALS, 'AUTH_INVALID_CREDENTIALS');
     }
 
     if (credential.account.currentState === 'SUSPENDED') {
-      await dummyHashVerify();
+      await enqueueAuditEvent('LOGIN_FAILED', credential.accountId, { reason: 'suspended' });
       throw new AppError(403, ErrorCodes.AUTH_ACCOUNT_SUSPENDED, 'AUTH_ACCOUNT_SUSPENDED');
     }
 
     if (credential.lockedUntil && credential.lockedUntil > new Date()) {
+      await enqueueAuditEvent('LOGIN_FAILED', credential.accountId, { reason: 'locked' });
       throw new AppError(429, ErrorCodes.AUTH_ACCOUNT_LOCKED, 'AUTH_ACCOUNT_LOCKED');
     }
 
@@ -140,20 +226,15 @@ export class AuthService {
     const valid = await verifyPassword(credential.passwordHash || '', dto.password);
     if (!valid) {
       await this.accountRepo.incrementFailedLogins(credential.accountId, credential.failedLoginCount);
+      await enqueueAuditEvent('LOGIN_FAILED', credential.accountId, { reason: 'invalid_password' });
       throw new AppError(401, ErrorCodes.AUTH_INVALID_CREDENTIALS, 'AUTH_INVALID_CREDENTIALS');
     }
 
     await this.accountRepo.resetFailedLogins(credential.accountId);
 
+    await enqueueAuditEvent('LOGIN_SUCCESS', credential.accountId, { device: device?.fingerprint });
+
     const roles = credential.account.roles.map((r: any) => r.role.code);
-
-    if (dto.portal === 'ADMIN' && !roles.includes('ADMIN')) {
-      throw new AppError(403, ErrorCodes.AUTH_PORTAL_MISMATCH, 'AUTH_PORTAL_MISMATCH');
-    }
-
-    if (dto.portal === 'USER' && roles.length === 1 && roles[0] === 'ADMIN') {
-      throw new AppError(403, ErrorCodes.AUTH_PORTAL_MISMATCH, 'AUTH_PORTAL_MISMATCH');
-    }
 
     const session = await this.sessionService.createSession(
       credential.accountId,
@@ -162,24 +243,12 @@ export class AuthService {
       device,
     );
 
-    const account = {
-      id: credential.accountId,
-      accountNo: credential.account.accountNo,
-      roles,
-      membership: credential.account.memberships?.[0]
-        ? {
-            planCode: credential.account.memberships[0].planCode,
-            planName: credential.account.memberships[0].planName,
-            status: credential.account.memberships[0].status,
-            expiresAt: credential.account.memberships[0].expiresAt,
-          }
-        : null,
-    };
-
     return {
       accessToken: session.accessToken,
       refreshToken: session.refreshToken,
-      account,
+      accountId: credential.accountId,
+      role: roles.includes('ADMIN') ? ('ADMIN' as const) : ('USER' as const),
+      sessionId: session.sessionId,
     };
   }
 
@@ -188,48 +257,30 @@ export class AuthService {
   }
 
   async logout(refreshToken: string) {
-    await this.sessionService.revokeSession(refreshToken);
+    await this.sessionService.revokeSession(refreshToken, 'LOGOUT');
   }
 
   async logoutAll(accountId: string) {
     await this.sessionService.revokeAll(accountId);
   }
 
-  async sendPasswordResetOtp(dto: ForgotPasswordOtpDto) {
-    const exists = await this.accountRepo.existsByEmail(dto.email);
-    if (exists) {
-      const otp = await this.verificationService.sendOtp('EMAIL', dto.email, 'RESET_PASSWORD');
-    }
-    return { email: dto.email };
-  }
-
-  async verifyPasswordResetOtp(dto: VerifyResetOtpDto) {
-    const record = await this.verificationService.verifyOtp('EMAIL', dto.email, dto.otp, 'RESET_PASSWORD');
-
-    const token = signAccessToken({ sub: record.id, roles: ['SESSION'] });
-
-    await prisma.resetSession.create({
-      data: {
-        verificationId: record.id,
-        snapshotTarget: dto.email,
-        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-      },
-    });
-
-    return { resetToken: token };
-  }
-
   async resetPassword(dto: ResetPasswordDto) {
-    let payload: any;
+    let payload;
     try {
-      payload = await import('../../common/utils/jwt.js').then((m) => m.verifyAccessToken(dto.resetToken));
+      payload = verifyResetToken(dto.resetToken);
     } catch {
       throw new AppError(400, ErrorCodes.AUTH_RESET_SESSION_INVALID, 'AUTH_RESET_SESSION_INVALID');
     }
 
+    if (payload.type !== 'reset' || payload.purpose !== 'reset_password') {
+      throw new AppError(400, ErrorCodes.AUTH_RESET_SESSION_INVALID, 'AUTH_RESET_SESSION_INVALID');
+    }
+
+    const verificationId = payload.sub;
+
     const resetSession = await prisma.resetSession.findFirst({
       where: {
-        verificationId: payload.sub,
+        verificationId,
         usedAt: null,
         expiresAt: { gt: new Date() },
       },
@@ -239,11 +290,13 @@ export class AuthService {
       throw new AppError(400, ErrorCodes.AUTH_RESET_SESSION_INVALID, 'AUTH_RESET_SESSION_INVALID');
     }
 
+    const email = resetSession.snapshotTarget;
     const newHash = await hashPassword(dto.password);
+    let accountId: string | undefined;
 
     await prisma.$transaction(async (tx) => {
       const credential = await tx.accountCredential.findUnique({
-        where: { email: dto.email },
+        where: { email },
         select: { accountId: true },
       });
 
@@ -251,8 +304,10 @@ export class AuthService {
         throw new AppError(400, ErrorCodes.AUTH_RESET_SESSION_INVALID, 'AUTH_RESET_SESSION_INVALID');
       }
 
+      accountId = credential.accountId;
+
       await tx.accountCredential.update({
-        where: { email: dto.email },
+        where: { email },
         data: { passwordHash: newHash },
       });
 
@@ -272,41 +327,8 @@ export class AuthService {
       });
     });
 
+    await enqueueAuditEvent('PASSWORD_RESET', accountId, {});
+
     return { message: 'Password reset successfully' };
-  }
-
-  async getProfile(accountId: string) {
-    return this.accountService.getProfile(accountId);
-  }
-
-  async changePassword(accountId: string, currentPassword: string, newPassword: string) {
-    const cred = await prisma.accountCredential.findUnique({
-      where: { accountId },
-    });
-
-    if (!cred?.passwordHash) {
-      throw new AppError(400, ErrorCodes.AUTH_INVALID_PASSWORD, 'AUTH_INVALID_PASSWORD');
-    }
-
-    const valid = await verifyPassword(cred.passwordHash, currentPassword);
-    if (!valid) {
-      throw new AppError(400, ErrorCodes.AUTH_INVALID_PASSWORD, 'AUTH_INVALID_PASSWORD');
-    }
-
-    const newHash = await hashPassword(newPassword);
-
-    await prisma.$transaction(async (tx) => {
-      await tx.accountCredential.update({
-        where: { accountId },
-        data: { passwordHash: newHash },
-      });
-
-      await tx.account.update({
-        where: { id: accountId },
-        data: { tokenVersion: { increment: 1 } },
-      });
-    });
-
-    return { message: 'Password changed successfully' };
   }
 }

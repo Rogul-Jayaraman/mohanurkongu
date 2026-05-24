@@ -50,39 +50,51 @@ export const useTranslations = (namespaces: string | string[] = ['common']) => {
     
     /**
      * Helper to translate errors from API or forms
+     * Uses error code (e.g., AUTH_INVALID_CREDENTIALS) to look up errors: namespace.
+     * Falls back to message-based mapping for non-code strings.
      */
     const translateError = (error: any, code?: string): string => {
         if (!error) return '';
-        
-        // If we have a standardized code, use it first
+
+        // If error is an AppError with a code, use it
         if (code && i18n.exists(`errors:${code}`)) {
             return translate(`errors:${code}`);
         }
 
-        // Check if error itself is a code or key
-        const errorStr = typeof error === 'string' ? error : (error.details || error.message || '');
-        
-        // Try direct key matches in errors namespace
+        const errorStr = typeof error === 'string' ? error : (error.code || error.message || error.details || '');
+
+        // Try direct key match in errors namespace
         if (i18n.exists(`errors:${errorStr}`)) {
             return translate(`errors:${errorStr}`);
         }
 
-        // Map common error strings to keys if no code is present
+        // Map common error strings / backend messages to translation keys
         const commonErrors: Record<string, string> = {
-            'Invalid or expired verification code': 'ERR_AUTH_004',
-            'Invalid verification code': 'otpInvalid',
-            'Verification code has expired': 'otpExpired',
-            'Invalid password': 'invalidCredentials',
-            'User already exists': 'userExists',
-            'Network Error': 'networkError',
-            'Internal server error': 'serverError'
+            'Invalid or expired verification code': 'AUTH_VERIFICATION_EXPIRED',
+            'Invalid verification code': 'AUTH_OTP_INVALID',
+            'Verification code has expired': 'AUTH_OTP_EXPIRED',
+            'Invalid password': 'AUTH_INVALID_CREDENTIALS',
+            'User already exists': 'AUTH_EMAIL_EXISTS',
+            'Invalid phone/email or password': 'AUTH_INVALID_CREDENTIALS',
+            'Login failed. Please check your credentials.': 'AUTH_INVALID_CREDENTIALS',
+            'Network Error': 'INTERNAL_ERROR',
+            'Internal server error': 'INTERNAL_ERROR',
+            'Failed to send verification code. Please try again.': 'AUTH_OTP_COOLDOWN',
+            'Registration failed. Please try again.': 'VALIDATION_ERROR',
+            'Failed to reset password. Please try again.': 'AUTH_RESET_SESSION_INVALID',
+            'Session expired': 'AUTH_SESSION_EXPIRED',
+            'Request timed out': 'REQUEST_TIMEOUT',
         };
 
         const mappedKey = commonErrors[errorStr];
-        if (mappedKey) {
+        if (mappedKey && i18n.exists(`errors:${mappedKey}`)) {
             return translate(`errors:${mappedKey}`);
         }
 
+        // Last resort: extract error from object or return raw string
+        if (typeof error === 'object' && error !== null) {
+            return error.message || error.details || errorStr;
+        }
         return errorStr;
     };
     

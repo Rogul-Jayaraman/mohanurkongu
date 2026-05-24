@@ -11,7 +11,9 @@ let transporter: nodemailer.Transporter | null = null;
 
 function getTransporter(): nodemailer.Transporter {
   if (!transporter) {
-    if (process.env.NODE_ENV === 'production') {
+    const hasAuth = !!(queueConfig.email.user && queueConfig.email.pass);
+
+    if (hasAuth) {
       transporter = nodemailer.createTransport({
         host: queueConfig.email.host,
         port: queueConfig.email.port,
@@ -42,6 +44,10 @@ function generatePlainTextFallback(template: EmailTemplate, data: Record<string,
       return `Your login code is: ${data.otpCode || '------'}. It expires in 5 minutes. Never share this code.`;
     case 'password-reset':
       return `Reset your password by visiting: ${data.resetUrl || 'the reset page'}. This link expires in 15 minutes.`;
+    case 'password-reset-otp':
+      return `Your password reset code is: ${data.otpCode || '------'}. It expires in 5 minutes. Never share this code.`;
+    case 'registration-otp':
+      return `Your registration code is: ${data.otpCode || '------'}. It expires in 5 minutes. Never share this code.`;
     case 'security-alert':
       return `A new login was detected on your account. Device: ${data.deviceName || 'Unknown'}, Location: ${data.deviceLocation || 'Unknown'}, Time: ${data.deviceTime || 'Unknown'}.`;
     default:

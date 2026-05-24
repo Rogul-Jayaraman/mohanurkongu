@@ -134,11 +134,6 @@ export class AccountRepository {
         account: {
           include: {
             roles: { include: { role: true } },
-            memberships: {
-              where: { status: 'ACTIVE' },
-              take: 1,
-              orderBy: { startsAt: 'desc' },
-            },
           },
         },
       },
@@ -152,11 +147,6 @@ export class AccountRepository {
         account: {
           include: {
             roles: { include: { role: true } },
-            memberships: {
-              where: { status: 'ACTIVE' },
-              take: 1,
-              orderBy: { startsAt: 'desc' },
-            },
           },
         },
       },
@@ -215,5 +205,34 @@ export class AccountRepository {
       where: { id: accountId },
       data: { tokenVersion: { increment: 1 } },
     });
+  }
+
+  async listAccounts(page: number, limit: number, search?: string) {
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { accountNo: { contains: search, mode: 'insensitive' } },
+        { credential: { email: { contains: search, mode: 'insensitive' } } },
+        { translations: { firstName: { contains: search, mode: 'insensitive' } } },
+        { translations: { lastName: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      prisma.account.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          credential: { select: { email: true, phone: true, emailVerified: true } },
+          roles: { include: { role: true } },
+          translations: { where: { language: 'EN' }, take: 1 },
+        },
+      }),
+      prisma.account.count({ where }),
+    ]);
+
+    return { data, total };
   }
 }

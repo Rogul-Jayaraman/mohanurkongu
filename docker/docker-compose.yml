@@ -4,11 +4,12 @@ services:
     container_name: mkm-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_USER: mohanurkongu
       POSTGRES_PASSWORD: mohanurkongu
       POSTGRES_DB: mohanurkongu
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

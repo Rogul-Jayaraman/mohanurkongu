@@ -10,8 +10,12 @@ export const authConfig = {
   jwt: {
     accessSecret: requireEnv('JWT_ACCESS_SECRET'),
     refreshSecret: requireEnv('JWT_REFRESH_SECRET'),
+    verificationSecret: requireEnv('JWT_VERIFICATION_SECRET'),
+    resetSecret: requireEnv('JWT_RESET_SECRET'),
     accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+    verificationExpiresIn: process.env.JWT_VERIFICATION_EXPIRES_IN || '15m',
+    resetExpiresIn: process.env.JWT_RESET_EXPIRES_IN || '15m',
   },
   argon2: {
     memory: parseInt(process.env.ARGON2_MEMORY || '65536', 10),
@@ -33,6 +37,7 @@ export const authConfig = {
     otpMax: parseInt(process.env.OTP_RATE_LIMIT_MAX || '3', 10),
     otpVerifyMax: parseInt(process.env.OTP_VERIFY_RATE_LIMIT_MAX || '5', 10),
     signupMax: parseInt(process.env.SIGNUP_RATE_LIMIT_MAX || '5', 10),
+    refreshMax: parseInt(process.env.REFRESH_RATE_LIMIT_MAX || '10', 10),
   },
   session: {
     cleanupIntervalMinutes: parseInt(process.env.SESSION_CLEANUP_INTERVAL_MINUTES || '15', 10),

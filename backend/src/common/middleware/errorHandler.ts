@@ -9,7 +9,8 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
   const lang = res.locals?.lang || 'en';
 
   if (err instanceof AppError) {
-    sendError(res, err.statusCode, err.code, err.message, err.details);
+    const message = err.message === err.code ? translate(err.code, lang) : err.message;
+    sendError(res, err.statusCode, err.code, message, err.details);
     return;
   }
 

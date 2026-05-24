@@ -11,7 +11,7 @@ import {
   ForgotPasswordResetForm,
 } from '@/components/forms/auth/ForgotPasswordForm';
 import * as authApi from '@/api/auth.api';
-import { getErrorMessage, isAppError } from '@/lib/errors';
+import { isAppError } from '@/lib/errors';
 
 type RecoveryStep = 'IDENTIFY' | 'VERIFY' | 'RESET' | 'SUCCESS';
 
@@ -75,7 +75,7 @@ export const ForgotPasswordForm: React.FC = () => {
       setCanResend(false);
       setStep('VERIFY');
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(isAppError(err) ? translateError(err, err.code) : translateError(err));
     } finally {
       setIsSending(false);
     }
@@ -91,7 +91,7 @@ export const ForgotPasswordForm: React.FC = () => {
       setCanResend(false);
       toast.success(t('signup.sent'));
     } catch (err) {
-      setOtpError(getErrorMessage(err));
+      setOtpError(isAppError(err) ? translateError(err, err.code) : translateError(err));
     } finally {
       setIsSending(false);
     }
@@ -111,7 +111,7 @@ export const ForgotPasswordForm: React.FC = () => {
         setOtpError(t('signup.codeExpired'));
         setCanResend(true);
       } else {
-        setOtpError(getErrorMessage(err));
+        setOtpError(isAppError(err) ? translateError(err, err.code) : translateError(err));
       }
     } finally {
       setIsVerifying(false);
@@ -144,7 +144,7 @@ export const ForgotPasswordForm: React.FC = () => {
       await authApi.resetPassword({ email, resetToken, password });
       setStep('SUCCESS');
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(isAppError(err) ? translateError(err, err.code) : translateError(err));
     } finally {
       setIsResetting(false);
     }

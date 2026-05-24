@@ -62,27 +62,26 @@ export const LoginForm: React.FC = () => {
         password: formData.password,
       });
 
-      const user = auth.login(result.accessToken, result.account);
-
-      if (user.role === 'ADMIN') {
-        toast.error(t('errors:unauthorized'));
-        setGeneralError(t('errors:unauthorized'));
-        return;
-      }
+      await auth.login(result.accessToken);
 
       toast.success(t('auth:login.success'));
       navigate('/manamaalai/dashboard');
     } catch (err) {
-      if (isValidationError(err)) {
-        const mapped: Partial<Record<keyof LoginData, string>> = {};
-        const identifierErr = getFieldError(err, 'identifier');
-        const passwordErr = getFieldError(err, 'password');
-        if (identifierErr) mapped.identifier = identifierErr;
-        if (passwordErr) mapped.password = passwordErr;
-        if (Object.keys(mapped).length > 0) {
-          setFieldErrors(mapped);
+      if (isAppError(err)) {
+        const translated = translateError(err, err.code);
+        if (isValidationError(err)) {
+          const mapped: Partial<Record<keyof LoginData, string>> = {};
+          const identifierErr = getFieldError(err, 'identifier');
+          const passwordErr = getFieldError(err, 'password');
+          if (identifierErr) mapped.identifier = translateError(identifierErr);
+          if (passwordErr) mapped.password = translateError(passwordErr);
+          if (Object.keys(mapped).length > 0) {
+            setFieldErrors(mapped);
+          } else {
+            setGeneralError(translated);
+          }
         } else {
-          setGeneralError(getErrorMessage(err));
+          setGeneralError(translated);
         }
       } else {
         setGeneralError(getErrorMessage(err));

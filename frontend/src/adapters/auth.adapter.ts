@@ -1,9 +1,14 @@
 import type { BackendAccount } from '../api/auth.api';
 import type { User, Admin } from '../types/user';
 
-export function mapAccountToUser(account: BackendAccount): User {
+function decodeJwtPayload(token: string) {
+  return JSON.parse(atob(token.split('.')[1]));
+}
+
+export function mapAccountToUser(account: BackendAccount, accessToken: string): User {
+  const { sub, roles } = decodeJwtPayload(accessToken);
   return {
-    id: account.id,
+    id: sub,
     customId: account.accountNo,
     firstNameEn: account.firstNameEn,
     lastNameEn: account.lastNameEn,
@@ -11,7 +16,7 @@ export function mapAccountToUser(account: BackendAccount): User {
     lastNameTa: account.lastNameTa || null,
     email: account.email,
     phone: account.phone || '',
-    role: account.roles.includes('ADMIN') ? 'ADMIN' : 'USER',
+    role: roles.includes('ADMIN') ? 'ADMIN' : 'USER',
     plan: account.membership?.planCode === 'PREMIUM' ? 'PREMIUM' : 'BASIC',
     planExpiry: account.membership?.expiresAt || null,
     createdAt: account.createdAt,
@@ -19,9 +24,10 @@ export function mapAccountToUser(account: BackendAccount): User {
   };
 }
 
-export function mapAccountToAdmin(account: BackendAccount): Admin {
+export function mapAccountToAdmin(account: BackendAccount, accessToken: string): Admin {
+  const { sub } = decodeJwtPayload(accessToken);
   return {
-    id: account.id,
+    id: sub,
     firstNameEn: account.firstNameEn,
     lastNameEn: account.lastNameEn,
     firstNameTa: account.firstNameTa || null,
@@ -33,9 +39,10 @@ export function mapAccountToAdmin(account: BackendAccount): Admin {
   };
 }
 
-export function storeSession(_accessToken: string, account: BackendAccount) {
-  const isAdmin = account.roles.includes('ADMIN');
-  return isAdmin ? mapAccountToAdmin(account) : mapAccountToUser(account);
+export function storeSession(accessToken: string, account: BackendAccount) {
+  const { roles } = decodeJwtPayload(accessToken);
+  const isAdmin = roles.includes('ADMIN');
+  return isAdmin ? mapAccountToAdmin(account, accessToken) : mapAccountToUser(account, accessToken);
 }
 
 export function clearSession() {

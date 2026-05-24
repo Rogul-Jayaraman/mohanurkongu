@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ta" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>Your Registration Code</title>
+  {{> _styles}}
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8F6F1; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F8F6F1; min-width: 100%;">
+    <tr>
+      <td align="center" style="padding: 40px 10px;">
+        <!--[if mso]>
+        <table width="600" cellpadding="0" cellspacing="0" border="0" align="center">
+          <tr><td>
+        <![endif]-->
+        <table width="100%" class="container" style="max-width: 600px; background-color: #FCFAF6; border-radius: 12px; box-shadow: 0 2px 12px rgba(74,64,56,0.06);" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td>
+              {{> header}}
+
+              {{> greeting
+                  icon='<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="16" fill="#1B6B50" opacity="0.12"/><rect x="11" y="12" width="18" height="20" rx="3" fill="#1B6B50" opacity="0.7"/><path d="M16 19h8M16 23h8M16 27h5" stroke="#FCFAF6" stroke-width="1.5" stroke-linecap="round"/><path d="M14 10l6 4 6-4" stroke="#1B6B50" stroke-width="1.5" fill="none"/></svg>'
+                  taHeading='உங்கள் பதிவுக் குறியீடு'
+                  enHeading='Your Registration Code'
+              }}
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="content card" style="padding: 0 40px 32px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FCFAF6; border-radius: 12px;">
+                      <tr>
+                        <td class="card" style="padding: 32px;">
+                          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center" class="ta-body" style="padding-bottom: 12px;">
+                                உங்கள் பதிவை முடிக்க கீழே உள்ள குறியீட்டைப் பயன்படுத்தவும்.
+                              </td>
+                            </tr>
+                            <tr>
+                              <td align="center" class="en-body" style="padding-bottom: 4px;">
+                                Use the code below to complete your registration.
+                              </td>
+                            </tr>
+                          </table>
+
+                          {{> otp-block code=otpCode}}
+
+                          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td align="center" style="padding-top: 16px;">
+                                <span class="small-text text-warning" style="font-family: 'Poppins', 'Noto Sans Tamil', Arial, sans-serif;">
+                                  ⏱ <span style="font-family: 'Noto Sans Tamil', Arial, sans-serif;">5 நிமிடங்களில் காலாவதியாகும்</span> / Expires in 5 minutes
+                                </span>
+                              </td>
+                            </tr>
+                          </table>
+
+                          {{> info-note
+                              borderColor='#A63B3B'
+                              textColor='#A63B3B'
+                              taText='⚠ இந்தக் குறியீட்டை யாருடனும் பகிர வேண்டாம். மோகனூர் கொங்கு ஊழியர்கள் இதை ஒருபோதும் கேட்க மாட்டார்கள்.'
+                              enText='Never share this code. Mohanur Kongu staff will never ask for it.'
+                          }}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              {{> footer}}
+            </td>
+          </tr>
+        </table>
+        <!--[if mso]>
+          </td></tr>
+        </table>
+        <![endif]-->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

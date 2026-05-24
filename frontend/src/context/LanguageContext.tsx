@@ -77,19 +77,47 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     /**
      * Helper to translate errors from API or forms
-     * Backend now localizes messages — frontend passes them through.
+     * Uses error code (e.g., AUTH_INVALID_CREDENTIALS) to look up errors: namespace.
      */
     const translateError = useCallback((error: any, code?: string) => {
         if (!error) return '';
 
-        if (typeof error === 'string') {
-          if (i18n.exists(`errors:${error}`)) {
-            return i18n.t(`errors:${error}`) as string;
-          }
-          return error;
+        if (code && i18n.exists(`errors:${code}`)) {
+            return i18n.t(`errors:${code}`) as string;
         }
 
-        return error.message || error.details || '';
+        const errorStr = typeof error === 'string' ? error : (error.code || error.message || error.details || '');
+
+        if (i18n.exists(`errors:${errorStr}`)) {
+            return i18n.t(`errors:${errorStr}`) as string;
+        }
+
+        const commonErrors: Record<string, string> = {
+            'Invalid or expired verification code': 'AUTH_VERIFICATION_EXPIRED',
+            'Invalid verification code': 'AUTH_OTP_INVALID',
+            'Verification code has expired': 'AUTH_OTP_EXPIRED',
+            'Invalid password': 'AUTH_INVALID_CREDENTIALS',
+            'User already exists': 'AUTH_EMAIL_EXISTS',
+            'Invalid phone/email or password': 'AUTH_INVALID_CREDENTIALS',
+            'Login failed. Please check your credentials.': 'AUTH_INVALID_CREDENTIALS',
+            'Network Error': 'INTERNAL_ERROR',
+            'Internal server error': 'INTERNAL_ERROR',
+            'Failed to send verification code. Please try again.': 'AUTH_OTP_COOLDOWN',
+            'Registration failed. Please try again.': 'VALIDATION_ERROR',
+            'Failed to reset password. Please try again.': 'AUTH_RESET_SESSION_INVALID',
+            'Session expired': 'AUTH_SESSION_EXPIRED',
+            'Request timed out': 'REQUEST_TIMEOUT',
+        };
+
+        const mappedKey = commonErrors[errorStr];
+        if (mappedKey && i18n.exists(`errors:${mappedKey}`)) {
+            return i18n.t(`errors:${mappedKey}`) as string;
+        }
+
+        if (typeof error === 'object' && error !== null) {
+            return error.message || error.details || errorStr;
+        }
+        return errorStr;
     }, []);
 
     return (

@@ -19,7 +19,7 @@
   "AUTH_VERIFICATION_EXPIRED": "Verification has expired. Please request a new one",
   "AUTH_EMAIL_EXISTS": "An account with this email already exists",
   "AUTH_PHONE_EXISTS": "An account with this phone already exists",
-  "AUTH_REGISTRATION_SESSION_INVALID": "Registration session is invalid or expired",
+  "AUTH_REGISTRATION_SESSION_INVALID": "Your registration session has expired or is invalid. Please close this page and start the registration process again.",
   "AUTH_RESET_SESSION_INVALID": "Reset session is invalid or expired",
   "VALIDATION_ERROR": "Validation failed",
   "VALIDATION_REQUIRED": "This field is required",

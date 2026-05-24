@@ -29,7 +29,9 @@ const SUBJECT_MAP: Record<EmailTemplate, string> = {
   'email-verification': 'மின்னஞலைச் சரிபார்க்க / Verify Your Email',
   'login-otp': 'உங்கள் உள்நுழைவுக் குறியீடு / Your Login Code',
   'password-reset': 'கடவுச்சொல்லை மீட்டமை / Reset Your Password',
+  'password-reset-otp': 'கடவுச்சொல்லை மீட்டமைக்கும் குறியீடு / Password Reset Code',
   'security-alert': 'பாதுகாப்பு எச்சரிக்கை / Security Alert',
+  'registration-otp': 'உங்கள் பதிவுக் குறியீடு / Your Registration Code',
 };
 
 export async function enqueueEmail(to: string, subject: string, body: string): Promise<void> {

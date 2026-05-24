@@ -1,4 +1,4 @@
-export type EmailTemplate = 'welcome' | 'email-verification' | 'login-otp' | 'password-reset' | 'security-alert';
+export type EmailTemplate = 'welcome' | 'email-verification' | 'login-otp' | 'password-reset' | 'security-alert' | 'password-reset-otp' | 'registration-otp';
 
 export interface BaseEmailData {
   to: string;
@@ -21,8 +21,18 @@ export interface LoginOtpEmailData extends BaseEmailData {
   unsubscribeUrl: string;
 }
 
+export interface RegistrationOtpEmailData extends BaseEmailData {
+  otpCode: string;
+  unsubscribeUrl: string;
+}
+
 export interface PasswordResetEmailData extends BaseEmailData {
   resetUrl: string;
+  unsubscribeUrl: string;
+}
+
+export interface PasswordResetOtpEmailData extends BaseEmailData {
+  otpCode: string;
   unsubscribeUrl: string;
 }
 
@@ -41,6 +51,8 @@ export type TemplateDataMap = {
   'login-otp': LoginOtpEmailData;
   'password-reset': PasswordResetEmailData;
   'security-alert': SecurityAlertEmailData;
+  'password-reset-otp': PasswordResetOtpEmailData;
+  'registration-otp': RegistrationOtpEmailData;
 };
 
 export interface TemplateEmailJob<T extends EmailTemplate = EmailTemplate> {

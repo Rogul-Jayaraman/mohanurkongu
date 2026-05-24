@@ -1,0 +1,18 @@
+# Architecture Decision Records
+
+This index catalogs all ADRs documented for the Mohanur Kongu Manamaalai platform.
+
+| ID | Title | Status | Date |
+|---|---|---|---|
+| ADR-001 | Express 5 with Prisma/PostgreSQL for Backend | ACCEPTED | Initial |
+| ADR-002 | JWT Access Tokens + Rotating Refresh Token Sessions | ACCEPTED | Initial |
+| ADR-003 | Argon2id for Password Hashing | ACCEPTED | Initial |
+| ADR-004 | BullMQ for Async Job Processing (Email, OTP, Audit) | ACCEPTED | Initial |
+| ADR-005 | React 19 + Vite SPA with i18next for Frontend | ACCEPTED | Initial |
+| ADR-006 | In-Memory Access Token Storage (Not localStorage) | ACCEPTED | Refactored |
+| ADR-007 | Role-Based Authorization via JWT Claims | ACCEPTED | Initial |
+| ADR-008 | SHA-256 for OTP Hashing (Not Argon2id) | ACCEPTED | Initial |
+| ADR-009 | Device Fingerprinting for Session Tracking | ACCEPTED | Initial |
+| ADR-010 | Two-Language Support (Tamil + English) | ACCEPTED | Initial |
+| ADR-011 | Monorepo Structure with Shared Configs | ACCEPTED | Initial |
+| ADR-012 | Docker Compose for Development and Production Deployment | ACCEPTED | Initial |

@@ -5,7 +5,10 @@ import { signRefreshToken, signAccessToken, verifyRefreshToken, type AccessToken
 import { sha256 } from '../../common/utils/hash.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
+import { prisma } from '../../database/prisma.js';
+import { enqueueAuditEvent } from '../../common/utils/audit.js';
 import type { DeviceInfo } from '../../common/utils/device.js';
+import type { Prisma } from '@prisma/client';
 
 export class SessionService {
   constructor(
@@ -13,7 +16,7 @@ export class SessionService {
     private accountRepo: AccountRepository,
   ) {}
 
-  async createSession(accountId: string, roles: string[], tokenVersion: number, device?: DeviceInfo) {
+  async createSession(accountId: string, roles: string[], tokenVersion: number, device?: DeviceInfo, tx?: Prisma.TransactionClient) {
     const refreshPayload = {
       sub: accountId,
       jti: crypto.randomUUID(),
@@ -23,35 +26,62 @@ export class SessionService {
 
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    await this.sessionRepo.create({
-      accountId,
-      refreshToken,
-      tokenVersion,
-      ipHash: device?.ipHash,
-      userAgentHash: device?.userAgentHash,
-      deviceFingerprint: device?.fingerprint,
-      expiresAt,
-    });
-
-    await this.enforceMaxSessions(accountId);
+    const session = tx
+      ? await this.createSessionTx(tx, accountId, refreshToken, tokenVersion, device, expiresAt)
+      : await prisma.$transaction((tx) =>
+          this.createSessionTx(tx, accountId, refreshToken, tokenVersion, device, expiresAt),
+        );
 
     const accessPayload: Omit<AccessTokenPayload, 'type'> = {
       sub: accountId,
       roles,
+      tver: tokenVersion,
     };
     const accessToken = signAccessToken(accessPayload);
 
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken, sessionId: session.id };
   }
 
-  private async enforceMaxSessions(accountId: string) {
-    const active = await this.sessionRepo.countActiveByAccountId(accountId);
+  private async createSessionTx(
+    tx: Prisma.TransactionClient,
+    accountId: string,
+    refreshToken: string,
+    tokenVersion: number,
+    device: DeviceInfo | undefined,
+    expiresAt: Date,
+  ) {
+    const tokenFamily = crypto.randomUUID();
+
+    const created = await tx.accountSession.create({
+      data: {
+        accountId,
+        refreshTokenHash: sha256(refreshToken),
+        tokenFamily,
+        tokenVersion,
+        ipHash: device?.ipHash,
+        userAgentHash: device?.userAgentHash,
+        deviceFingerprint: device?.fingerprint,
+        expiresAt,
+      },
+    });
+
+    const active = await tx.accountSession.count({
+      where: { accountId, revokedAt: null, expiresAt: { gt: new Date() } },
+    });
     if (active > authConfig.session.maxActive) {
-      const oldest = await this.sessionRepo.findOldestActive(accountId);
+      const oldest = await tx.accountSession.findFirst({
+        where: { accountId, revokedAt: null, expiresAt: { gt: new Date() } },
+        orderBy: { createdAt: 'asc' },
+      });
       if (oldest) {
-        await this.sessionRepo.revoke(oldest.id, 'max_sessions_exceeded');
+        await tx.accountSession.update({
+          where: { id: oldest.id },
+          data: { revokedAt: new Date(), revokedReason: 'max_sessions_exceeded' },
+        });
       }
     }
+
+    return created;
   }
 
   async rotateSession(refreshToken: string, device?: DeviceInfo) {
@@ -72,11 +102,6 @@ export class SessionService {
       throw new AppError(401, ErrorCodes.AUTH_SESSION_EXPIRED, 'AUTH_SESSION_EXPIRED');
     }
 
-    if (session.revokedAt) {
-      await this.sessionRepo.revokeAllByFamily(session.tokenFamily, 'reuse_detected');
-      throw new AppError(401, ErrorCodes.AUTH_TOKEN_REUSE, 'AUTH_TOKEN_REUSE');
-    }
-
     const account = await this.accountRepo.findById(session.accountId);
     if (!account) {
       throw new AppError(401, ErrorCodes.ACCOUNT_NOT_FOUND, 'ACCOUNT_NOT_FOUND');
@@ -95,28 +120,37 @@ export class SessionService {
       throw new AppError(401, ErrorCodes.AUTH_TOKEN_REUSE, 'AUTH_TOKEN_REUSE');
     }
 
-    await this.sessionRepo.revoke(session.id, 'rotated');
+    const won = await this.sessionRepo.tryAtomicRevoke(session.id, 'rotated');
+    if (!won) {
+      await this.sessionRepo.revokeAllByFamily(session.tokenFamily, 'reuse_detected');
+      throw new AppError(401, ErrorCodes.AUTH_TOKEN_REUSE, 'AUTH_TOKEN_REUSE');
+    }
 
     const roles = account.roles.map((r) => r.role.code);
 
     return this.createSession(session.accountId, roles, account.tokenVersion, device);
   }
 
-  async revokeSession(refreshToken: string) {
+  async revokeSession(refreshToken: string, auditEvent?: string) {
     const tokenHash = sha256(refreshToken);
     const session = await this.sessionRepo.findByRefreshTokenHash(tokenHash);
     if (session) {
       await this.sessionRepo.revoke(session.id, 'logout');
+      if (auditEvent) {
+        await enqueueAuditEvent(auditEvent, session.accountId, { sessionId: session.id });
+      }
     }
   }
 
   async revokeAll(accountId: string) {
     await this.accountRepo.incrementTokenVersion(accountId);
-    await this.sessionRepo.revokeAllByAccountId(accountId);
+    const count = await this.sessionRepo.revokeAllByAccountId(accountId);
+    await enqueueAuditEvent('SESSION_REVOKE_ALL', accountId, { count });
   }
 
   async revokeOthers(accountId: string, currentSessionId: string) {
     await this.accountRepo.incrementTokenVersion(accountId);
-    await this.sessionRepo.revokeAllByAccountId(accountId, currentSessionId);
+    const count = await this.sessionRepo.revokeAllByAccountId(accountId, currentSessionId);
+    await enqueueAuditEvent('SESSION_REVOKE_OTHERS', accountId, { count });
   }
 }

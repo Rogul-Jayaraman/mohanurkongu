@@ -19,13 +19,4 @@ export async function verifyPassword(hash: string, password: string): Promise<bo
   }
 }
 
-export async function dummyHashVerify(): Promise<boolean> {
-  const dummy = await argon2.hash('dummy-constant-time-guard', {
-    type: argon2.argon2id,
-    memoryCost: authConfig.argon2.memory,
-    timeCost: authConfig.argon2.iterations,
-    parallelism: authConfig.argon2.parallelism,
-    hashLength: authConfig.argon2.hashLength,
-  });
-  return argon2.verify(dummy, 'dummy-constant-time-guard');
-}
+

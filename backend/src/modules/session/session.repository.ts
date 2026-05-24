@@ -49,6 +49,17 @@ export class SessionRepository {
     });
   }
 
+  async tryAtomicRevoke(id: string, reason?: string): Promise<boolean> {
+    const result = await prisma.accountSession.updateMany({
+      where: { id, revokedAt: null },
+      data: {
+        revokedAt: new Date(),
+        revokedReason: reason || 'rotated',
+      },
+    });
+    return result.count > 0;
+  }
+
   async revokeAllByFamily(tokenFamily: string, reason?: string) {
     const result = await prisma.accountSession.updateMany({
       where: { tokenFamily },

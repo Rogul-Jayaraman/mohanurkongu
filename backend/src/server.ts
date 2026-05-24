@@ -9,6 +9,7 @@ import { expireVerifications } from './jobs/expire-verification.job.js';
 import { archiveVerifications } from './jobs/archive-verification.job.js';
 import { purgeVerifications } from './jobs/purge-verification.job.js';
 import { runSessionExpiry } from './jobs/expire-session.job.js';
+import { expireRegistrationSessions, expireResetSessions } from './jobs/expire-registration.job.js';
 import { authConfig } from './config/auth.config.js';
 
 async function bootstrap() {
@@ -46,6 +47,14 @@ async function bootstrap() {
     authConfig.session.cleanupIntervalMinutes * 60 * 1000,
   );
 
+  const regExpireInterval = setInterval(
+    () => {
+      expireRegistrationSessions().catch((e) => logger.error({ err: e }, 'Registration expire failed'));
+      expireResetSessions().catch((e) => logger.error({ err: e }, 'Reset expire failed'));
+    },
+    60_000,
+  );
+
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Shutdown signal received');
 
@@ -54,10 +63,20 @@ async function bootstrap() {
       clearInterval(archiveInterval);
       clearInterval(purgeInterval);
       clearInterval(sessionInterval);
+      clearInterval(regExpireInterval);
 
-      await emailWorker.close();
-      await otpWorker.close();
-      await auditWorker.close();
+      logger.info('Shutting down workers...');
+      await Promise.allSettled([
+        emailWorker.close(true),
+        otpWorker.close(true),
+        auditWorker.close(true),
+      ]);
+
+      const { getEmailQueue } = await import('./modules/notification/email.queue.js');
+      try {
+        await getEmailQueue().close();
+      } catch { /* ok */ }
+
       await prisma.$disconnect();
 
       logger.info('Server shut down gracefully');
@@ -67,7 +86,7 @@ async function bootstrap() {
     setTimeout(() => {
       logger.error('Forced shutdown after timeout');
       process.exit(1);
-    }, 10000);
+    }, 30000);
   };
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));

@@ -1,45 +1,34 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AuthService } from './auth.service.js';
-import { sendSuccess, sendError } from '../../common/responses/ApiResponse.js';
+import { sendSuccess } from '../../common/responses/ApiResponse.js';
 import { getDeviceInfo } from '../../common/utils/device.js';
 import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
 import { translate } from '../../common/utils/translation.js';
 import { AppError } from '../../common/errors/AppError.js';
+import { setCsrfCookie } from '../../common/middleware/csrf.js';
 
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  sendRegistrationOtp = async (req: Request, res: Response, next: NextFunction) => {
+  register = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.authService.sendRegistrationOtp(req.body);
-      sendSuccess(res, null);
-    } catch (err) {
-      next(err);
-    }
-  };
+      const result = await this.authService.register(req.body);
 
-  verifyRegistrationOtp = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await this.authService.verifyRegistrationOtp(req.body);
-      sendSuccess(res, result);
-    } catch (err) {
-      if (err instanceof AppError && err.code === ErrorCodes.AUTH_VERIFICATION_EXPIRED) {
-        const lang = res.locals.lang || 'en';
-        return res.status(410).json({
-          success: false,
-          code: ErrorCodes.AUTH_VERIFICATION_EXPIRED,
-          message: translate(ErrorCodes.AUTH_VERIFICATION_EXPIRED, lang),
-          canResend: true,
+      if (result.refreshToken) {
+        res.cookie('refreshToken', result.refreshToken, {
+          httpOnly: true,
+          secure: req.app.get('env') === 'production',
+          sameSite: 'strict',
+          path: '/auth',
+          maxAge: 7 * 24 * 60 * 60 * 1000,
         });
+        setCsrfCookie(res);
       }
-      next(err);
-    }
-  };
 
-  signup = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await this.authService.signup(req.body);
-      sendSuccess(res, result, 201);
+      sendSuccess(res, {
+        accessToken: result.accessToken,
+        sessionId: result.sessionId,
+      }, 201);
     } catch (err) {
       next(err);
     }
@@ -57,10 +46,11 @@ export class AuthController {
         path: '/auth',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
+      setCsrfCookie(res);
 
       sendSuccess(res, {
         accessToken: result.accessToken,
-        account: result.account,
+        sessionId: result.sessionId,
       });
     } catch (err) {
       next(err);
@@ -85,6 +75,7 @@ export class AuthController {
         path: '/auth',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
+      setCsrfCookie(res);
 
       sendSuccess(res, { accessToken: result.accessToken });
     } catch (err) {
@@ -100,6 +91,7 @@ export class AuthController {
       }
 
       res.clearCookie('refreshToken', { path: '/auth' });
+      res.clearCookie('csrf-token', { path: '/' });
       sendSuccess(res, null);
     } catch (err) {
       next(err);
@@ -110,35 +102,9 @@ export class AuthController {
     try {
       await this.authService.logoutAll(req.account.sub);
       res.clearCookie('refreshToken', { path: '/auth' });
+      res.clearCookie('csrf-token', { path: '/' });
       sendSuccess(res, null);
     } catch (err) {
-      next(err);
-    }
-  };
-
-  sendPasswordResetOtp = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      await this.authService.sendPasswordResetOtp(req.body);
-      sendSuccess(res, null);
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  verifyPasswordResetOtp = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await this.authService.verifyPasswordResetOtp(req.body);
-      sendSuccess(res, result);
-    } catch (err) {
-      if (err instanceof AppError && err.code === ErrorCodes.AUTH_VERIFICATION_EXPIRED) {
-        const lang = res.locals.lang || 'en';
-        return res.status(410).json({
-          success: false,
-          code: ErrorCodes.AUTH_VERIFICATION_EXPIRED,
-          message: translate(ErrorCodes.AUTH_VERIFICATION_EXPIRED, lang),
-          canResend: true,
-        });
-      }
       next(err);
     }
   };
@@ -146,28 +112,6 @@ export class AuthController {
   resetPassword = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.authService.resetPassword(req.body);
-      sendSuccess(res, result);
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  getProfile = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await this.authService.getProfile(req.account.sub);
-      sendSuccess(res, result);
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  changePassword = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await this.authService.changePassword(
-        req.account.sub,
-        req.body.currentPassword,
-        req.body.newPassword,
-      );
       sendSuccess(res, result);
     } catch (err) {
       next(err);

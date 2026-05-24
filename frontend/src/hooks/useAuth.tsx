@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import type { User, Admin } from '../types/user';
 import { storeSession, clearSession } from '../adapters/auth.adapter';
 import * as authApi from '../api/auth.api';
-import type { BackendAccount } from '../api/auth.api';
 import { setAccessToken, getAccessToken, clearAccessToken } from '../lib/session';
 
 export type AuthStatus = 'anonymous' | 'otp_pending' | 'register_pending' | 'authenticated' | 'expired';
@@ -19,7 +18,7 @@ interface AuthContextType extends AuthState {
   setUser: (user: User | Admin | null) => void;
   setToken: (token: string | null) => void;
   logout: () => Promise<void>;
-  login: (accessToken: string, account: BackendAccount) => User | Admin;
+  login: (accessToken: string, role?: string) => Promise<User | Admin>;
   restoreSession: () => Promise<boolean>;
   refreshSession: () => Promise<boolean>;
   setAuthStatus: (status: AuthStatus) => void;
@@ -50,8 +49,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState((prev) => ({ ...prev, status }));
   }, []);
 
-  const login = useCallback((accessToken: string, account: BackendAccount): User | Admin => {
+  const login = useCallback(async (accessToken: string, _role?: string): Promise<User | Admin> => {
     setAccessToken(accessToken);
+    const account = await authApi.getProfile();
     const user = storeSession(accessToken, account);
     setState({ status: 'authenticated', user, token: accessToken });
     return user;
@@ -129,7 +129,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [refreshSession]);
 
   useEffect(() => {
+    const publicPaths = ['/manamaalai/login', '/manamaalai/signup', '/manamaalai/forgot-password', '/admin/login'];
+    if (publicPaths.includes(window.location.pathname)) {
+      setLoading(false);
+      return;
+    }
     restoreSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isAuthenticated = state.status === 'authenticated' && !!state.token;

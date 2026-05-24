@@ -4,7 +4,6 @@ export interface SignupDto {
   lastNameEn: string;
   firstNameTa: string;
   lastNameTa: string;
-  email: string;
   phone?: string;
   password: string;
 }
