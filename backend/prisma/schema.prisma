@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider          = "postgresql"
-  url               = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum LanguageCode {
@@ -47,6 +47,69 @@ enum VerificationState {
   ARCHIVED
 }
 
+enum ProfileStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum Diet {
+  VEGETARIAN
+  NON_VEGETARIAN
+  EGGETARIAN
+  VEGAN
+}
+
+enum BloodGroup {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+}
+
+enum Complexion {
+  FAIR
+  WHEATISH
+  BROWN
+  DARK
+}
+
+enum MaritalStatus {
+  NEVER_MARRIED
+  DIVORCED
+  WIDOWED
+  SEPARATED
+  ANNULED
+}
+
+enum ResidenceType {
+  OWNED
+  RENTED
+  PARENTAL
+  LEASED
+}
+
+enum HoroscopeMode {
+  MANUAL
+  GENERATED
+  UPLOADED
+}
+
 model Account {
   id           String       @id @default(uuid()) @db.Uuid
   accountNo    String       @unique @db.VarChar(20)
@@ -62,6 +125,7 @@ model Account {
   memberships   AccountMembership[]
   statusHistory AccountStatusHistory[]
   sessions      AccountSession[]
+  profile       Profile?
 
   @@index([accountNo])
   @@index([currentState])
@@ -69,12 +133,12 @@ model Account {
 }
 
 model AccountTranslation {
-  id         String       @id @default(uuid())
-  accountId  String       @db.Uuid
-  language   LanguageCode
+  id        String       @id @default(uuid())
+  accountId String       @db.Uuid
+  language  LanguageCode
   firstName String
   lastName  String?
-  isDefault  Boolean      @default(false)
+  isDefault Boolean      @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -128,12 +192,12 @@ model AccountRole {
 }
 
 model MembershipPlan {
-  id          String             @id @default(uuid())
-  code        String             @unique @db.VarChar(50)
-  displayName String             @db.VarChar(100)
-  price       Decimal            @db.Decimal(10, 2)
-  currency    String             @default("INR") @db.VarChar(3)
-  active      Boolean            @default(true)
+  id          String  @id @default(uuid())
+  code        String  @unique @db.VarChar(50)
+  displayName String  @db.VarChar(100)
+  price       Decimal @db.Decimal(10, 2)
+  currency    String  @default("INR") @db.VarChar(3)
+  active      Boolean @default(true)
 
   memberships AccountMembership[]
 
@@ -175,20 +239,20 @@ model AccountStatusHistory {
 }
 
 model AccountVerification {
-  id         String             @id @default(uuid())
-  accountId  String?
-  type       VerificationType
-  purpose    VerificationPurpose
-  target     String             @db.VarChar(255)
-  otpHash    String
-  state      VerificationState  @default(PENDING)
-  attempts   Int                @default(0)
-  maxAttempts Int               @default(5)
-  expiresAt  DateTime
-  consumedAt DateTime?
-  archivedAt DateTime?
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
+  id          String              @id @default(uuid())
+  accountId   String?
+  type        VerificationType
+  purpose     VerificationPurpose
+  target      String              @db.VarChar(255)
+  otpHash     String
+  state       VerificationState   @default(PENDING)
+  attempts    Int                 @default(0)
+  maxAttempts Int                 @default(5)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  archivedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
   @@index([target])
   @@index([state])
@@ -220,12 +284,12 @@ model AccountSession {
 }
 
 model RegistrationSession {
-  id              String   @id @default(uuid())
-  verificationId  String
-  snapshotTarget  String   @db.VarChar(255)
-  expiresAt       DateTime
-  usedAt          DateTime?
-  createdAt       DateTime @default(now())
+  id             String    @id @default(uuid())
+  verificationId String
+  snapshotTarget String    @db.VarChar(255)
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime  @default(now())
 
   @@index([verificationId])
   @@index([expiresAt])
@@ -233,23 +297,450 @@ model RegistrationSession {
 }
 
 model ResetSession {
-  id              String   @id @default(uuid())
-  verificationId  String
-  snapshotTarget  String   @db.VarChar(255)
-  expiresAt       DateTime
-  usedAt          DateTime?
-  createdAt       DateTime @default(now())
+  id             String    @id @default(uuid())
+  verificationId String
+  snapshotTarget String    @db.VarChar(255)
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime  @default(now())
 
   @@index([verificationId])
   @@index([expiresAt])
   @@map("reset_sessions")
 }
 
-model AccountNoCounter {
-  id        Int      @id @default(autoincrement())
-  prefix    String   @default("MKM") @db.VarChar(5)
-  counter   Int      @default(0)
+model Counter {
+  id      Int    @id @default(autoincrement())
+  prefix  String @unique @db.VarChar(10)
+  counter Int    @default(0)
 
-  @@unique([prefix])
-  @@map("account_no_counters")
+  @@map("counters")
+}
+
+model Upload {
+  id        String   @id @default(uuid()) @db.Uuid
+  filePath  String
+  mimeType  String
+  size      Int
+  createdAt DateTime @default(now())
+
+  rasiChartProfiles    ProfileHoroscope[]    @relation("RasiChart")
+  navamsaChartProfiles ProfileHoroscope[]    @relation("NavamsaChart")
+  primaryPhoto         ProfilePhoto?
+  galleryPhotos        ProfileGalleryPhoto[]
+
+  @@map("uploads")
+}
+
+model ProfileFor {
+  id   Int    @id @default(autoincrement())
+  code String @unique @db.VarChar(50)
+
+  basics ProfileBasic[]
+
+  @@map("profile_fors")
+}
+
+model Community {
+  id   Int    @id @default(autoincrement())
+  code String @unique
+
+  castes   Caste[]
+  profiles ProfileCommunity[]
+
+  @@map("communities")
+}
+
+model Caste {
+  id          Int    @id @default(autoincrement())
+  code        String
+  communityId Int
+
+  community Community @relation(fields: [communityId], references: [id])
+  profiles  ProfileCommunity[]
+
+  @@unique([communityId, code])
+  @@map("castes")
+}
+
+model Height {
+  id      Int  @id @default(autoincrement())
+  valueCm Int  @unique
+  label   String
+
+  basicProfiles         ProfileBasic[]
+  partnerMinPreferences PartnerPreference[] @relation("PartnerMinHeight")
+  partnerMaxPreferences PartnerPreference[] @relation("PartnerMaxHeight")
+
+  @@map("heights")
+}
+
+model JobSector {
+  id   Int    @id @default(autoincrement())
+  code String @unique
+
+  profiles ProfileProfessional[]
+
+  @@map("job_sectors")
+}
+
+model District {
+  id   Int    @id @default(autoincrement())
+  code String @unique
+
+  taluks    Taluk[]
+  locations Location[]
+
+  @@map("districts")
+}
+
+model Taluk {
+  id         Int    @id @default(autoincrement())
+  code       String
+  districtId Int
+
+  district  District   @relation(fields: [districtId], references: [id])
+  locations Location[]
+
+  @@unique([districtId, code])
+  @@map("taluks")
+}
+
+model Kulam {
+  id   Int    @id @default(autoincrement())
+  code String @unique
+
+  profiles ProfileCommunity[]
+
+  @@map("kulams")
+}
+
+model Rasi {
+  id   Int    @id @default(autoincrement())
+  code String @unique
+
+  profiles ProfileHoroscope[]
+
+  @@map("risis")
+}
+
+model Nakshatra {
+  id   Int    @id @default(autoincrement())
+  code String @unique
+
+  profiles ProfileHoroscope[]
+
+  @@map("nakshatras")
+}
+
+model Lagna {
+  id   Int    @id @default(autoincrement())
+  code String @unique
+
+  profiles ProfileHoroscope[]
+
+  @@map("lagnas")
+}
+
+model Location {
+  id         String   @id @default(uuid()) @db.Uuid
+  isOther    Boolean  @default(false)
+  districtId Int?
+  talukId    Int?
+  city       String?
+  state      String?
+  country    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  district District? @relation(fields: [districtId], references: [id])
+  taluk    Taluk?    @relation(fields: [talukId], references: [id])
+
+  currentLocationProfiles ProfileBasic[] @relation("CurrentLocation")
+  nativeLocationProfiles  ProfileBasic[] @relation("NativeLocation")
+
+  @@index([districtId])
+  @@index([talukId])
+  @@index([isOther])
+  @@map("locations")
+}
+
+model Profile {
+  id            String        @id @default(uuid()) @db.Uuid
+  accountId     String        @unique @db.Uuid
+  regNo         String?       @unique
+  currentStatus ProfileStatus
+  visibility    Visibility
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  activatedAt   DateTime?
+  archivedAt    DateTime?
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  basic             ProfileBasic?
+  community         ProfileCommunity?
+  professional      ProfileProfessional?
+  family            ProfileFamily?
+  horoscope         ProfileHoroscope?
+  photo             ProfilePhoto?
+  assets            ProfileAssets?
+  partnerPreference PartnerPreference?
+  translations      ProfileTranslation[]
+  history           ProfileStateHistory[]
+
+  @@index([accountId])
+  @@index([currentStatus])
+  @@map("profiles")
+}
+
+model ProfileBasic {
+  id                String         @id @default(uuid()) @db.Uuid
+  profileId         String         @unique @db.Uuid
+  profileForId      Int
+  gender            Gender
+  dob               DateTime
+  diet              Diet
+  bloodGroup        BloodGroup?
+  heightId          Int
+  weight            Int?
+  complexion        Complexion?
+  maritalStatus     MaritalStatus?
+  currentLocationId String?        @db.Uuid
+  nativeLocationId  String?        @db.Uuid
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  profile         Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileFor      ProfileFor @relation(fields: [profileForId], references: [id])
+  height          Height     @relation(fields: [heightId], references: [id])
+  currentLocation Location?  @relation("CurrentLocation", fields: [currentLocationId], references: [id])
+  nativeLocation  Location?  @relation("NativeLocation", fields: [nativeLocationId], references: [id])
+
+  @@index([gender])
+  @@index([dob])
+  @@index([gender, dob])
+  @@index([heightId])
+  @@index([currentLocationId])
+  @@index([nativeLocationId])
+  @@map("profile_basic")
+}
+
+model ProfileCommunity {
+  id          String   @id @default(uuid()) @db.Uuid
+  profileId   String   @unique @db.Uuid
+  communityId Int
+  casteId     Int
+  kulamId     Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id])
+  caste     Caste     @relation(fields: [casteId], references: [id])
+  kulam     Kulam?    @relation(fields: [kulamId], references: [id])
+
+  @@index([communityId, casteId])
+  @@index([kulamId])
+  @@map("profile_communities")
+}
+
+model ProfileProfessional {
+  id             String   @id @default(uuid()) @db.Uuid
+  profileId      String   @unique @db.Uuid
+  education      String?
+  jobSectorId    Int?
+  jobDetail      String?
+  jobLocation    String?
+  monthlySalary  Decimal? @db.Decimal(12, 2)
+  salaryCurrency String?  @default("INR")
+  companyName    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  profile   Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  jobSector JobSector? @relation(fields: [jobSectorId], references: [id])
+
+  @@index([jobSectorId])
+  @@index([monthlySalary])
+  @@index([jobLocation])
+  @@map("profile_professional")
+}
+
+model ProfileFamily {
+  id           String   @id @default(uuid()) @db.Uuid
+  profileId    String   @unique @db.Uuid
+  fatherAlive  Boolean
+  fatherName   String?
+  fatherJob    String?
+  fatherSalary Int?
+  motherAlive  Boolean
+  motherName   String?
+  motherJob    String?
+  motherSalary Int?
+  noOfBrother  Int?
+  noOfSister   Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("profile_family")
+}
+
+model ProfileHoroscope {
+  id                   String        @id @default(uuid()) @db.Uuid
+  profileId            String        @unique @db.Uuid
+  mode                 HoroscopeMode
+  birthTime            DateTime?
+  birthPlace           String?
+  birthLat             Decimal?      @db.Decimal(10, 7)
+  birthLong            Decimal?      @db.Decimal(10, 7)
+  timezone             String?
+  ayanamsa             String?
+  generatedAt          DateTime?
+  horoscopeJson        Json?         @db.JsonB
+  rasiId               Int?
+  nakshatraId          Int?
+  lagnaId              Int?
+  rasiChartUploadId    String?       @db.Uuid
+  navamsaChartUploadId String?       @db.Uuid
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  profile      Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  rasi         Rasi?      @relation(fields: [rasiId], references: [id])
+  nakshatra    Nakshatra? @relation(fields: [nakshatraId], references: [id])
+  lagna        Lagna?     @relation(fields: [lagnaId], references: [id])
+  rasiChart    Upload?    @relation("RasiChart", fields: [rasiChartUploadId], references: [id])
+  navamsaChart Upload?    @relation("NavamsaChart", fields: [navamsaChartUploadId], references: [id])
+
+  @@index([rasiId])
+  @@index([nakshatraId])
+  @@index([lagnaId])
+  @@map("profile_horoscopes")
+}
+
+model ProfilePhoto {
+  id              String   @id @default(uuid()) @db.Uuid
+  profileId       String   @unique @db.Uuid
+  primaryUploadId String?  @unique @db.Uuid
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  profile       Profile               @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  primaryUpload Upload?               @relation(fields: [primaryUploadId], references: [id])
+  gallery       ProfileGalleryPhoto[]
+
+  @@map("profile_photos")
+}
+
+model ProfileGalleryPhoto {
+  id             String @id @default(uuid()) @db.Uuid
+  profilePhotoId String @db.Uuid
+  uploadId       String @db.Uuid
+
+  profilePhoto ProfilePhoto @relation(fields: [profilePhotoId], references: [id], onDelete: Cascade)
+  upload       Upload       @relation(fields: [uploadId], references: [id])
+
+  @@unique([profilePhotoId, uploadId])
+  @@index([uploadId])
+  @@map("profile_gallery_photos")
+}
+
+model ProfileAssets {
+  id            String         @id @default(uuid()) @db.Uuid
+  profileId     String         @unique @db.Uuid
+  land          String?
+  residenceType ResidenceType?
+  otherAssets   String?
+  vehicle       String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("profile_assets")
+}
+
+model PartnerPreference {
+  id              String   @id @default(uuid()) @db.Uuid
+  profileId       String   @unique @db.Uuid
+  ageMin          Int?
+  ageMax          Int?
+  heightMinId     Int?
+  heightMaxId     Int?
+  monthlySalary   Decimal? @db.Decimal(12, 2)
+  salaryCurrency  String?  @default("INR")
+  expectationNote String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  heightMin Height? @relation("PartnerMinHeight", fields: [heightMinId], references: [id])
+  heightMax Height? @relation("PartnerMaxHeight", fields: [heightMaxId], references: [id])
+
+  locations PartnerPreferenceLocation[]
+
+  @@map("partner_preferences")
+}
+
+model PartnerPreferenceLocation {
+  id                  String   @id @default(uuid()) @db.Uuid
+  partnerPreferenceId String   @db.Uuid
+  value               String
+  createdAt           DateTime @default(now())
+
+  partnerPreference PartnerPreference                      @relation(fields: [partnerPreferenceId], references: [id], onDelete: Cascade)
+  translations      PartnerPreferenceLocationTranslation[]
+
+  @@unique([partnerPreferenceId, value])
+  @@map("partner_preference_locations")
+}
+
+model PartnerPreferenceLocationTranslation {
+  id                          String       @id @default(uuid()) @db.Uuid
+  partnerPreferenceLocationId String       @db.Uuid
+  language                    LanguageCode
+  value                       String
+
+  partnerPreferenceLocation PartnerPreferenceLocation @relation(fields: [partnerPreferenceLocationId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerPreferenceLocationId, language])
+  @@map("partner_preference_location_translations")
+}
+
+model ProfileTranslation {
+  id          String       @id @default(uuid()) @db.Uuid
+  profileId   String       @db.Uuid
+  language    LanguageCode
+  firstName   String?
+  lastName    String?
+  kuladeivam  String?
+  fatherName  String?
+  motherName  String?
+  jobLocation String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, language])
+  @@map("profile_translations")
+}
+
+model ProfileStateHistory {
+  id                 String         @id @default(uuid()) @db.Uuid
+  profileId          String         @db.Uuid
+  changedByAccountId String?        @db.Uuid
+  fromStatus         ProfileStatus?
+  toStatus           ProfileStatus
+  reason             String?
+  metadata           Json?
+  createdAt          DateTime       @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt])
+  @@map("profile_state_history")
 }

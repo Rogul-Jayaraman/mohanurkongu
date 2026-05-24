@@ -116,15 +116,21 @@ export class AccountService {
     return this.getProfile(accountId);
   }
 
-  async generateAccountNo(tx?: any): Promise<string> {
+  async nextCounter(prefix: string, tx?: any): Promise<string> {
     const client = tx || prisma;
-    const prefix = appConfig.accountNoPrefix;
-    const updated = await client.accountNoCounter.upsert({
+    const updated = await client.counter.upsert({
       where: { prefix },
       create: { prefix, counter: 1 },
       update: { counter: { increment: 1 } },
     });
-    const digits = Math.max(4, Math.floor(Math.log10(updated.counter)) + 1);
-    return `${prefix}-${updated.counter.toString().padStart(digits, '0')}`;
+    return `${prefix}-${updated.counter.toString().padStart(4, '0')}`;
+  }
+
+  async generateAccountNo(tx?: any): Promise<string> {
+    return this.nextCounter(appConfig.prefixes.account, tx);
+  }
+
+  async generateRegNo(tx?: any): Promise<string> {
+    return this.nextCounter(appConfig.prefixes.reg, tx);
   }
 }

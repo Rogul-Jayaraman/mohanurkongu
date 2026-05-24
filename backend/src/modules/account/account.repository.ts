@@ -89,14 +89,6 @@ export class AccountRepository {
         });
       }
 
-      const counter = await tx.accountNoCounter.findUnique({ where: { prefix: appConfig.accountNoPrefix } });
-      if (counter) {
-        await tx.accountNoCounter.update({
-          where: { id: counter.id },
-          data: { counter: counter.counter + 1 },
-        });
-      }
-
       return account;
     });
   }

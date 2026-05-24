@@ -9,7 +9,11 @@ export const appConfig = {
   logLevel: process.env.LOG_LEVEL || 'info',
   cookieSecret: process.env.COOKIE_SECRET || 'change-me-cookie-secret-min-32-chars',
   cookieSecure: process.env.COOKIE_SECURE === 'true',
-  accountNoPrefix: process.env.ACCOUNT_NO_PREFIX || 'MKM',
+
+  prefixes: {
+    account: process.env.ACCOUNT_NO_PREFIX || 'MKM',
+    reg: process.env.REG_NO_PREFIX || 'MK',
+  },
 
   get isDev() {
     return this.nodeEnv === 'development';
