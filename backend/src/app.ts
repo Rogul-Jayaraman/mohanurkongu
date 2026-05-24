@@ -45,6 +45,7 @@ import { createVerificationRoutes } from './modules/verification/verification.ro
 import { createAccountRoutes } from './modules/account/account.routes.js';
 import { createAdminAuthRoutes } from './modules/admin-auth/admin-auth.routes.js';
 import { createAdminAccountRoutes } from './modules/admin-auth/admin-account.routes.js';
+import horoscopeRouter from './modules/horoscope/index.js';
 
 export function createApp() {
   const app = express();
@@ -149,7 +150,7 @@ export function createApp() {
   app.use(requestLogger);
 
   app.use((req, res, next) => {
-    if (req.path.startsWith('/auth/')) return next();
+    if (req.path.startsWith('/auth/') || req.path.startsWith('/horoscope/')) return next();
     requireCsrf(req, res, next);
   });
 
@@ -195,6 +196,7 @@ export function createApp() {
   app.use(createAccountRoutes(accountController));
   app.use(createAdminAuthRoutes(adminAuthController));
   app.use(createAdminAccountRoutes(adminAccountController));
+  app.use('/horoscope', horoscopeRouter);
 
   // 404
   app.use((_req, res) => {

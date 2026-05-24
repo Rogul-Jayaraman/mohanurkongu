@@ -68,8 +68,8 @@ export const commonEn = {
     setup: {
       brand: "Profile Setup",
       tagline: "Your journey starts here. Build a profile that reflects your unique personality and values.",
-      back: "Go Back",
-      next: "Continue",
+      back: "Previous Step",
+      next: "Next Step",
       create: "Create Profile",
       stepProgress: "Step {{current}} of {{total}}",
       step: {
@@ -117,8 +117,9 @@ export const commonEn = {
     monthly_income: "Monthly Income",
     month: "month",
     change: "Change",
+    remove: "Remove",
     upload: "Upload",
-    save_as_draft: "Save as Draft",
+    save_as_draft: "Save Draft",
     continue: "Continue",
     submit_for_verification: "Submit for Verification",
     login_required: "Please login to shortlist profiles",

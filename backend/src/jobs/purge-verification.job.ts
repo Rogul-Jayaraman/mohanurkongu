@@ -9,3 +9,4 @@ export async function purgeVerifications(): Promise<void> {
     logger.info({ count, thresholdDays: authConfig.jobs.purgeAfterDays }, 'Purged archived verifications');
   }
 }
+

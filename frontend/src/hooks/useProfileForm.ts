@@ -31,7 +31,8 @@ export const useProfileForm = () => {
                 'nameEn', 'fatherNameEn', 'motherNameEn', 'companyName', 
                 'birthPlace', 'jobLocationEn', 'kuladeivamEn', 'jobDetail',
                 'fatherJob', 'motherJob', 'community', 'education',
-                'currentDistrictEn', 'currentCityEn', 'currentStateEn', 'currentCountryEn'
+                'currentDistrictEn', 'currentCityEn', 'currentStateEn', 'currentCountryEn',
+                'landEn', 'otherAssetsEn', 'expectationNoteEn', 'preferredLocationEn'
             ];
             
             let mode: InputFormattingMode = 'sentence';
@@ -49,6 +50,11 @@ export const useProfileForm = () => {
 
     const restoreDraft = useCallback((draftData: any) => {
         if (!draftData) return;
+        const toLocalDateStr = (d: Date) => { const offset = d.getTimezoneOffset(); const local = new Date(d.getTime() - offset * 60000); return local.toISOString().split('T')[0]; };
+        const maxDobDate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 21); return toLocalDateStr(d); })();
+        const minDobDate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 40); return toLocalDateStr(d); })();
+        const rawDob = draftData.basic?.dob || draftData.personal?.dob;
+        const validDob = rawDob && rawDob >= minDobDate && rawDob <= maxDobDate ? rawDob : undefined;
         const restored = {
             ...DEFAULT_FORM_DATA,
             ...draftData.basic,
@@ -57,6 +63,7 @@ export const useProfileForm = () => {
             ...draftData.professional,
             ...draftData.family,
             ...draftData.assets,
+            dob: validDob,
             gallery: draftData.gallery ?? [],
             profilePhoto: draftData.profilePhoto ?? null,
             astrology: draftData.basic?.astrology || { mode: 'none' },

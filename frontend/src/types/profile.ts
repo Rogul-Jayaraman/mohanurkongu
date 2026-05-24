@@ -78,8 +78,22 @@ export interface Profile {
   residence: string;
   propertyDetailsEn: string | null;
   propertyDetailsTa: string | null;
+  landEn: string | null;
+  landTa: string | null;
+  otherAssetsEn: string | null;
+  otherAssetsTa: string | null;
+  vehicle: string | null;
   expectationEn: string | null;
   expectationTa: string | null;
+  expectationNoteEn: string | null;
+  expectationNoteTa: string | null;
+  ageMin: number | null;
+  ageMax: number | null;
+  heightMinId: number | null;
+  heightMaxId: number | null;
+  monthlySalary: number | null;
+  preferredLocationEn: string | null;
+  preferredLocationTa: string | null;
 
   svgData?: any;
   svgDataEn?: any;

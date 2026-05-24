@@ -48,9 +48,9 @@ const TranslatableInput: React.FC<TranslatableInputProps> = ({
     }, [language]);
 
     return (
-        <div className="w-full space-y-1.5">
+        <div className="w-full space-y-2">
             <div className="flex items-center justify-between px-1">
-                <label className="block text-[11px] sm:text-xs font-bold text-rosewood tracking-tight">
+                <label className="block text-[11px] sm:text-xs font-bold text-rosewood tracking-tight ml-1">
                     {label}
                     {required && <span className="text-gold ml-1 text-xs">*</span>}
                 </label>

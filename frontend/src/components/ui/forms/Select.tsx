@@ -45,7 +45,7 @@ const FormSelect: React.FC<FormSelectProps> = ({
         : '';
 
     return (
-        <div className={`space-y-1 ${className}`}>
+        <div className={`space-y-2 ${className}`}>
             {/* Label */}
             <label className="block text-[11px] sm:text-xs font-bold text-rosewood tracking-tight ml-1">
                 {label}

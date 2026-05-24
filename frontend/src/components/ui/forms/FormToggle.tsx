@@ -59,7 +59,7 @@ const FormToggle: React.FC<FormToggleProps> = ({
     };
 
     return (
-        <div className="space-y-2.5 w-full animate-in fade-in duration-500">
+        <div className="space-y-2 w-full animate-in fade-in duration-500">
             <label className="block text-[11px] sm:text-xs font-bold text-rosewood tracking-tight ml-1">
                 {label}
                 {required && <span className="text-gold ml-1 text-xs">*</span>}

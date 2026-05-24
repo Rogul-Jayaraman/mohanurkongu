@@ -27,6 +27,8 @@ export interface InputProps {
     readOnly?: boolean;
     disabled?: boolean;
     maxLength?: number;
+    max?: string;
+    min?: string;
     targetLanguage?: 'ta' | 'en';
     forceLowercase?: boolean;
     autoCapitalize?: string;
@@ -60,6 +62,8 @@ export const Input: React.FC<InputProps> = ({
     readOnly = false,
     disabled = false,
     maxLength,
+    max,
+    min,
     targetLanguage,
     forceLowercase,
     autoCapitalize,
@@ -224,16 +228,18 @@ export const Input: React.FC<InputProps> = ({
     };
 
     return (
-        <div className={`space-y-1 group text-left ${className}`}>
-            <div className={`flex items-center ${labelSuffix ? 'justify-between' : 'justify-start'} gap-1 px-1`}>
-                {label && (
-                    <label className="block text-[11px] sm:text-xs font-bold text-rosewood tracking-tight ml-1">
-                        {label}
-                        {required && <span className="text-gold ml-1 text-xs">*</span>}
-                    </label>
-                )}
-                {labelSuffix}
-            </div>
+        <div className={`space-y-2 group text-left ${className}`}>
+            {(label || labelSuffix) && (
+                <div className={`flex items-center ${labelSuffix ? 'justify-between' : 'justify-start'} gap-1 px-1`}>
+                    {label && (
+                        <label className="block text-[11px] sm:text-xs font-bold text-rosewood tracking-tight ml-1">
+                            {label}
+                            {required && <span className="text-gold ml-1 text-xs">*</span>}
+                        </label>
+                    )}
+                    {labelSuffix}
+                </div>
+            )}
 
             <div className={`flex items-stretch gap-2 ${isPhone ? '' : 'relative'}`}>
                 {/* ─── Country Code Dropdown (Only for Phone) ─── */}
@@ -321,6 +327,8 @@ export const Input: React.FC<InputProps> = ({
                         readOnly={readOnly}
                         disabled={disabled}
                         maxLength={maxLength}
+                        max={max}
+                        min={min}
                         targetLanguage={targetLanguage}
                         autoCapitalize={autoCapitalize || (type === 'email' ? 'none' : undefined)}
                         autoComplete={autoComplete}

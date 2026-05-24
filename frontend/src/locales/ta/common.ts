@@ -59,8 +59,8 @@ export const commonTa = {
     setup: {
       brand: "சுயவிவர அமைவு",
       tagline: "உங்கள் பயணம் இங்கிருந்து தொடங்குகிறது. உங்கள் தனித்துவத்தையும் மதிப்புகளையும் பிரதிபலிக்கும் சிறந்த சுயவிவரத்தை உருவாக்குங்கள்.",
-      back: "பின்னால்",
-      next: "தொடரவும்",
+      back: "முந்தைய படி",
+      next: "அடுத்த படி",
       create: "பதிவை உருவாக்கு",
       stepProgress: "படி {{current}} / {{total}}",
       step: {
@@ -85,8 +85,9 @@ export const commonTa = {
     monthly_income: "மாத வருமானம்",
     month: "மாதம்",
     change: "மாற்றவும்",
+    remove: "அகற்றவும்",
     upload: "பதிவேற்றவும்",
-    save_as_draft: "வரைவாக சேமி",
+    save_as_draft: "வரைவு சேமி",
     continue: "தொடரவும்",
     submit_for_verification: "சரிபார்ப்பிற்கு சமர்ப்பிக்கவும்",
     salary_monthly: "மாத வருமானம் (தோராயமாக)",

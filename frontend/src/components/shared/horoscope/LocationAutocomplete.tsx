@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import api from '@/lib/api';
 
 interface LocationSuggestion {
   displayName: string;
@@ -15,42 +16,37 @@ interface LocationAutocompleteProps {
 
 const INPUT_BASE = "w-full h-14 pl-12 pr-11 bg-input-bg border-2 border-input-border rounded-xl outline-none transition-all font-input-text text-sm text-input-text shadow-xl shadow-input-shadow hover:border-input-border-hover focus:border-input-focus focus:ring-4 focus:ring-input-ring placeholder:text-input-placeholder";
 
-const MOCK_LOCATIONS: LocationSuggestion[] = [
-  { displayName: 'Chennai, Tamil Nadu, India', latitude: 13.0827, longitude: 80.2707 },
-  { displayName: 'Coimbatore, Tamil Nadu, India', latitude: 11.0168, longitude: 76.9558 },
-  { displayName: 'Madurai, Tamil Nadu, India', latitude: 9.9252, longitude: 78.1198 },
-  { displayName: 'Salem, Tamil Nadu, India', latitude: 11.6643, longitude: 78.1460 },
-  { displayName: 'Namakkal, Tamil Nadu, India', latitude: 11.2290, longitude: 78.1665 },
-  { displayName: 'Erode, Tamil Nadu, India', latitude: 11.3410, longitude: 77.7172 },
-  { displayName: 'Tiruppur, Tamil Nadu, India', latitude: 11.1085, longitude: 77.3411 },
-  { displayName: 'Bangalore, Karnataka, India', latitude: 12.9716, longitude: 77.5946 },
-  { displayName: 'Mohanur, Tamil Nadu, India', latitude: 11.0800, longitude: 78.1400 },
-];
-
 export default function LocationAutocomplete({ onSelect, label, value, onChange }: LocationAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [selected, setSelected] = useState(false);
-  const error = null;
+  const [error, setError] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const fetchSuggestions = useCallback((q: string) => {
+  const fetchSuggestions = useCallback(async (q: string) => {
     if (q.length < 2) {
       setSuggestions([]);
       setIsOpen(false);
+      setError(null);
       return;
     }
     setIsSearching(true);
-    const filtered = MOCK_LOCATIONS.filter(l =>
-      l.displayName.toLowerCase().includes(q.toLowerCase())
-    );
-    setSuggestions(filtered);
-    setIsOpen(filtered.length > 0);
-    setActiveIndex(-1);
-    setIsSearching(false);
+    setError(null);
+    try {
+      const data = await api.get('/horoscope/location/search', { params: { q } }) as unknown as LocationSuggestion[];
+      setSuggestions(data || []);
+      setIsOpen((data || []).length > 0);
+      setActiveIndex(-1);
+    } catch {
+      setSuggestions([]);
+      setError('Search failed. Try again.');
+      setIsOpen(false);
+    } finally {
+      setIsSearching(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -83,6 +79,7 @@ export default function LocationAutocomplete({ onSelect, label, value, onChange 
     setSelected(false);
     setIsOpen(false);
     setActiveIndex(-1);
+    setError(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -118,10 +115,15 @@ export default function LocationAutocomplete({ onSelect, label, value, onChange 
     }
   };
 
+  const handleRetry = () => {
+    if (value.length >= 2) fetchSuggestions(value);
+  };
+
   const handleClear = () => {
     onChange('');
     setSuggestions([]);
     setIsOpen(false);
+    setError(null);
     setActiveIndex(-1);
     setSelected(false);
     inputRef.current?.focus();
@@ -180,7 +182,20 @@ export default function LocationAutocomplete({ onSelect, label, value, onChange 
         </div>
       </div>
 
-      {!isSearching && hasValue && !showDropdown && !selected && value.length >= 2 && (
+      {error && !isSearching && (
+        <div className="mt-2 flex items-center gap-2 px-1">
+          <span className="text-[11px] font-bold text-red-500">{error}</span>
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="text-[11px] font-black text-rosewood underline underline-offset-2 hover:text-rosewood-dark"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!isSearching && !error && hasValue && !showDropdown && !selected && value.length >= 2 && (
         <div className="mt-2 px-1">
           <p className="text-[11px] font-medium text-slate-400 italic">
             No locations found. Type more or try a different name.
