@@ -4,7 +4,7 @@ export { default as D9Chart } from './D9Chart';
 export { default as SouthIndianChart } from './BirthChart';
 export { default as PlanetGlyph } from './PlanetGlyph';
 export { default as PlanetTable } from './PlanetTable';
-export { default as HoroscopeOverview } from './HoroscopeOverview';
 export { default as HoroscopeResults } from './HoroscopeResults';
 export { default as TimePicker } from './TimePicker';
 export { default as LocationAutocomplete } from './LocationAutocomplete';
+export { default as CelestialChartsSection } from './CelestialChartsSection';

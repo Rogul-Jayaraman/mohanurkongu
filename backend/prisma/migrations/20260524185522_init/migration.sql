@@ -20,7 +20,10 @@ CREATE TYPE "VerificationPurpose" AS ENUM ('REGISTER', 'RESET_PASSWORD');
 CREATE TYPE "VerificationState" AS ENUM ('PENDING', 'VERIFIED', 'EXPIRED', 'CANCELLED', 'ARCHIVED');
 
 -- CreateEnum
-CREATE TYPE "ProfileStatus" AS ENUM ('DRAFT', 'ACTIVE', 'INACTIVE');
+CREATE TYPE "ProfileStatus" AS ENUM ('DRAFT', 'ACTIVE', 'INACTIVE', 'DELETED');
+
+-- CreateEnum
+CREATE TYPE "UploadStatus" AS ENUM ('TEMP', 'DRAFT', 'ACTIVE', 'DELETED');
 
 -- CreateEnum
 CREATE TYPE "Visibility" AS ENUM ('PUBLIC', 'PRIVATE');
@@ -219,12 +222,31 @@ CREATE TABLE "counters" (
 -- CreateTable
 CREATE TABLE "uploads" (
     "id" UUID NOT NULL,
-    "filePath" TEXT NOT NULL,
+    "ownerAccountId" UUID NOT NULL,
+    "objectKey" TEXT NOT NULL,
+    "originalFileName" TEXT NOT NULL,
     "mimeType" TEXT NOT NULL,
+    "extension" TEXT NOT NULL,
     "size" INTEGER NOT NULL,
+    "checksum" TEXT,
+    "status" "UploadStatus" NOT NULL DEFAULT 'TEMP',
+    "lastAccessedAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "uploads_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "publish_logs" (
+    "id" UUID NOT NULL,
+    "idempotencyKey" TEXT NOT NULL,
+    "profileId" UUID NOT NULL,
+    "regNo" TEXT NOT NULL,
+    "accountId" UUID NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "publish_logs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -488,30 +510,11 @@ CREATE TABLE "partner_preferences" (
     "monthlySalary" DECIMAL(12,2),
     "salaryCurrency" TEXT DEFAULT 'INR',
     "expectationNote" TEXT,
+    "preferredLocation" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "partner_preferences_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "partner_preference_locations" (
-    "id" UUID NOT NULL,
-    "partnerPreferenceId" UUID NOT NULL,
-    "value" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "partner_preference_locations_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "partner_preference_location_translations" (
-    "id" UUID NOT NULL,
-    "partnerPreferenceLocationId" UUID NOT NULL,
-    "language" "LanguageCode" NOT NULL,
-    "value" TEXT NOT NULL,
-
-    CONSTRAINT "partner_preference_location_translations_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -600,6 +603,9 @@ CREATE INDEX "account_verifications_expiresAt_idx" ON "account_verifications"("e
 CREATE INDEX "account_verifications_target_purpose_idx" ON "account_verifications"("target", "purpose");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "account_sessions_refreshTokenHash_key" ON "account_sessions"("refreshTokenHash");
+
+-- CreateIndex
 CREATE INDEX "account_sessions_accountId_idx" ON "account_sessions"("accountId");
 
 -- CreateIndex
@@ -622,6 +628,18 @@ CREATE INDEX "reset_sessions_expiresAt_idx" ON "reset_sessions"("expiresAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "counters_prefix_key" ON "counters"("prefix");
+
+-- CreateIndex
+CREATE INDEX "uploads_ownerAccountId_idx" ON "uploads"("ownerAccountId");
+
+-- CreateIndex
+CREATE INDEX "uploads_status_idx" ON "uploads"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "publish_logs_idempotencyKey_key" ON "publish_logs"("idempotencyKey");
+
+-- CreateIndex
+CREATE INDEX "publish_logs_accountId_idx" ON "publish_logs"("accountId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "profile_fors_code_key" ON "profile_fors"("code");
@@ -753,12 +771,6 @@ CREATE UNIQUE INDEX "profile_assets_profileId_key" ON "profile_assets"("profileI
 CREATE UNIQUE INDEX "partner_preferences_profileId_key" ON "partner_preferences"("profileId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "partner_preference_locations_partnerPreferenceId_value_key" ON "partner_preference_locations"("partnerPreferenceId", "value");
-
--- CreateIndex
-CREATE UNIQUE INDEX "partner_preference_location_translations_partnerPreferenceL_key" ON "partner_preference_location_translations"("partnerPreferenceLocationId", "language");
-
--- CreateIndex
 CREATE UNIQUE INDEX "profile_translations_profileId_language_key" ON "profile_translations"("profileId", "language");
 
 -- CreateIndex
@@ -787,6 +799,9 @@ ALTER TABLE "account_status_history" ADD CONSTRAINT "account_status_history_acco
 
 -- AddForeignKey
 ALTER TABLE "account_sessions" ADD CONSTRAINT "account_sessions_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "accounts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "uploads" ADD CONSTRAINT "uploads_ownerAccountId_fkey" FOREIGN KEY ("ownerAccountId") REFERENCES "accounts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "castes" ADD CONSTRAINT "castes_communityId_fkey" FOREIGN KEY ("communityId") REFERENCES "communities"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -880,12 +895,6 @@ ALTER TABLE "partner_preferences" ADD CONSTRAINT "partner_preferences_heightMinI
 
 -- AddForeignKey
 ALTER TABLE "partner_preferences" ADD CONSTRAINT "partner_preferences_heightMaxId_fkey" FOREIGN KEY ("heightMaxId") REFERENCES "heights"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "partner_preference_locations" ADD CONSTRAINT "partner_preference_locations_partnerPreferenceId_fkey" FOREIGN KEY ("partnerPreferenceId") REFERENCES "partner_preferences"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "partner_preference_location_translations" ADD CONSTRAINT "partner_preference_location_translations_partnerPreference_fkey" FOREIGN KEY ("partnerPreferenceLocationId") REFERENCES "partner_preference_locations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "profile_translations" ADD CONSTRAINT "profile_translations_profileId_fkey" FOREIGN KEY ("profileId") REFERENCES "profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE;

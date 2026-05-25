@@ -98,6 +98,46 @@
 
 ---
 
+## Upload / Storage Module
+
+| Attribute | Value |
+|---|---|
+| **Purpose** | Image upload, processing pipeline, file storage, media serving |
+| **Owner** | Backend team |
+| **Status** | EXECUTED |
+| **Entrypoints** | `POST /uploads`, `DELETE /uploads/:id`, `GET /media/:uploadId` |
+| **Dependencies** | Prisma (PostgreSQL), Sharp, heic-convert, multer |
+| **Files** | `upload.routes.ts`, `upload.controller.ts`, `upload.service.ts`, `media.routes.ts`, `media.controller.ts`, `media.service.ts`, `storage.service.ts`, `storage.repository.ts`, `local-storage.service.ts`, `storage-provider.interface.ts` |
+| **Pipeline** | `image-pipeline.service.ts`, `image-validator.service.ts`, `image-processor.service.ts`, `heic-converter.service.ts`, `public-id.helper.ts` |
+| **Docs** | `docs/image-pipeline/ARCHITECTURE.md` |
+
+### Endpoint List
+
+| Method | Path | Auth | Rate Limit | Status |
+|--------|------|------|------------|--------|
+| POST | /uploads | Yes | Yes (10/min) | EXECUTED |
+| DELETE | /uploads/:id | Yes | No | EXECUTED |
+| GET | /media/:uploadId | Yes | No | EXECUTED |
+
+### Upload Lifecycle
+
+`TEMP → DRAFT → ACTIVE` (forward), `ACTIVE → DELETED` (soft delete), `TEMP/DRAFT → DELETED` (hard delete via cleanup jobs or profile delete)
+
+---
+
+## Image Pipeline Module
+
+| Attribute | Value |
+|---|---|
+| **Purpose** | Image validation (magic bytes, MIME, resolution), HEIC→PNG conversion, adaptive Sharp processing → WEBP output |
+| **Owner** | Backend team |
+| **Status** | EXECUTED (see KNOWN_LIMITATIONS.md for HEIC perf caveat) |
+| **Entrypoints** | Called by UploadService (not a direct API) |
+| **Files** | `image-validator.service.ts`, `image-processor.service.ts`, `heic-converter.service.ts`, `image-pipeline.service.ts` |
+| **Category configs** | `profiles`: 1800×2400 WEBP Q90, `gallery`: 2200 adaptive WEBP Q90, `horoscope`: 3000 adaptive WEBP Q95 |
+
+---
+
 ## Notification / Email Module
 
 | Attribute | Value |

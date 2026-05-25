@@ -1,8 +1,10 @@
+import path from 'node:path';
 import dotenv from 'dotenv';
 dotenv.config();
 
 export const appConfig = {
   nodeEnv: process.env.NODE_ENV || 'development',
+  uploadDir: process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads'),
   port: parseInt(process.env.PORT || '4000', 10),
   host: process.env.HOST || '0.0.0.0',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',

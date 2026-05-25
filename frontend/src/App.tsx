@@ -53,6 +53,7 @@ import AdminLogin from '@/pages/auth/AdminLogin';
 import Signup from '@/pages/auth/Signup';
 import ForgotPassword from '@/pages/auth/ForgotPassword';
 
+import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { Toaster } from 'sonner';
 
 const RootLayout = () => (
@@ -158,7 +159,7 @@ function App() {
             duration={3000}
             richColors
           />
-          <RouterProvider router={router} />
+          <ErrorBoundary><RouterProvider router={router} /></ErrorBoundary>
         </AuthProvider>
         </CapsLockProvider>
       </LanguageProvider>

@@ -1,8 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Profile } from '../types/profile';
 import { useInputFormatting, type InputFormattingMode } from './useInputFormatting';
+import { useIndexedDB } from './useIndexedDB';
+import { formToDraft, draftToForm } from '../adapters/profile.adapter';
 
-const DEFAULT_FORM_DATA = {
+export const DEFAULT_FORM_DATA = {
     profileFor: 'MYSELF',
     gender: 'MALE',
     maritalStatus: 'NEVER_MARRIED',
@@ -21,6 +23,17 @@ export const useProfileForm = () => {
     const { formatValue } = useInputFormatting();
     const [isDirty, setIsDirty] = useState(false);
     const [formData, setFormData] = useState<Partial<Profile>>({ ...DEFAULT_FORM_DATA });
+    const { data: draftData, isLoaded, hydrate, persist, update } = useIndexedDB();
+    const formDataRef = useRef(formData);
+    formDataRef.current = formData;
+
+    useEffect(() => {
+        if (isLoaded && draftData) {
+            const restored = draftToForm(draftData);
+            setFormData(prev => ({ ...DEFAULT_FORM_DATA, ...restored }));
+            setIsDirty(false);
+        }
+    }, [isLoaded, draftData]);
 
     const updateField = (field: keyof Profile, value: any) => {
         let formattedValue = value;
@@ -48,6 +61,14 @@ export const useProfileForm = () => {
         setIsDirty(true);
     };
 
+    const persistDraft = useCallback(async () => {
+        const current = formDataRef.current;
+        if (!current) return;
+        const draft = formToDraft(current as any);
+        update(draft);
+        await persist();
+    }, [persist, update]);
+
     const restoreDraft = useCallback((draftData: any) => {
         if (!draftData) return;
         const toLocalDateStr = (d: Date) => { const offset = d.getTimezoneOffset(); const local = new Date(d.getTime() - offset * 60000); return local.toISOString().split('T')[0]; };
@@ -64,8 +85,6 @@ export const useProfileForm = () => {
             ...draftData.family,
             ...draftData.assets,
             dob: validDob,
-            gallery: draftData.gallery ?? [],
-            profilePhoto: draftData.profilePhoto ?? null,
             astrology: draftData.basic?.astrology || { mode: 'none' },
         };
         setFormData(restored);
@@ -83,7 +102,9 @@ export const useProfileForm = () => {
         setFormData,
         reset,
         restoreDraft,
+        persistDraft,
         isDirty,
-        setIsDirty
+        setIsDirty,
+        formDataRef,
     };
 };

@@ -35,6 +35,9 @@ services:
       REDIS_HOST: redis
       SMTP_HOST: mailpit
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      UPLOAD_DIR: /uploads
+    volumes:
+      - uploads_data:/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,6 +58,9 @@ services:
       - backend
     networks:
       - mkm-network
+
+volumes:
+  uploads_data:
 
 networks:
   mkm-network:

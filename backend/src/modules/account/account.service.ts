@@ -110,7 +110,7 @@ export class AccountService {
     }
 
     if (updates.length > 0) {
-      await Promise.all(updates);
+      await prisma.$transaction(updates);
     }
 
     return this.getProfile(accountId);

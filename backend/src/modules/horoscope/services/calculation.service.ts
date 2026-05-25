@@ -32,8 +32,11 @@ const PLANET_DEFS: { body: number; name: string }[] = [
 ];
 
 export function generateHoroscope(input: BirthInput): GenerateResponse {
-  const [tz] = tzLookup(input.location.latitude, input.location.longitude);
-  const localDT = DateTime.fromISO(`${input.dateOfBirth}T${input.timeOfBirth}`, { zone: tz });
+  const timezones = tzLookup(input.location.latitude, input.location.longitude);
+  if (timezones.length === 0) {
+    throw new Error(`No timezone found for coordinates (${input.location.latitude}, ${input.location.longitude})`);
+  }
+  const localDT = DateTime.fromISO(`${input.dateOfBirth}T${input.timeOfBirth}`, { zone: timezones[0] });
   if (!localDT.isValid) {
     throw new Error(`Invalid date/time: ${input.dateOfBirth}T${input.timeOfBirth}`);
   }
@@ -131,7 +134,7 @@ export function generateHoroscope(input: BirthInput): GenerateResponse {
     meta: {
       ayanamsa,
       julianDay: jd,
-      timezone: tz,
+      timezone: timezones[0],
     },
     lagna: {
       signIndex: lagnaIdx,

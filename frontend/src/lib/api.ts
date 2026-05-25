@@ -16,6 +16,7 @@ interface FailedRequest {
 
 let isRefreshing = false;
 let failedQueue: FailedRequest[] = [];
+const MAX_QUEUE_SIZE = 50;
 let onRefreshEnd: (() => void) | null = null;
 
 function processQueue(error: unknown, token: string | null = null) {
@@ -78,7 +79,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry && originalRequest.headers?.Authorization) {
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
+          if (failedQueue.length < MAX_QUEUE_SIZE) {
+            failedQueue.push({ resolve, reject });
+          } else {
+            reject(new AppError(401, 'AUTH_TOKEN_INVALID', 'Session expired'));
+          }
         }).then((token) => {
           originalRequest.headers.Authorization = `Bearer ${token}`;
           return api(originalRequest);

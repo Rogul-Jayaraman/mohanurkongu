@@ -6,7 +6,7 @@ const R = '\x1b[0m';
 const B = '\x1b[1m';
 
 function out(s: string): void {
-  process.stderr.write(s + '\n');
+  try { process.stdout.write(s + '\n'); } catch { /* silent */ }
 }
 
 const C = {
@@ -149,76 +149,83 @@ function collectQueryParams(url: string): Record<string, string> | null {
 }
 
 export function requestLogger(req: Request, res: Response, next: NextFunction): void {
-  const start = Date.now();
-  const rid = shortId(req.id);
-  const m = METHOD[req.method] || { badge: ' ??? ', bg: BG.wht, fg: C.wht };
+  try {
+    const start = Date.now();
+    const rid = shortId(req.id);
+    const m = METHOD[req.method] || { badge: ' ??? ', bg: BG.wht, fg: C.wht };
 
-  const originalJson = res.json.bind(res);
-  let capturedBody: unknown = null;
+    const originalJson = res.json.bind(res);
+    let capturedBody: unknown = null;
 
-  res.json = function (body: unknown): Response {
-    capturedBody = body;
-    return originalJson(body);
-  };
+    res.json = function (body: unknown): Response {
+      capturedBody = body;
+      return originalJson(body);
+    };
 
-  const maskedBody = req.body && typeof req.body === 'object' && Object.keys(req.body).length
-    ? maskSensitive(req.body)
-    : null;
+    const maskedBody = req.body && typeof req.body === 'object' && Object.keys(req.body).length
+      ? maskSensitive(req.body)
+      : null;
 
-  const queryParams = collectQueryParams(req.originalUrl || req.url || '');
+    const queryParams = collectQueryParams(req.originalUrl || req.url || '');
 
-  const ts = new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const userTag = req.account
-    ? ` ${C.grn}${req.account.sub.slice(0, 8)}${R}`
-    : '';
+    const ts = new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const userTag = req.account
+      ? ` ${C.grn}${req.account.sub.slice(0, 8)}${R}`
+      : '';
 
-  const rawUrl = req.originalUrl || req.url || '';
-  const qIdx = rawUrl.indexOf('?');
-  const pathOnly = qIdx === -1 ? rawUrl : rawUrl.slice(0, qIdx);
-  const methodBadge = `${m.bg}${B}${C.wht}${m.badge}${R}`;
+    const rawUrl = req.originalUrl || req.url || '';
+    const qIdx = rawUrl.indexOf('?');
+    const pathOnly = qIdx === -1 ? rawUrl : rawUrl.slice(0, qIdx);
+    const methodBadge = `${m.bg}${B}${C.wht}${m.badge}${R}`;
 
-  out('');
-  header(`▶  ${B}${C.wht}REQUEST${R}`, C.cyn);
-  ln(`${methodBadge}  ${B}${C.wht}${pathOnly}${R}`);
-  ln(`${C.mut}${ts}${R}  ${C.mut}│${R}  ${C.gry}${rid}${R}  ${C.mut}│${R}  ${C.gry}${req.ip || req.socket.remoteAddress}${R}${userTag}`);
+    out('');
+    header(`▶  ${B}${C.wht}REQUEST${R}`, C.cyn);
+    ln(`${methodBadge}  ${B}${C.wht}${pathOnly}${R}`);
+    ln(`${C.mut}${ts}${R}  ${C.mut}│${R}  ${C.gry}${rid}${R}  ${C.mut}│${R}  ${C.gry}${req.ip || req.socket.remoteAddress}${R}${userTag}`);
 
-  if (queryParams) {
-    blank();
-    for (const [k, v] of Object.entries(queryParams)) {
-      ln(` ${C.cyn}${k}${R}  ${C.mut}=${R}  ${C.grn}${v}${R}`);
-    }
-  }
-
-  if (maskedBody) {
-    blank();
-    for (const line of fmtJson(maskedBody).split('\n')) {
-      ln(` ${C.mut}${line.replace(/"([^"]+)"(?=\s*:)/g, (_, k) => `${C.cyn}${k}${R}`)}${R}`);
-    }
-  }
-
-  footer(C.cyn);
-
-  res.on('finish', () => {
-    const dur = Date.now() - start;
-    const st = methodMeta(res.statusCode);
-    const tb = timeBar(dur);
-    const cl = res.getHeader('content-length');
-    const clStr = cl ? `${C.mut}│${R}  ${C.gry}${cl} B${R}` : '';
-
-    header(`${st.icon}  ${B}${C.wht}${res.statusCode}  ${st.text}${R}`, st.fg);
-    ln(`${B}${tb.c}${dur}ms${R}  ${gauge(tb.pct, tb.c)}  ${C.gry}${tb.label}${R}  ${clStr}`);
-
-    if (capturedBody) {
+    if (queryParams) {
       blank();
-      const maskedRes = maskSensitive(capturedBody);
-      for (const line of fmtJson(maskedRes).split('\n')) {
-        ln(` ${C.mut}${highlightJsonLine(line, st.fg)}${R}`);
+      for (const [k, v] of Object.entries(queryParams)) {
+        ln(` ${C.cyn}${k}${R}  ${C.mut}=${R}  ${C.grn}${v}${R}`);
       }
     }
 
-    footer(st.fg);
-    out('');
-  });
+    if (maskedBody) {
+      blank();
+      for (const line of fmtJson(maskedBody).split('\n')) {
+        ln(` ${C.mut}${line.replace(/"([^"]+)"(?=\s*:)/g, (_, k) => `${C.cyn}${k}${R}`)}${R}`);
+      }
+    }
 
-  next();
+    footer(C.cyn);
+
+    res.on('finish', () => {
+      try {
+        const dur = Date.now() - start;
+        const st = methodMeta(res.statusCode);
+        const tb = timeBar(dur);
+        const cl = res.getHeader('content-length');
+        const clStr = cl ? `${C.mut}│${R}  ${C.gry}${cl} B${R}` : '';
+
+        header(`${st.icon}  ${B}${C.wht}${res.statusCode}  ${st.text}${R}`, st.fg);
+        ln(`${B}${tb.c}${dur}ms${R}  ${gauge(tb.pct, tb.c)}  ${C.gry}${tb.label}${R}  ${clStr}`);
+
+        if (capturedBody) {
+          blank();
+          const maskedRes = maskSensitive(capturedBody);
+          for (const line of fmtJson(maskedRes).split('\n')) {
+            ln(` ${C.mut}${highlightJsonLine(line, st.fg)}${R}`);
+          }
+        }
+
+        footer(st.fg);
+        out('');
+      } catch { /* silent */ }
+    });
+
+    next();
+  } catch (e) {
+    console.error('[requestLogger] error:', e);
+    next();
+  }
 }

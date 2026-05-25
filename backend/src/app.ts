@@ -9,11 +9,13 @@ import { requestId } from './common/middleware/requestId.js';
 import { language } from './common/middleware/language.js';
 import { requestLogger } from './common/middleware/requestLogger.js';
 import { errorHandler } from './common/middleware/errorHandler.js';
+import { requireSession } from './common/middleware/requireAuth.js';
 import { requireCsrf } from './common/middleware/csrf.js';
 import { translate } from './common/utils/translation.js';
 import { ErrorCodes } from './common/errors/ErrorCodes.js';
 import { sendSuccess } from './common/responses/ApiResponse.js';
 import { logger } from './common/utils/logger.js';
+import { prisma } from './database/prisma.js';
 import { getEmailQueue } from './modules/notification/email.queue.js';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
@@ -23,6 +25,8 @@ import { ExpressAdapter } from '@bull-board/express';
 import { VerificationRepository } from './modules/verification/verification.repository.js';
 import { SessionRepository } from './modules/session/session.repository.js';
 import { AccountRepository } from './modules/account/account.repository.js';
+import { StorageRepository } from './modules/storage/storage.repository.js';
+import { ProfileRepository } from './modules/profile/profile.repository.js';
 
 // Services
 import { VerificationService } from './modules/verification/verification.service.js';
@@ -31,6 +35,13 @@ import { AccountService } from './modules/account/account.service.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import { AdminAuthService } from './modules/admin-auth/admin-auth.service.js';
 import { NotificationService } from './modules/notification/notification.service.js';
+import { StorageService } from './modules/storage/storage.service.js';
+import { LocalStorageService } from './modules/storage/providers/local-storage.service.js';
+import type { IStorageProvider } from './modules/storage/providers/storage-provider.interface.js';
+import { UploadService } from './modules/upload/upload.service.js';
+import { ProfileService } from './modules/profile/profile.service.js';
+import { ImagePipelineService } from './modules/image/image-pipeline.service.js';
+import { MediaService } from './modules/media/media.service.js';
 
 // Controllers
 import { AuthController } from './modules/auth/auth.controller.js';
@@ -38,6 +49,9 @@ import { VerificationController } from './modules/verification/verification.cont
 import { AccountController } from './modules/account/account.controller.js';
 import { AdminAuthController } from './modules/admin-auth/admin-auth.controller.js';
 import { AdminAccountController } from './modules/admin-auth/admin-account.controller.js';
+import { UploadController } from './modules/upload/upload.controller.js';
+import { ProfileController } from './modules/profile/profile.controller.js';
+import { MediaController } from './modules/media/media.controller.js';
 
 // Routes
 import { createAuthRoutes } from './modules/auth/auth.routes.js';
@@ -45,6 +59,9 @@ import { createVerificationRoutes } from './modules/verification/verification.ro
 import { createAccountRoutes } from './modules/account/account.routes.js';
 import { createAdminAuthRoutes } from './modules/admin-auth/admin-auth.routes.js';
 import { createAdminAccountRoutes } from './modules/admin-auth/admin-account.routes.js';
+import { createUploadRoutes } from './modules/upload/upload.routes.js';
+import { createProfileRoutes } from './modules/profile/profile.routes.js';
+import { createMediaRoutes } from './modules/media/media.routes.js';
 import horoscopeRouter from './modules/horoscope/index.js';
 
 export function createApp() {
@@ -80,13 +97,22 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
   // Health check — must be before global rate limiter
-  app.get('/health', (_req, res) => {
-    sendSuccess(res, {
-      status: 'ok',
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString(),
-      environment: appConfig.nodeEnv,
-    });
+  app.get('/health', async (_req, res, next) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      sendSuccess(res, {
+        status: 'ok',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        environment: appConfig.nodeEnv,
+        database: 'connected',
+      });
+    } catch {
+      res.status(503).json({
+        success: false,
+        error: { code: 'SERVICE_UNAVAILABLE', message: 'Database not reachable' },
+      });
+    }
   });
 
   // Metrics endpoint (Prometheus format)
@@ -149,8 +175,27 @@ export function createApp() {
   app.use(language);
   app.use(requestLogger);
 
+  // Paths exempt from CSRF (no Bearer token available, e.g. auth flows)
+  const csrfExemptPaths = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/refresh',
+    // Upload/profile routes use CSRF exemption since the client may
+    // not have a CSRF token available when uploading (multipart forms)
+    '/uploads',
+    '/profiles',
+    '/horoscope/generate',
+    '/horoscope/location/search',
+  ];
+
   app.use((req, res, next) => {
-    if (req.path.startsWith('/auth/') || req.path.startsWith('/horoscope/')) return next();
+    const isExempt = csrfExemptPaths.some(p => req.path === p || req.path.startsWith(p + '/'));
+    const hasBearer = req.headers.authorization?.startsWith('Bearer ');
+    if (isExempt || hasBearer) {
+      console.log(`[CSRF] SKIP path=${req.path} exempt=${isExempt} bearer=${hasBearer}`);
+      return next();
+    }
+    console.log(`[CSRF] BLOCK path=${req.path} exempt=${isExempt} bearer=${hasBearer}`);
     requireCsrf(req, res, next);
   });
 
@@ -181,6 +226,27 @@ export function createApp() {
   // AdminAccountModule
   const adminAccountController = new AdminAccountController(accountRepo);
 
+  // StorageModule
+  const storageRepo = new StorageRepository();
+  const localStorageProvider: IStorageProvider = new LocalStorageService();
+  const storageService = new StorageService(localStorageProvider, storageRepo);
+
+  // ImagePipelineModule
+  const imagePipelineService = new ImagePipelineService();
+
+  // UploadModule
+  const uploadService = new UploadService(storageService, imagePipelineService);
+  const uploadController = new UploadController(uploadService);
+
+  // MediaModule
+  const mediaService = new MediaService(storageService);
+  const mediaController = new MediaController(mediaService);
+
+  // ProfileModule
+  const profileRepo = new ProfileRepository();
+  const profileService = new ProfileService(profileRepo, storageService, accountService);
+  const profileController = new ProfileController(profileService);
+
   // --- Bull Board ---
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath('/admin/queues');
@@ -191,12 +257,15 @@ export function createApp() {
   app.use('/admin/queues', serverAdapter.getRouter());
 
   // --- Routes ---
-  app.use(createAuthRoutes(authController));
-  app.use(createVerificationRoutes(verificationController));
-  app.use(createAccountRoutes(accountController));
-  app.use(createAdminAuthRoutes(adminAuthController));
-  app.use(createAdminAccountRoutes(adminAccountController));
+  app.use('/', createAuthRoutes(authController));
+  app.use('/', createVerificationRoutes(verificationController));
+  app.use('/', createAccountRoutes(accountController));
+  app.use('/admin', createAdminAuthRoutes(adminAuthController));
+  app.use('/admin', createAdminAccountRoutes(adminAccountController));
   app.use('/horoscope', horoscopeRouter);
+  app.use('/', createUploadRoutes(uploadController));
+  app.use('/', createProfileRoutes(profileController));
+  app.use('/', createMediaRoutes(mediaController));
 
   // 404
   app.use((_req, res) => {

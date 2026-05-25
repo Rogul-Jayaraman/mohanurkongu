@@ -1,10 +1,10 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { HoroscopeResult } from '@/types/horoscope';
-import HoroscopeOverview from './HoroscopeOverview';
 import PlanetTable from './PlanetTable';
 import D1Chart from './D1Chart';
 import D9Chart from './D9Chart';
+import CelestialChartsSection from './CelestialChartsSection';
 
 interface HoroscopeResultsProps {
   result: HoroscopeResult | null;
@@ -33,10 +33,49 @@ export default function HoroscopeResults({ result, loading, error, language }: H
 
   if (!result) return null;
 
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString(lang === 'ta' ? 'ta-IN' : 'en-IN', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="space-y-8">
       <section className="horoscope-section">
-        <HoroscopeOverview result={result} language={lang} />
+        <div className="bg-ivory border border-gold/20 rounded-xl shadow-sm transition-all hover:shadow-md">
+          <div className="bg-ivory/50 px-6 py-4 border-b border-gold-soft rounded-t-xl flex items-center gap-3">
+            <div className="size-8 bg-rosewood-gradient text-white rounded-xl shadow-sm flex items-center justify-center text-rosewood">
+              <span className="material-symbols-outlined text-base!">calendar_month</span>
+            </div>
+            <h3 className="text-sm font-serif font-bold text-rosewood">
+              {lang === 'ta' ? 'பிறந்த தின விவரங்கள்' : 'Birth Details'}
+            </h3>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest">{t('profile_new:dob')}</p>
+                <p className="text-sm font-bold text-slate-700 leading-relaxed">{formatDate(result.input.dateOfBirth)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest">{t('profile_new:horoscope.birth_time')}</p>
+                <p className="text-sm font-bold text-slate-700 leading-relaxed">{result.input.timeOfBirth}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest">{t('profile_new:horoscope.birth_place')}</p>
+                <p className="text-sm font-bold text-slate-700 leading-relaxed">{result.summary.locationName}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="horoscope-section">
+        <CelestialChartsSection result={result} language={lang} />
       </section>
 
       <section className="horoscope-section">

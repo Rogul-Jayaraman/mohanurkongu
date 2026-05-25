@@ -101,6 +101,7 @@ export const profileNewEn = {
       rasi_chart_label: "Rasi Chart",
       navamsa_chart_label: "Navamsa Chart",
       horoscope_pdf_label: "Horoscope PDF",
+      edit_details: "Edit Details",
       no_chart_provided: "No Horoscope charts provided",
       required_image: "Required Image",
       upload_pdf_desc: "Upload clear image of the traditional chart",

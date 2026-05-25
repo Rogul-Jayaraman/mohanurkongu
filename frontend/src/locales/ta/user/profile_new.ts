@@ -97,6 +97,7 @@ export const profileNewTa = {
       rasi_chart_label: "ராசி கட்டம்",
       navamsa_chart_label: "அம்ச கட்டம்",
       horoscope_pdf_label: "ஜாதக PDF",
+      edit_details: "விவரங்களைத் திருத்து",
       no_chart_provided: "ஜாதகம் இல்லை",
       required_image: "தேவையான படம்",
       upload_pdf_desc: "ஜாதகத்தின் தெளிவான படத்தை பதிவேற்றவும்",

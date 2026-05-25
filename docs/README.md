@@ -8,6 +8,7 @@
 
 ## Quick Links
 
+- [CREATE_NEW_PROFILE](./features/CREATE_NEW_PROFILE.md) — Complete profile creation workflow (7-step wizard, draft save/resume, upload lifecycle, publish)
 - [PROJECT_OVERVIEW](./PROJECT_OVERVIEW.md) — Goals, domain, team, lifecycle
 - [SYSTEM_OVERVIEW](./SYSTEM_OVERVIEW.md) — High-level architecture
 - [MODULES](./MODULES.md) — Module breakdown with status

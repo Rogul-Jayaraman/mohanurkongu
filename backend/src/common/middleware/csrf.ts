@@ -31,6 +31,8 @@ export function requireCsrf(req: Request, res: Response, next: NextFunction): vo
   const cookieToken = req.cookies?.[CSRF_COOKIE];
   const headerToken = req.headers[CSRF_HEADER] as string | undefined;
 
+  console.log(`[requireCsrf] cookie=${cookieToken?.substring(0,8)}... header=${headerToken?.substring(0,8)}...`);
+
   if (!cookieToken || !headerToken || !crypto.timingSafeEqual(Buffer.from(cookieToken), Buffer.from(headerToken))) {
     const lang = res.locals.lang || 'en';
     next(new AppError(403, ErrorCodes.AUTH_FORBIDDEN, translate(ErrorCodes.AUTH_FORBIDDEN, lang)));

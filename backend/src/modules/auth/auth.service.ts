@@ -41,7 +41,7 @@ export class AuthService {
 
     const verificationId = payload.sub;
 
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const regSession = await tx.registrationSession.findFirst({
         where: {
           verificationId,
@@ -166,8 +166,6 @@ export class AuthService {
         },
       });
 
-      await this.notificationService.sendWelcomeEmail(regSession.snapshotTarget, dto.firstNameEn, '');
-
       const roles = ['USER'];
       const session = await this.sessionService.createSession(
         account.id,
@@ -183,8 +181,13 @@ export class AuthService {
         accountId: account.id,
         role: 'USER' as const,
         sessionId: session.sessionId,
+        email: regSession.snapshotTarget,
       };
     });
+
+    this.notificationService.sendWelcomeEmail(result.email, dto.firstNameEn, '').catch(() => {});
+
+    return result;
   }
 
   async login(dto: LoginDto, device?: DeviceInfo) {
@@ -294,18 +297,26 @@ export class AuthService {
     const newHash = await hashPassword(dto.password);
     let accountId: string | undefined;
 
+    const credential = await prisma.accountCredential.findUnique({
+      where: { email },
+      include: { account: { select: { currentState: true } } },
+    });
+
+    if (!credential) {
+      throw new AppError(400, ErrorCodes.AUTH_RESET_SESSION_INVALID, 'AUTH_RESET_SESSION_INVALID');
+    }
+
+    if (credential.account.currentState === 'SUSPENDED') {
+      throw new AppError(403, ErrorCodes.AUTH_ACCOUNT_SUSPENDED, 'AUTH_ACCOUNT_SUSPENDED');
+    }
+
+    if (credential.account.currentState === 'DELETED') {
+      throw new AppError(400, ErrorCodes.AUTH_RESET_SESSION_INVALID, 'AUTH_RESET_SESSION_INVALID');
+    }
+
+    accountId = credential.accountId;
+
     await prisma.$transaction(async (tx) => {
-      const credential = await tx.accountCredential.findUnique({
-        where: { email },
-        select: { accountId: true },
-      });
-
-      if (!credential) {
-        throw new AppError(400, ErrorCodes.AUTH_RESET_SESSION_INVALID, 'AUTH_RESET_SESSION_INVALID');
-      }
-
-      accountId = credential.accountId;
-
       await tx.accountCredential.update({
         where: { email },
         data: { passwordHash: newHash },

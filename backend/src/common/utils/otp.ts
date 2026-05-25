@@ -5,7 +5,7 @@ export function generateOTP(length: number = authConfig.otp.length): string {
   const max = Math.pow(10, length);
   const min = Math.pow(10, length - 1);
   const num = crypto.randomInt(min, max);
-  return num.toString();
+  return num.toString().padStart(length, '0');
 }
 
 export function hashOTP(otp: string): string {

@@ -8,10 +8,10 @@ export function createAdminAccountRoutes(controller: AdminAccountController): Ro
 
   router.use(requireSession, requireRole('ADMIN'));
 
-  router.get('/admin/accounts', controller.listAccounts);
-  router.get('/admin/accounts/:id', controller.getAccountDetail);
-  router.post('/admin/accounts/:id/suspend', controller.suspendAccount);
-  router.post('/admin/accounts/:id/restore', controller.restoreAccount);
+  router.get('/accounts', controller.listAccounts);
+  router.get('/accounts/:id', controller.getAccountDetail);
+  router.post('/accounts/:id/suspend', controller.suspendAccount);
+  router.post('/accounts/:id/restore', controller.restoreAccount);
 
   return router;
 }

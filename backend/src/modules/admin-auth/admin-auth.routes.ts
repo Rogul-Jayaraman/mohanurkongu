@@ -20,14 +20,14 @@ export function createAdminAuthRoutes(controller: AdminAuthController): Router {
   const router = Router();
 
   router.post(
-    '/admin/auth/login',
+    '/auth/login',
     createRateLimiter(10),
     validate(loginSchema),
     controller.login,
   );
 
   router.get(
-    '/admin/account/me',
+    '/account/me',
     requireSession,
     requireRole('ADMIN'),
     controller.getProfile,

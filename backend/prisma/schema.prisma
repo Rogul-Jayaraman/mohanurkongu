@@ -49,8 +49,17 @@ enum VerificationState {
 
 enum ProfileStatus {
   DRAFT
+  PENDING
   ACTIVE
   INACTIVE
+  DELETED
+}
+
+enum UploadStatus {
+  TEMP
+  DRAFT
+  ACTIVE
+  DELETED
 }
 
 enum Visibility {
@@ -126,6 +135,7 @@ model Account {
   statusHistory AccountStatusHistory[]
   sessions      AccountSession[]
   profile       Profile?
+  uploads       Upload[]
 
   @@index([accountNo])
   @@index([currentState])
@@ -264,7 +274,7 @@ model AccountVerification {
 model AccountSession {
   id                String    @id @default(uuid())
   accountId         String    @db.Uuid
-  refreshTokenHash  String
+  refreshTokenHash  String    @unique
   tokenFamily       String    @db.VarChar(36)
   tokenVersion      Int       @default(0)
   userAgentHash     String?
@@ -318,18 +328,46 @@ model Counter {
 }
 
 model Upload {
-  id        String   @id @default(uuid()) @db.Uuid
-  filePath  String
-  mimeType  String
-  size      Int
-  createdAt DateTime @default(now())
+  id               String       @id @default(uuid()) @db.Uuid
+  publicId         String       @unique @db.VarChar(16)
+  ownerAccountId   String       @db.Uuid
+  objectKey        String
+  originalFileName String
+  mimeType         String
+  extension        String
+  size             Int
+  checksum         String
+  status           UploadStatus @default(TEMP)
+  lastAccessedAt   DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  owner Account @relation(fields: [ownerAccountId], references: [id])
 
   rasiChartProfiles    ProfileHoroscope[]    @relation("RasiChart")
   navamsaChartProfiles ProfileHoroscope[]    @relation("NavamsaChart")
   primaryPhoto         ProfilePhoto?
   galleryPhotos        ProfileGalleryPhoto[]
 
+  @@index([ownerAccountId])
+  @@index([status])
+  @@index([publicId])
+  @@index([status, updatedAt])
+  @@index([status, createdAt])
+  @@index([status, lastAccessedAt])
   @@map("uploads")
+}
+
+model PublishLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  idempotencyKey  String   @unique
+  profileId       String   @db.Uuid
+  regNo           String
+  accountId       String   @db.Uuid
+  createdAt       DateTime @default(now())
+
+  @@index([accountId])
+  @@map("publish_logs")
 }
 
 model ProfileFor {

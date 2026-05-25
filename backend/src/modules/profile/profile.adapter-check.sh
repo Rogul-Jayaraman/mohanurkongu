@@ -1,0 +1,1 @@
+grep -n "Id:" C:\Development\Mohanurkongu\frontend\src\adapters\profile.adapter.ts | head -30

@@ -111,6 +111,79 @@ Create a new account.
 
 ---
 
+## Uploads
+
+### POST /uploads
+
+Upload an image. The file is validated (magic bytes, MIME, resolution), processed (HEIC→WEBP, adaptive resize), and stored. Returns only an opaque upload ID — no URL.
+
+**Authentication:** Required (`requireSession` middleware)
+
+**Rate Limit:** 10 requests per minute
+
+**Request:** `multipart/form-data`
+| Field | Type | Description |
+|-------|------|-------------|
+| `file` | File | Image file (JPG, PNG, WEBP, HEIC, HEIF). Max input resolution: 100MP. |
+| `category` | String | `profiles` (portrait), `gallery` (lifestyle), `horoscope` (chart) |
+
+**Response (201):**
+```json
+{ "uploadId": "550e8400-e29b-41d4-a716-446655440000" }
+```
+
+**Errors:**
+- `400` — Invalid file format, corrupted data, or exceeds 100MP resolution
+- `401` — Missing or invalid session token
+- `429` — Rate limit exceeded (10 req/min)
+
+**Notes:**
+- File size is not limited at the multer level. Adaptive output scaling handles any input.
+- The returned `uploadId` is the UUID primary key (not `publicId`).
+- The client must store only the `uploadId` (in IndexedDB). The URL is derived as `/media/${uploadId}` at render time.
+
+---
+
+### DELETE /uploads/:id
+
+Delete an upload. Hard-deletes TEMP and DRAFT uploads (file + DB row). Soft-deletes ACTIVE uploads (status only, file retained).
+
+**Authentication:** Required (`requireSession` middleware)
+
+**Response (200):**
+```json
+{ "success": true }
+```
+
+**Errors:**
+- `401` — Unauthorized
+- `404` — Upload not found or not owned
+
+---
+
+## Media
+
+### GET /media/:uploadId
+
+Retrieve a processed image. Ownership-gated — the requesting account must own the upload.
+
+**Authentication:** Required (`requireSession` middleware)
+
+**Response (200):**
+- `Content-Type: image/webp`
+- `Cache-Control: private, max-age=31536000`
+- Body: image bytes
+
+**Errors:**
+- `401` — Unauthorized
+- `404` — Not found or not owned (returns 404 instead of 403 to avoid leaking upload existence)
+
+**Notes:**
+- The response is always WEBP regardless of the original upload format.
+- Cache is set to private (browser-only, not CDN/proxy) for 1 year.
+
+---
+
 ### POST /auth/login
 
 Authenticate a user.
