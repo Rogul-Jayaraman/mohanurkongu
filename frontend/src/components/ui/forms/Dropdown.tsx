@@ -17,6 +17,7 @@ interface DropdownProps {
     options: DropdownOption[];
     value?: string;
     onChange: (value: string) => void;
+    onBlur?: () => void;
     placeholder?: string;
     align?: 'left' | 'right' | 'center';
     searchable?: boolean;
@@ -36,6 +37,7 @@ const Dropdown: React.FC<DropdownProps> = ({
     options,
     value,
     onChange,
+    onBlur,
     placeholder,
     align = 'left',
     searchable = false,
@@ -194,6 +196,7 @@ const Dropdown: React.FC<DropdownProps> = ({
             className={`relative block ${className}`} 
             ref={containerRef}
             onKeyDown={handleKeyDown}
+            onBlur={(e) => { if (containerRef.current && !containerRef.current.contains(e.relatedTarget as Node)) { onBlur?.(); } }}
         >
             {/* Trigger */}
             <div onClick={handleToggle} className="cursor-pointer">
@@ -204,20 +207,21 @@ const Dropdown: React.FC<DropdownProps> = ({
                         type="button"
                         disabled={disabled}
                         className={`
-                            w-full h-14 flex items-center justify-between px-4 bg-white border border-slate-200 rounded-xl 
-                            text-sm font-medium text-left outline-none transition-all duration-300
-                            hover:border-gold-soft/50 shadow-sm shadow-black/2
-                            disabled:bg-slate-50 disabled:cursor-not-allowed
-                            focus:border-rosewood focus:ring-4 focus:ring-rosewood/5
-                            ${isOpen ? 'border-rosewood ring-4 ring-rosewood/5' : ''}
+                            w-full h-14 flex items-center justify-between px-4 rounded-xl border transition-all
+                            text-sm font-input-text text-left outline-none
+                            ${disabled ? 'bg-slate-50 opacity-70 cursor-not-allowed' : 'bg-input-bg'}
+                            ${isOpen
+                              ? 'border-input-focus ring-4 ring-input-ring'
+                              : 'border-input-border shadow-sm shadow-input-shadow hover:border-input-border-hover'
+                            }
                         `}
                         aria-haspopup="listbox"
                         aria-expanded={isOpen}
                     >
-                        <span className={`truncate mr-2 ${!value ? 'text-slate-400 font-normal' : 'text-slate-800'}`}>
+                        <span className={`truncate mr-2 ${!value ? 'text-input-placeholder font-medium' : 'text-input-text font-input-text'}`}>
                             {displayValue || defaultPlaceholder}
                         </span>
-                        <span className={`material-symbols-outlined text-xl transition-transform duration-300 ${isOpen ? 'rotate-180 text-rosewood' : 'text-slate-400'}`}>
+                        <span className={`material-symbols-outlined text-xl transition-transform duration-300 ${isOpen ? 'rotate-180 text-input-icon' : 'text-input-icon/50'}`}>
                             expand_more
                         </span>
                     </button>
@@ -233,8 +237,8 @@ const Dropdown: React.FC<DropdownProps> = ({
                         exit={{ opacity: 0, y: openUpwards ? 10 : -10, scale: 0.95 }}
                         transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
                         className={`
-                            absolute z-50 min-w-[200px] w-max max-w-[320px] bg-white border border-gold-soft/20 rounded-xl 
-                            shadow-2xl shadow-black/15 flex flex-col max-h-[300px] ring-1 ring-black/5 overflow-hidden
+                            absolute z-50 min-w-[200px] w-max max-w-[320px] bg-dropdown-menu-bg border border-dropdown-menu-border rounded-xl 
+                            shadow-xl flex flex-col
                             ${alignmentClasses[align]}
                             ${openUpwards ? 'bottom-full mb-2' : 'top-full mt-2'}
                             ${menuClassName}
@@ -244,18 +248,17 @@ const Dropdown: React.FC<DropdownProps> = ({
                     >
                         {/* Search bar */}
                         {searchable && (
-                            <div className="p-3 bg-ivory/30 border-b border-slate-100 flex items-center gap-2 group">
-                                <span className="material-symbols-outlined text-rosewood/50 group-focus-within:text-rosewood transition-colors">search</span>
+                            <div className="px-3.5 py-3 border-b border-dropdown-menu-border flex items-center gap-2.5 shrink-0">
+                                <span className="material-symbols-outlined text-lg text-input-icon/50">search</span>
                                 <input
                                     ref={searchInputRef}
                                     type="text"
-                                    className="flex-1 text-sm bg-transparent outline-none text-slate-700 placeholder:text-gold-soft font-medium"
+                                    className="flex-1 text-sm bg-transparent outline-none text-input-text placeholder:text-input-placeholder font-medium"
                                     placeholder={t('common:search')}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Escape') setIsOpen(false);
-                                        // Prevents double handling in the container handleKeyDown
                                         if (['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
                                             e.stopPropagation();
                                             handleKeyDown(e as any);
@@ -269,7 +272,7 @@ const Dropdown: React.FC<DropdownProps> = ({
                         {/* Options */}
                         <div 
                             ref={menuRef}
-                            className="flex-1 overflow-y-auto py-1 custom-scrollbar"
+                            className="overflow-y-auto max-h-60 p-1.5 custom-scrollbar"
                             role="presentation"
                         >
                             {filteredOptions.length > 0 ? (
@@ -277,36 +280,36 @@ const Dropdown: React.FC<DropdownProps> = ({
                                     <button
                                         key={option.value}
                                         type="button"
+                                        onMouseDown={(e) => e.preventDefault()}
                                         onClick={() => handleSelect(option.value)}
                                         onMouseEnter={() => setActiveIndex(index)}
                                         className={`
-                                            w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-all outline-none
-                                            ${(value === option.value || activeIndex === index) 
-                                                ? 'bg-rosewood/5 text-rosewood' 
-                                                : 'text-slate-600 hover:bg-gold-soft/5 hover:text-rosewood'
+                                            w-full flex items-center gap-3 px-3.5 py-3 rounded-lg text-sm text-left transition-all
+                                            border-b border-slate-100 last:border-0
+                                            ${value === option.value || activeIndex === index
+                                                ? 'bg-dropdown-option-hover text-input-label font-bold shadow-sm'
+                                                : 'text-input-text font-medium hover:bg-dropdown-option-hover'
                                             }
-                                            ${value === option.value ? 'font-black' : 'font-medium'}
-                                            ${activeIndex === index ? 'ring-inset ring-2 ring-gold/20' : ''}
                                         `}
                                         role="option"
                                         aria-selected={value === option.value}
                                     >
                                         {option.icon && (
-                                            <span className="material-symbols-outlined text-lg opacity-70">
+                                            <span className={`material-symbols-outlined text-lg shrink-0 ${value === option.value || activeIndex === index ? 'text-input-icon' : 'text-input-icon/40'}`}>
                                                 {option.icon}
                                             </span>
                                         )}
-                                        <span className="truncate flex-1">
+                                        <span className="truncate flex-1 leading-snug">
                                             {bilingual ? getBilingualLabel(option.label, lang) : (option.label[lang] || option.label.en)}
                                         </span>
                                         {value === option.value && (
-                                            <span className="material-symbols-outlined text-lg animate-in zoom-in-50 duration-300">check</span>
+                                            <span className="material-symbols-outlined text-lg text-input-icon shrink-0 animate-in zoom-in-50 duration-300">check</span>
                                         )}
                                     </button>
                                 ))
                             ) : (
-                                <div className="px-4 py-8 text-center bg-slate-50/30">
-                                    <p className="text-xs font-bold text-slate-400 tracking-wider lowercase">
+                                <div className="px-4 py-8 text-center">
+                                    <p className="text-xs font-bold text-input-placeholder tracking-wide">
                                         {t('common:no_results')}
                                     </p>
                                 </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { stubFetchProfile } from '@/utils/stubs';
+import { fetchProfile } from '@/api/profile.api';
 import { useAuth } from "@/hooks/useAuth";
 import { useProfileUtils } from "@/hooks/useProfileUtils";
 import { useDateFormatter } from "@/hooks/useDateFormatter";
@@ -796,7 +796,7 @@ const ProfileViewHoroscope: React.FC<{ profile: any; isLoading: boolean }> = ({
               <div className="aspect-square bg-gold/10 rounded-xl animate-pulse" />
               <div className="aspect-square bg-gold/10 rounded-xl animate-pulse" />
             </div>
-          ) : profile?.horoscope?.mode === "CREATE" ? (
+          ) : profile?.horoscope?.mode === "GENERATED" ? (
             (() => {
               const hJson = profile?.horoscope?.horoscopeJson;
               if (hJson) {
@@ -917,7 +917,7 @@ const ProfileView: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
-  useEffect(() => { if (id) { stubFetchProfile(id).then(setProfile).catch(() => setIsError(true)).finally(() => setIsLoading(false)); } }, [id]);
+  useEffect(() => { if (id) { fetchProfile(id).then(setProfile).catch(() => setIsError(true)).finally(() => setIsLoading(false)); } }, [id]);
 
   const [isPrintingJathagam, setIsPrintingJathagam] = useState(false);
   const [isPrintingBiodata, setIsPrintingBiodata] = useState(false);

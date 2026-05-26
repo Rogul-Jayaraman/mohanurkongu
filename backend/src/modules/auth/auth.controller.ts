@@ -5,7 +5,6 @@ import { getDeviceInfo } from '../../common/utils/device.js';
 import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
 import { translate } from '../../common/utils/translation.js';
 import { AppError } from '../../common/errors/AppError.js';
-import { setCsrfCookie } from '../../common/middleware/csrf.js';
 
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -22,7 +21,6 @@ export class AuthController {
           path: '/auth',
           maxAge: 7 * 24 * 60 * 60 * 1000,
         });
-        setCsrfCookie(res);
       }
 
       sendSuccess(res, {
@@ -46,7 +44,6 @@ export class AuthController {
         path: '/auth',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
-      setCsrfCookie(res);
 
       sendSuccess(res, {
         accessToken: result.accessToken,
@@ -59,7 +56,7 @@ export class AuthController {
 
   refresh = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+      const refreshToken = req.cookies?.refreshToken;
       if (!refreshToken) {
         const lang = res.locals.lang || 'en';
         throw new AppError(401, ErrorCodes.AUTH_TOKEN_INVALID, translate(ErrorCodes.AUTH_TOKEN_INVALID, lang));
@@ -75,7 +72,6 @@ export class AuthController {
         path: '/auth',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
-      setCsrfCookie(res);
 
       sendSuccess(res, { accessToken: result.accessToken });
     } catch (err) {
@@ -85,13 +81,12 @@ export class AuthController {
 
   logout = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+      const refreshToken = req.cookies?.refreshToken;
       if (refreshToken) {
         await this.authService.logout(refreshToken);
       }
 
       res.clearCookie('refreshToken', { path: '/auth' });
-      res.clearCookie('csrf-token', { path: '/' });
       sendSuccess(res, null);
     } catch (err) {
       next(err);
@@ -102,7 +97,6 @@ export class AuthController {
     try {
       await this.authService.logoutAll(req.account.sub);
       res.clearCookie('refreshToken', { path: '/auth' });
-      res.clearCookie('csrf-token', { path: '/' });
       sendSuccess(res, null);
     } catch (err) {
       next(err);

@@ -419,7 +419,7 @@ export const SignupFormWrapper: React.FC = () => {
                         verifyingText={t('signup.verifying')}
                         otpVerifySuccessText={t('signup.otpVerifySuccess')}
                         otpInfoText={t('signup.otpInfo')}
-                        resendText={t('signup.resend')}
+                        resendTimer={otpTimer}
                         isOTPVerified={isOTPVerified}
                         onOTPChange={(value: string) => setOtpValue(value)}
                         onVerify={handleVerifyOTP}

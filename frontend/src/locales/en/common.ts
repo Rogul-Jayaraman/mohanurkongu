@@ -49,6 +49,16 @@ export const commonEn = {
       fri: "Fri",
       sat: "Sat"
     },
+    daysShort: {
+      sun: "Su",
+      mon: "Mo",
+      tue: "Tu",
+      wed: "We",
+      thu: "Th",
+      fri: "Fr",
+      sat: "Sa"
+    },
+    select_year: "Select year",
     brand: "Mohanur Kongu ",
     tagline: "Manamaalai",
     subtitle: "",

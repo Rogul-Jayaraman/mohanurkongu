@@ -15,8 +15,11 @@ export enum VerificationStatus {
   REJECTED = 'REJECTED',
 }
 
-export enum ProfileVisibility {
+export enum ProfileStatus {
+  DRAFT = 'DRAFT',
+  PENDING = 'PENDING',
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
-  DRAFT = 'DRAFT',
+  REJECTED = 'REJECTED',
+  DELETED = 'DELETED',
 }

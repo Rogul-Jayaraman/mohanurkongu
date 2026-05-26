@@ -15,14 +15,16 @@ import { Spinner } from '../../ui/feedback/Spinner';
 import TranslatableInput from '../../ui/forms/TranslatableInput';
 import TranslatableTextarea from '../../ui/forms/TranslatableTextarea';
 import { Input } from '../../ui/forms/Input';
+import DobInput from '../../ui/forms/DobInput';
 import Select from '../../ui/forms/Select';
 import Toggle from '../../ui/forms/FormToggle';
 import RangeSlider from '../../ui/forms/RangeSlider';
 import api from '@/lib/api';
 import { MediaImage } from '../../ui/media/MediaImage';
-import { uploadFile, deleteUpload, saveDraft, resumeDraft, createProfile, publishProfile } from '../../../api/profile.api';
+import { uploadFile, deleteUpload, saveDraft, resumeDraft, createProfile } from '../../../api/profile.api';
 import { formToDraft, draftToForm } from '../../../adapters/profile.adapter';
 import { getErrorMessage } from '../../../lib/errors';
+import { getMinDobDate, getMaxDobDate, STEP_REQUIRED_FIELDS } from '../../../validation/profile-schema';
 
 import {
     PROFILE_FOR_OPTIONS, GENDER_OPTIONS, MARITAL_STATUS_OPTIONS, DIET_OPTIONS,
@@ -35,20 +37,406 @@ import { DISTRICTS, TALUKS_BY_DISTRICT, DISTRICT_TAMIL, TALUK_TAMIL } from '../.
 // NewProfile (Main Page)
 // ═══════════════════════════════════════════════════════════
 
+
+// ═══════════════════════════════════════════════════════════
+// HoroscopeMethodSelector
+// ═══════════════════════════════════════════════════════════
+
+const HoroscopeMethodSelector: React.FC<{ onSelect: (method: 'GENERATED' | 'UPLOADED') => void }> = ({ onSelect }) => {
+    const { t } = useTranslation(['profile_new']);
+    return (
+        <motion.div key="choice" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <button onClick={() => onSelect('GENERATED')} className="group relative bg-ivory border border-gold/20 rounded-xl p-6 text-left transition-all hover:bg-ivory hover:border-rosewood/30 hover:shadow-lg hover:shadow-rosewood/5 overflow-hidden">
+                <div className="flex items-start gap-5">
+                    <div className="size-14 shrink-0 bg-rosewood-gradient text-white rounded-xl flex items-center justify-center shadow-sm"><span className="material-symbols-outlined text-3xl">auto_awesome</span></div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                        <h4 className="text-base font-black text-rosewood tracking-tight leading-tight">{t('profile_new:horoscope.auto_generate')}</h4>
+                        <p className="text-sm text-rosewood/60 font-medium leading-relaxed">{t('profile_new:horoscope.auto_generate_sub')}</p>
+                        <div className="pt-1 flex items-center gap-1.5 text-rosewood font-black text-[10px] uppercase tracking-widest opacity-50 group-hover:opacity-100 transition-opacity"><span className="leading-none">{t('profile_new:horoscope.select_mode')}</span><span className="material-symbols-outlined text-sm leading-none group-hover:translate-x-1 transition-transform">arrow_forward</span></div>
+                    </div>
+                </div>
+            </button>
+            <button onClick={() => onSelect('UPLOADED')} className="group relative bg-ivory border border-gold/20 rounded-xl p-6 text-left transition-all hover:bg-ivory hover:border-rosewood/30 hover:shadow-lg hover:shadow-rosewood/5 overflow-hidden">
+                <div className="flex items-start gap-5">
+                    <div className="size-14 shrink-0 bg-rosewood-gradient text-white rounded-xl flex items-center justify-center shadow-sm"><span className="material-symbols-outlined text-3xl">cloud_upload</span></div>
+                    <div className="flex-1 min-w-0 space-y-2">
+                        <h4 className="text-base font-black text-rosewood tracking-tight leading-tight">{t('profile_new:horoscope.upload_chart')}</h4>
+                        <p className="text-sm text-rosewood/60 font-medium leading-relaxed">{t('profile_new:horoscope.upload_chart_sub')}</p>
+                        <div className="pt-1 flex items-center gap-1.5 text-rosewood font-black text-[10px] uppercase tracking-widest opacity-50 group-hover:opacity-100 transition-opacity"><span className="leading-none">{t('profile_new:horoscope.select_mode')}</span><span className="material-symbols-outlined text-sm leading-none group-hover:translate-x-1 transition-transform">arrow_forward</span></div>
+                    </div>
+                </div>
+            </button>
+        </motion.div>
+    );
+};
+
+// ═══════════════════════════════════════════════════════════
+// HoroscopeAutoForm
+// ═══════════════════════════════════════════════════════════
+
+const HoroscopeAutoForm: React.FC<{
+    dob: string; onDobChange: (dob: string) => void; birthTime: string; onBirthTimeChange: (time: string) => void;
+    birthPlaceName: string; onBirthPlaceChange: (data: { name: string; lat?: number; lon?: number }) => void;
+    onGenerate: () => void; isGenerating: boolean;
+}> = ({ dob, onDobChange, birthTime, onBirthTimeChange, birthPlaceName, onBirthPlaceChange, onGenerate, isGenerating }) => {
+    const { t } = useTranslation(['profile_new', 'common']);
+    const maxDobDate = getMaxDobDate();
+    const minDobDate = getMinDobDate();
+    const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        if (val && (val > maxDobDate || val < minDobDate)) { toast.error(t('profile_new:toasts.age_out_of_range')); return; }
+        onDobChange(val);
+    };
+    return (
+        <div className="space-y-6">
+            <div className="bg-ivory border border-gold/20 rounded-xl shadow-sm transition-all hover:shadow-md">
+                <div className="bg-ivory/50 px-6 py-4 border-b border-gold-soft rounded-t-xl flex items-center gap-3">
+                    <div className="size-8 bg-rosewood-gradient text-white rounded-xl shadow-sm flex items-center justify-center text-rosewood"><span className="material-symbols-outlined text-base!">auto_awesome</span></div>
+                    <h3 className="text-sm font-serif font-bold text-rosewood">{t('profile_new:horoscope.auto_generate')}</h3>
+                </div>
+                <div className="p-6 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Input label={t('profile_new:dob')} icon="event" name="dob" type="date" value={dob ? dob.split('T')[0] : ''} onChange={handleDobChange} min={minDobDate} max={maxDobDate} disabled />
+                        <TimePicker value={birthTime} onChange={onBirthTimeChange} label={t('profile_new:horoscope.birth_time')} />
+                    </div>
+                    <LocationAutocomplete
+                        value={birthPlaceName}
+                        onChange={(val) => onBirthPlaceChange({ name: val })}
+                        onSelect={(loc) => onBirthPlaceChange({ name: loc.displayName, lat: loc.latitude, lon: loc.longitude })}
+                        label={t('profile_new:horoscope.birth_place')}
+                    />
+                    <div className="flex justify-center pt-2">
+                        <button type="button" onClick={onGenerate} disabled={isGenerating || !birthTime || !birthPlaceName || !dob}
+                            className="flex items-center justify-center gap-2.5 px-8 py-3 bg-rosewood text-white font-bold rounded-xl shadow-lg shadow-rosewood/20 text-sm hover:bg-rosewood-dark transition-all disabled:opacity-50 active:scale-[0.98]">
+                            {isGenerating ? <Spinner size="sm" color="white" /> : <span className="material-symbols-outlined text-base">auto_awesome</span>}
+                            <span>{isGenerating ? t('profile_new:horoscope.generating') : t('profile_new:horoscope.generate_now')}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ═══════════════════════════════════════════════════════════
+// HoroscopeUploadForm
+// ═══════════════════════════════════════════════════════════
+
+const HoroscopeUploadForm: React.FC<{
+    onFileUpload: (e: React.ChangeEvent<HTMLInputElement>, target: 'rasi' | 'navamsa' | 'full') => void;
+    onFileDelete: (type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => Promise<void>;
+    rasiChartUploadId?: string | null; navamsaChartUploadId?: string | null;
+    isUploading?: boolean; uploadingType?: string | null;
+    formData: any; updateField: (field: string, val: any) => void;
+    fieldErrors?: Record<string, string>;
+    touchedFields?: Set<string>; markTouched?: (field: string) => void;
+}> = ({ onFileUpload, onFileDelete, rasiChartUploadId, navamsaChartUploadId, isUploading = false, uploadingType, formData, updateField, fieldErrors = {}, touchedFields = new Set(), markTouched = () => {} }) => {
+    const { t, i18n } = useTranslation(['profile_new', 'common']);
+    const rasiRef = React.useRef<HTMLInputElement>(null);
+    const navamsaRef = React.useRef<HTMLInputElement>(null);
+    const inputRefs = { rasi: rasiRef, navamsa: navamsaRef };
+    const [previewUploadId, setPreviewUploadId] = React.useState<string | null>(null);
+
+    const renderUploadSlot = (type: 'rasi' | 'navamsa', labelKey: string, chartUploadId?: string | null) => {
+        const isSlotUploading = isUploading && uploadingType === type;
+        return (
+            <motion.div layout className="flex flex-col items-center gap-3">
+                <div className="text-center">
+                    <h4 className="text-sm font-black text-rosewood tracking-wider">{t(`profile_new:horoscope.${labelKey}`)}</h4>
+                    {!chartUploadId && (
+                        <p className="text-[8px] text-slate-400 font-bold tracking-widest uppercase">JPG / PNG · Max 5MB</p>
+                    )}
+                </div>
+                <div className={`relative rounded-2xl transition-all duration-500 overflow-hidden
+                    ${chartUploadId
+                        ? 'ring-2 ring-gold/30 shadow-xl shadow-rosewood/10 p-1.5 bg-white'
+                        : 'border-2 border-dashed border-gold-soft/40 bg-ivory/50 hover:bg-ivory hover:border-gold/60'}`}>
+                    <div className={`relative overflow-hidden rounded-xl size-44 sm:size-52`}>
+                        {chartUploadId ? (
+                            <MediaImage uploadId={chartUploadId} alt={type}
+                                className="w-full h-full object-contain transition-transform duration-700 cursor-pointer"
+                                fallback={<div className="w-full h-full flex items-center justify-center text-slate-300 italic text-xs">Error</div>}
+                                onClick={() => chartUploadId && setPreviewUploadId(chartUploadId)} />
+                        ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-6">
+                                <div className="size-16 rounded-2xl bg-rosewood/5 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-4xl text-rosewood/40">cloud_upload</span>
+                                </div>
+                                <p className="text-[10px] font-black text-rosewood/30 uppercase tracking-widest text-center leading-relaxed">
+                                    {t(`profile_new:horoscope.upload_${type}`)}
+                                </p>
+                            </div>
+                        )}
+                        {isSlotUploading && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm z-30">
+                                <div className="size-12 rounded-full border-2 border-rosewood/20 border-t-rosewood animate-spin mb-2" />
+                                <p className="text-[8px] animate-pulse text-rosewood font-black tracking-widest uppercase">{t('profile_new:processing')}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    {!chartUploadId && !isSlotUploading && (
+                        <label className="flex items-center gap-1.5 px-4 py-2 bg-rosewood text-white rounded-xl text-[10px] font-black hover:bg-rosewood/90 hover:shadow-md transition-all cursor-pointer">
+                            <span className="material-symbols-outlined text-sm">cloud_upload</span>
+                            <span>{t('profile_new:horoscope.upload_chart')}</span>
+                            <input type="file" className="hidden" accept="image/*" disabled={isUploading}
+                                onChange={(e) => { const file = e.target.files?.[0]; if (file) onFileUpload(e as any, type); }} />
+                        </label>
+                    )}
+                    {chartUploadId && !isSlotUploading && (
+                        <div className="flex items-center gap-1">
+                            <label className="size-9 rounded-xl bg-ivory border border-gold-soft/30 flex items-center justify-center text-rosewood/60 hover:text-rosewood hover:border-rosewood/40 hover:bg-white hover:shadow-sm transition-all cursor-pointer" title="Change">
+                                <span className="material-symbols-outlined text-lg">edit</span>
+                                <input type="file" className="hidden" accept="image/*" disabled={isUploading}
+                                    onChange={(e) => { const file = e.target.files?.[0]; if (file) onFileUpload(e as any, type); }} />
+                            </label>
+                            <button onClick={() => onFileDelete(type)}
+                                className="size-9 rounded-xl bg-ivory border border-gold-soft/30 flex items-center justify-center text-rosewood/60 hover:text-red-500 hover:border-red-300 hover:bg-red-50 hover:shadow-sm transition-all" title="Remove">
+                                <span className="material-symbols-outlined text-lg">delete</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </motion.div>
+        );
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="bg-ivory border border-gold/20 rounded-xl shadow-sm transition-all hover:shadow-md">
+                <div className="bg-ivory/50 px-6 py-4 border-b border-gold-soft rounded-t-xl flex items-center gap-3"><div className="size-8 bg-rosewood-gradient text-white rounded-xl shadow-sm flex items-center justify-center text-rosewood"><span className="material-symbols-outlined text-base!">wb_sunny</span></div><h3 className="text-sm font-serif font-bold text-rosewood">{t('profile_new:sections.astrology')}</h3></div>
+                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    <Select label={t('profile_new:star')} value={formData.star || ''} onChange={(val) => updateField('star', val)} options={NAKSHATRA_OPTIONS} bilingual error={touchedFields.has('star') ? fieldErrors?.star : undefined} onBlur={() => markTouched('star')} required />
+                    <Select label={t('profile_new:rasi')} value={formData.rasi || ''} onChange={(val) => updateField('rasi', val)} options={RASI_OPTIONS} bilingual error={touchedFields.has('rasi') ? fieldErrors?.rasi : undefined} onBlur={() => markTouched('rasi')} required />
+                    <Select label={t('profile_new:laganam')} value={formData.laganam || ''} onChange={(val) => updateField('laganam', val)} options={RASI_OPTIONS} bilingual error={touchedFields.has('laganam') ? fieldErrors?.laganam : undefined} onBlur={() => markTouched('laganam')} required />
+                </div>
+            </div>
+            <div className="bg-ivory border border-gold/20 rounded-xl shadow-sm transition-all hover:shadow-md">
+                <div className="bg-ivory/50 px-6 py-4 border-b border-gold-soft rounded-t-xl flex items-center gap-3"><div className="size-8 bg-rosewood-gradient text-white rounded-xl shadow-sm flex items-center justify-center"><span className="material-symbols-outlined text-base!">auto_awesome</span></div><h3 className="text-sm font-serif font-bold text-rosewood">{t('profile_new:horoscope.upload_your_charts')}</h3></div>
+                <div className="p-8 flex flex-col items-center">
+                    <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        <div className="flex flex-wrap justify-center gap-8">
+                            {renderUploadSlot('rasi', 'rasi_chart_label', rasiChartUploadId)}
+                            {renderUploadSlot('navamsa', 'navamsa_chart_label', navamsaChartUploadId)}
+                        </div>
+                    </motion.div>
+                </div>
+            </div>
+
+            <AnimatePresence>
+                {previewUploadId && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+                        onClick={() => setPreviewUploadId(null)}>
+                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+                            className="relative max-w-2xl w-full max-h-[90vh] bg-white rounded-2xl overflow-hidden shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}>
+                            <MediaImage uploadId={previewUploadId} alt="Preview" className="w-full h-full object-contain max-h-[85vh]" />
+                            <button onClick={() => setPreviewUploadId(null)}
+                                className="absolute top-3 right-3 size-9 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                                <span className="material-symbols-outlined text-lg">close</span>
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+// Step5Horoscope
+// ═══════════════════════════════════════════════════════════
+
+const Step5Horoscope: React.FC<StepProps & { isUploading?: boolean; uploadingType?: string | null; onFileUpload: (file: File, type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => Promise<void>; onFileDelete: (type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => Promise<void>; }> = ({ formData, updateField, onAction, isUploading: parentIsUploading, uploadingType, onFileUpload, onFileDelete, fieldErrors = {}, touchedFields = new Set(), markTouched = () => {} }) => {
+    const { t } = useTranslation(['profile_new', 'common']);
+    const containerRef = React.useRef<HTMLDivElement>(null);
+    useKeyboardFormNavigation({ containerRef, onSubmitLastField: onAction });
+
+    const [activeMethod, setActiveMethod] = useState<'GENERATED' | 'UPLOADED' | 'none'>(() => formData.astrology?.mode || 'none');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const isUploading = parentIsUploading || false;
+    const hJson = formData.astrology?.horoscopeJson;
+    const [birthTime, setBirthTime] = useState(hJson?.input?.timeOfBirth || '');
+    const [birthPlace, setBirthPlace] = useState<{ name: string; lat?: number; lon?: number }>({ name: hJson?.input?.location?.displayName || '', lat: hJson?.input?.location?.latitude, lon: hJson?.input?.location?.longitude });
+    const [generatedResult, setGeneratedResult] = useState<HoroscopeResult | null>(() => {
+        if (formData.astrology?.mode === 'GENERATED' && formData.astrology?.horoscopeJson) {
+            const parsed = typeof formData.astrology.horoscopeJson === 'string'
+                ? JSON.parse(formData.astrology.horoscopeJson)
+                : formData.astrology.horoscopeJson;
+            return parsed as HoroscopeResult;
+        }
+        return null;
+    });
+
+    const handleMethodSelect = (method: 'GENERATED' | 'UPLOADED') => { setActiveMethod(method); updateField('astrology', { ...formData.astrology, mode: method }); };
+    const handleResetMethod = () => { setActiveMethod('none'); setGeneratedResult(null); updateField('astrology', { ...formData.astrology, mode: 'none' }); };
+
+    // Helper functions to map indices to form option values
+    const mapRasiToFormValue = (rasiIndex: number): string => {
+        const rasiSign = SIGNS[rasiIndex]; // e.g., 'Aries'
+        // Map from sign name to form value (e.g., 'Aries' -> 'MESHA')
+        const rasiMap: Record<string, string> = {
+            'Aries': 'MESHA',
+            'Taurus': 'VRISHABHA',
+            'Gemini': 'MITHUNA',
+            'Cancer': 'KATAKA',
+            'Leo': 'SIMHA',
+            'Virgo': 'KANYA',
+            'Libra': 'TULA',
+            'Scorpio': 'VRISCHIKA',
+            'Sagittarius': 'DHANUS',
+            'Capricorn': 'MAKARA',
+            'Aquarius': 'KUMBHA',
+            'Pisces': 'MEENA'
+        };
+        return rasiMap[rasiSign] || '';
+    };
+
+    const mapNakshatraToFormValue = (nakshatraIndex: number): string => {
+        const nakshatra = NAKSHATRAS[nakshatraIndex]; // e.g., 'Ashwini'
+        // Map from nakshatra name to form value (e.g., 'Ashwini' -> 'ASHWINI')
+        const nakshatraMap: Record<string, string> = {
+            'Ashwini': 'ASHWINI',
+            'Bharani': 'BHARANI',
+            'Krittika': 'KRITTIKA',
+            'Rohini': 'ROHINI',
+            'Mrigashirsha': 'MRIGASHIRA',
+            'Ardra': 'ARDRA',
+            'Punarvasu': 'PUNARVASU',
+            'Pushya': 'PUSHYA',
+            'Ashlesha': 'ASHLESHA',
+            'Magha': 'MAGHA',
+            'Purva Phalguni': 'PURVA_PHALGUNI',
+            'Uttara Phalguni': 'UTTARA_PHALGUNI',
+            'Hasta': 'HASTA',
+            'Chitra': 'CHITRA',
+            'Swati': 'SWATI',
+            'Vishakha': 'VISHAKHA',
+            'Anuradha': 'ANURADHA',
+            'Jyeshtha': 'JYESHTHA',
+            'Mula': 'MULA',
+            'Purva Ashadha': 'PURVA_ASHADHA',
+            'Uttara Ashadha': 'UTTARA_ASHADHA',
+            'Shravana': 'SHRAVANA',
+            'Dhanistha': 'DHANISHTHA',
+            'Shatabhisha': 'SHATABHISHA',
+            'Purva Bhadrapada': 'PURVA_BHADRAPADA',
+            'Uttara Bhadrapada': 'UTTARA_BHADRAPADA',
+            'Revati': 'REVATI'
+        };
+        return nakshatraMap[nakshatra] || '';
+    };
+
+    const handleGenerate = async () => {
+        if (!formData.dob || !birthTime || !birthPlace.name || birthPlace.lat === undefined || birthPlace.lon === undefined) {
+            toast.error(t('profile_new:toasts.error_missing_birth_details'));
+            return;
+        }
+        setIsGenerating(true);
+        try {
+            const result = await api.post('/horoscope/generate', {
+                dateOfBirth: formData.dob?.split('T')[0] ?? formData.dob,
+                timeOfBirth: birthTime,
+                location: {
+                    displayName: birthPlace.name,
+                    latitude: birthPlace.lat,
+                    longitude: birthPlace.lon,
+                },
+            }) as unknown as HoroscopeResult;
+
+            // Normalize dateOfBirth to YYYY-MM-DD to match formData.dob date portion
+            result.input.dateOfBirth = formData.dob?.split('T')[0] ?? formData.dob;
+
+            // Auto-populate the celestial chart fields (Star/Rasi/Lagnam) in formData
+            const starValue = mapNakshatraToFormValue(result.summary.nakshatraIndex);
+            const rasiValue = mapRasiToFormValue(result.summary.rasiSignIndex);
+            const laganamValue = mapRasiToFormValue(result.summary.lagnaSignIndex);
+            
+            updateField('astrology', {
+                ...formData.astrology,
+                mode: 'GENERATED',
+                horoscopeJson: result,
+                generatedAt: new Date().toISOString(),
+                // Auto-populate celestial chart fields
+                star: starValue,
+                rasi: rasiValue,
+                laganam: laganamValue
+            });
+            // Also set top-level fields for review step display
+            updateField('star', starValue);
+            updateField('rasi', rasiValue);
+            updateField('laganam', laganamValue);
+            setGeneratedResult(result);
+            toast.success(t('profile_new:toasts.horoscope_generated'));
+        } catch {
+            toast.error(t('profile_new:toasts.error_generating_horoscope'));
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleRegenerate = () => {
+        setGeneratedResult(null);
+        updateField('astrology', {
+            ...formData.astrology,
+            horoscopeJson: null,
+        });
+        updateField('star', null);
+        updateField('rasi', null);
+        updateField('laganam', null);
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'rasi' | 'navamsa' | 'full') => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            if (target === 'full') { await onFileUpload(file, 'rasi'); } else { await onFileUpload(file, target as any); }
+        } catch (error: any) { console.error('Horoscope upload error:', error); }
+    };
+
+    return (
+        <div ref={containerRef} className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <AnimatePresence mode="wait">
+                {activeMethod === 'none' ? (<HoroscopeMethodSelector onSelect={handleMethodSelect} />) : (
+                    <motion.div key="active" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} className="space-y-8">
+                        {activeMethod === 'GENERATED' && generatedResult ? null : (
+                            <button type="button" onClick={handleResetMethod} className="flex items-center justify-center gap-1.5 px-4 py-3 bg-ivory border border-gold-soft/30 rounded-xl text-xs font-bold text-rosewood/70 hover:text-rosewood hover:border-rosewood/40 hover:shadow-sm transition-all"><span className="material-symbols-outlined text-sm font-black">arrow_back</span><span className="text-[10px] font-black tracking-widest uppercase">{t('common:back')}</span></button>
+                        )}
+                        <div className="">
+                            {activeMethod === 'GENERATED' ? (
+                                generatedResult ? (
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-end gap-4 flex-wrap">
+                                            <button type="button" onClick={onAction} className="flex items-center justify-center gap-2 px-6 py-3 bg-rosewood text-white font-bold rounded-xl shadow-lg shadow-rosewood/20 text-sm hover:bg-rosewood-dark transition-all active:scale-[0.98]"><span>{t('common:next')}</span><span className="material-symbols-outlined text-base">arrow_forward</span></button>
+                                        </div>
+                                        <HoroscopeResults result={generatedResult} loading={false} error={null} onRegenerate={handleRegenerate} />
+                                    </div>
+                                ) : (
+                                    <HoroscopeAutoForm dob={formData.dob} onDobChange={(val) => updateField('dob', val)} birthTime={birthTime} onBirthTimeChange={setBirthTime} birthPlaceName={birthPlace.name} onBirthPlaceChange={setBirthPlace} onGenerate={handleGenerate} isGenerating={isGenerating} />
+                                )
+                            ) : (
+                                <HoroscopeUploadForm onFileUpload={handleFileUpload} onFileDelete={onFileDelete} rasiChartUploadId={formData.astrology?.rasiChartUploadId || null} navamsaChartUploadId={formData.astrology?.navamsaChartUploadId || null} isUploading={isUploading} uploadingType={uploadingType} formData={formData} updateField={updateField} fieldErrors={fieldErrors} touchedFields={touchedFields} markTouched={markTouched} />
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
 const NewProfile: React.FC = () => {
     const { t, i18n } = useTranslation(['profile_new', 'common']);
     const navigate = useNavigate();
     const { setHeaderContent } = useOutletContext<{ setHeaderContent: (content: React.ReactNode) => void }>();
-    const { formData, updateField, isDirty, setIsDirty, setFormData, persistDraft } = useProfileForm();
+    const { formData, updateField, isDirty, setIsDirty, setFormData, persistDraft, fieldErrors, touchedFields, markTouched, validateStepOnNav, stepErrors } = useProfileForm();
     const [currentStep, setCurrentStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSavingDraft, setIsSavingDraft] = useState(false);
     const [uploadingType, setUploadingType] = useState<string | null>(null);
     const [profileId, setProfileId] = useState<string | null>(null);
     const [draftProfileId, setDraftProfileId] = useState<string | null>(null);
     const totalSteps = 7;
-    const toLocalDateStr = (d: Date) => { const offset = d.getTimezoneOffset(); const local = new Date(d.getTime() - offset * 60000); return local.toISOString().split('T')[0]; };
-    const maxDobDate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 21); return toLocalDateStr(d); })();
-    const minDobDate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 40); return toLocalDateStr(d); })();
 
     useScrollToTop([currentStep]);
 
@@ -72,6 +460,11 @@ const NewProfile: React.FC = () => {
                     <span className="text-[10px] font-bold text-rosewood/60 whitespace-nowrap">
                         {t('common:setup.stepProgress', { current: currentStep, total: totalSteps })}
                     </span>
+                    {stepErrors[currentStep]?.length > 0 && (
+                        <span className="text-[10px] font-black text-red-500 ml-1">
+                            {stepErrors[currentStep].length} error{(stepErrors[currentStep].length > 1) ? 's' : ''}
+                        </span>
+                    )}
                     <div className="flex-1 h-0.5 bg-gold-soft/30 rounded-full overflow-hidden max-w-[120px]">
                         <div className="h-full bg-rosewood rounded-full transition-all duration-700"
                             style={{ width: `${(currentStep / totalSteps) * 100}%` }} />
@@ -84,18 +477,38 @@ const NewProfile: React.FC = () => {
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const draftId = params.get('draft');
+        const draftId = params.get('draft') || params.get('id');
         if (draftId) {
             const loadDraft = async () => {
                 try {
                     const draft = await resumeDraft(draftId);
+                    console.log('[loadDraft] draft keys=%s hasTranslations=%s', Object.keys(draft).join(', '), Array.isArray((draft as any).translations));
                     const restored = draftToForm(draft as any);
-                    setFormData(prev => ({ ...{ profileFor: 'MYSELF', gender: 'MALE', maritalStatus: 'NEVER_MARRIED', diet: 'VEGETARIAN', caste: 'BC', community: 'Kongu Vellalar', noOfBrothers: 0, noOfSisters: 0, fatherIsLate: false, motherIsLate: false, status: 'ACTIVE' as any, astrology: { mode: 'none' } }, ...restored }));
+                    console.log('[loadDraft] restored keys=%s residence=%s residenceType=%s', Object.keys(restored).join(','), restored.residence, (draft as any).assets?.residenceType);
+                    setFormData(prev => {
+                        const merged = { ...{ profileFor: 'MYSELF', gender: 'MALE', maritalStatus: 'NEVER_MARRIED', diet: 'VEGETARIAN', caste: 'BC', community: 'Kongu Vellalar', noOfBrothers: 0, noOfSisters: 0, fatherIsLate: false, motherIsLate: false, status: 'ACTIVE' as any, astrology: { mode: 'none' } }, ...restored };
+                        const currentOtherKeys = ['currentCityEn', 'currentCityTa', 'currentStateEn', 'currentStateTa', 'currentCountryEn', 'currentCountryTa'];
+                        const nativeOtherKeys = ['nativeCityEn', 'nativeCityTa', 'nativeStateEn', 'nativeStateTa', 'nativeCountryEn', 'nativeCountryTa'];
+                        const preserveIf = (keys: string[], district: string) => {
+                            if ((merged as any)[district] === 'OTHER') {
+                                for (const key of keys) {
+                                    if ((merged as any)[key] == null && (prev as any)[key] != null) (merged as any)[key] = (prev as any)[key];
+                                }
+                            }
+                        };
+                        preserveIf(currentOtherKeys, 'currentDistrict');
+                        preserveIf(nativeOtherKeys, 'nativeDistrict');
+                        return merged;
+                    });
                     setIsDirty(false);
                     const { indexedDBStorage } = await import('../../../lib/indexeddb');
-                    await indexedDBStorage.saveDraft(draft as any);
+                    const existing = await indexedDBStorage.getDraft();
+                    if (!existing) await indexedDBStorage.saveDraft(draft as any);
                     setDraftProfileId(draftId);
-                } catch { toast.error('Failed to load draft'); }
+                } catch (err) {
+                  console.error('[loadDraft] Failed to load draft id=%s — error: %o', draftId, err);
+                  toast.error('Failed to load draft');
+                }
             };
             loadDraft();
         }
@@ -109,17 +522,11 @@ const NewProfile: React.FC = () => {
 
     const isEn = i18n.language === 'en';
 
-    const validateStep = (step: number) => {
-        const errors: string[] = [];
-        if (step === 1) {
-            if (formData.dob && (formData.dob > maxDobDate || formData.dob < minDobDate)) errors.push(t('profile_new:toasts.age_out_of_range'));
-        }
-        return errors;
-    };
-
     const handleNext = () => {
-        const stepErrors = validateStep(currentStep);
-        if (stepErrors.length > 0) { toast.error(stepErrors[0]); return; }
+        const fields = STEP_REQUIRED_FIELDS[currentStep] || [];
+        fields.forEach(f => markTouched(f));
+        const errors = validateStepOnNav(currentStep);
+        if (errors.length > 0) { toast.error(errors[0]); return; }
         if (currentStep < totalSteps) {
             setCurrentStep((prev: number) => prev + 1);
         }
@@ -216,33 +623,32 @@ const NewProfile: React.FC = () => {
 
     const handleSaveDraft = async () => {
         try {
-            setIsSubmitting(true);
+            setIsSavingDraft(true);
             const draft = formToDraft(formData);
-            const result = await saveDraft(draft as any);
-            await persistDraft();
+            console.log('[saveDraft] assets=%o', draft.assets);
+            const payload: any = draft;
+            if (draftProfileId) payload.profileId = draftProfileId;
+            const result = await saveDraft(payload);
+            if (result?.profileId && !draftProfileId) setDraftProfileId(result.profileId);
+            const { indexedDBStorage } = await import('../../../lib/indexeddb');
+            await indexedDBStorage.clearDraft();
             toast.success(t('profile_new:toasts.draft_success'));
             navigate('/manamaalai/my-profiles');
         } catch { toast.error(t('profile_new:toasts.draft_error')); }
-        finally { setIsSubmitting(false); }
+        finally { setIsSavingDraft(false); }
     };
 
     const handleSubmit = async () => {
-        const requiredErrors: string[] = [];
-        if (!formData.firstNameEn?.trim()) requiredErrors.push('First name is required');
-        if (!formData.gender) requiredErrors.push('Gender is required');
-        if (!formData.agreedToTerms) requiredErrors.push('You must agree to the terms');
-        if (requiredErrors.length > 0) { toast.error(requiredErrors[0]); return; }
+        const { validateCreate } = await import('../../../validation/profile-schema');
+        const errors = validateCreate(formData);
+        if (errors.length > 0) { toast.error(errors[0]); return; }
 
         try {
             setIsSubmitting(true);
             const { indexedDBStorage } = await import('../../../lib/indexeddb');
-            if (draftProfileId) {
-                const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
-                await publishProfile(draftProfileId, idempotencyKey, formData.agreedToTerms || false);
-            } else {
-                const draft = formToDraft(formData);
-                await createProfile({ ...draft, agreedToTerms: formData.agreedToTerms || false });
-            }
+            const draft = formToDraft(formData);
+            if (draftProfileId) draft.profileId = draftProfileId;
+            await createProfile({ ...draft, agreedToTerms: formData.agreedToTerms || false });
             await indexedDBStorage.clearDraft();
             toast.success(t('profile_new:toasts.success'));
             navigate('/manamaalai/my-profiles');
@@ -253,13 +659,13 @@ const NewProfile: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto w-full pt-10 lg:pt-16 pb-8 lg:pb-12 px-2 sm:px-4 min-h-full flex flex-col">
             <form onSubmit={(e: React.FormEvent) => e.preventDefault()} className="flex-1">
-                {currentStep === 1 && <Step1Personal formData={formData} updateField={updateField} onAction={handleNext} />}
-                {currentStep === 2 && <Step2Combined formData={formData} updateField={updateField} onAction={handleNext} />}
-                {currentStep === 3 && <Step3Family formData={formData} updateField={updateField} onAction={handleNext} />}
-                {currentStep === 4 && <Step4Assets formData={formData} updateField={updateField} onAction={handleNext} />}
-                {currentStep === 5 && <Step5Horoscope formData={formData} updateField={updateField} onAction={handleNext} onFileUpload={handleImageUpload} onFileDelete={handleImageDelete} isUploading={!!uploadingType} uploadingType={uploadingType} />}
-                {currentStep === 6 && <Step6Gallery formData={formData} updateField={updateField} onAction={handleNext} onFileUpload={handleImageUpload} onFileDelete={handleImageDelete} isUploading={!!uploadingType} uploadingType={uploadingType} />}
-                {currentStep === 7 && <Step7Review formData={formData} updateField={updateField} onAction={handleSubmit} />}
+                {currentStep === 1 && <Step1Personal formData={formData} updateField={updateField} onAction={handleNext} fieldErrors={fieldErrors} touchedFields={touchedFields} markTouched={markTouched} />}
+                {currentStep === 2 && <Step2Combined formData={formData} updateField={updateField} onAction={handleNext} fieldErrors={fieldErrors} touchedFields={touchedFields} markTouched={markTouched} />}
+                {currentStep === 3 && <Step3Family formData={formData} updateField={updateField} onAction={handleNext} fieldErrors={fieldErrors} touchedFields={touchedFields} markTouched={markTouched} />}
+                {currentStep === 4 && <Step4Assets formData={formData} updateField={updateField} onAction={handleNext} fieldErrors={fieldErrors} touchedFields={touchedFields} markTouched={markTouched} />}
+                {currentStep === 5 && <Step5Horoscope formData={formData} updateField={updateField} onAction={handleNext} fieldErrors={fieldErrors} touchedFields={touchedFields} markTouched={markTouched} onFileUpload={handleImageUpload} onFileDelete={handleImageDelete} isUploading={!!uploadingType} uploadingType={uploadingType} />}
+                {currentStep === 6 && <Step6Gallery formData={formData} updateField={updateField} onAction={handleNext} fieldErrors={fieldErrors} touchedFields={touchedFields} markTouched={markTouched} onFileUpload={handleImageUpload} onFileDelete={handleImageDelete} isUploading={!!uploadingType} uploadingType={uploadingType} />}
+                {currentStep === 7 && <Step7Review formData={formData} updateField={updateField} onAction={handleSubmit} fieldErrors={fieldErrors} touchedFields={touchedFields} markTouched={markTouched} />}
             </form>
 
             <div className="mt-auto pt-6 border-t border-gold-soft/10">
@@ -270,9 +676,9 @@ const NewProfile: React.FC = () => {
                         <span className="hidden sm:inline">{t('common:setup.back')}</span>
                     </button>
                     <div className="flex items-center gap-3">
-                        <button onClick={handleSaveDraft}
-                            className="flex items-center justify-center gap-1.5 px-4 py-3 bg-ivory border border-gold-soft/30 rounded-xl text-xs font-bold text-rosewood/50 hover:text-rosewood hover:border-rosewood/40 hover:shadow-sm transition-all">
-                            <span className="material-symbols-outlined text-sm">save</span>
+                        <button onClick={handleSaveDraft} disabled={currentStep === 1 || isSavingDraft}
+                            className="flex items-center justify-center gap-1.5 px-4 py-3 bg-ivory border border-gold-soft/30 rounded-xl text-xs font-bold text-rosewood/50 hover:text-rosewood hover:border-rosewood/40 hover:shadow-sm transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                            {isSavingDraft ? <Spinner size="sm" color="rosewood" /> : <span className="material-symbols-outlined text-sm">save</span>}
                             <span className="hidden sm:inline">{t('common:save_as_draft')}</span>
                         </button>
                         {currentStep === totalSteps ? (
@@ -372,211 +778,6 @@ const SouthIndianChart: React.FC<SouthIndianChartProps> = ({ planets, title, sho
     );
 };
 
-// ═══════════════════════════════════════════════════════════
-// HoroscopeMethodSelector
-// ═══════════════════════════════════════════════════════════
-
-const HoroscopeMethodSelector: React.FC<{ onSelect: (method: 'CREATE' | 'UPLOAD') => void }> = ({ onSelect }) => {
-    const { t } = useTranslation(['profile_new']);
-    return (
-        <motion.div key="choice" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <button onClick={() => onSelect('CREATE')} className="group relative bg-ivory border border-gold/20 rounded-xl p-6 text-left transition-all hover:bg-ivory hover:border-rosewood/30 hover:shadow-lg hover:shadow-rosewood/5 overflow-hidden">
-                <div className="flex items-start gap-5">
-                    <div className="size-14 shrink-0 bg-rosewood-gradient text-white rounded-xl flex items-center justify-center shadow-sm"><span className="material-symbols-outlined text-3xl">auto_awesome</span></div>
-                    <div className="flex-1 min-w-0 space-y-2">
-                        <h4 className="text-base font-black text-rosewood tracking-tight leading-tight">{t('profile_new:horoscope.auto_generate')}</h4>
-                        <p className="text-sm text-rosewood/60 font-medium leading-relaxed">{t('profile_new:horoscope.auto_generate_sub')}</p>
-                        <div className="pt-1 flex items-center gap-1.5 text-rosewood font-black text-[10px] uppercase tracking-widest opacity-50 group-hover:opacity-100 transition-opacity"><span className="leading-none">{t('profile_new:horoscope.select_mode')}</span><span className="material-symbols-outlined text-sm leading-none group-hover:translate-x-1 transition-transform">arrow_forward</span></div>
-                    </div>
-                </div>
-            </button>
-            <button onClick={() => onSelect('UPLOAD')} className="group relative bg-ivory border border-gold/20 rounded-xl p-6 text-left transition-all hover:bg-ivory hover:border-rosewood/30 hover:shadow-lg hover:shadow-rosewood/5 overflow-hidden">
-                <div className="flex items-start gap-5">
-                    <div className="size-14 shrink-0 bg-rosewood-gradient text-white rounded-xl flex items-center justify-center shadow-sm"><span className="material-symbols-outlined text-3xl">cloud_upload</span></div>
-                    <div className="flex-1 min-w-0 space-y-2">
-                        <h4 className="text-base font-black text-rosewood tracking-tight leading-tight">{t('profile_new:horoscope.upload_chart')}</h4>
-                        <p className="text-sm text-rosewood/60 font-medium leading-relaxed">{t('profile_new:horoscope.upload_chart_sub')}</p>
-                        <div className="pt-1 flex items-center gap-1.5 text-rosewood font-black text-[10px] uppercase tracking-widest opacity-50 group-hover:opacity-100 transition-opacity"><span className="leading-none">{t('profile_new:horoscope.select_mode')}</span><span className="material-symbols-outlined text-sm leading-none group-hover:translate-x-1 transition-transform">arrow_forward</span></div>
-                    </div>
-                </div>
-            </button>
-        </motion.div>
-    );
-};
-
-// ═══════════════════════════════════════════════════════════
-// HoroscopeAutoForm
-// ═══════════════════════════════════════════════════════════
-
-const HoroscopeAutoForm: React.FC<{
-    dob: string; onDobChange: (dob: string) => void; birthTime: string; onBirthTimeChange: (time: string) => void;
-    birthPlaceName: string; onBirthPlaceChange: (data: { name: string; lat?: number; lon?: number }) => void;
-    onGenerate: () => void; isGenerating: boolean;
-}> = ({ dob, onDobChange, birthTime, onBirthTimeChange, birthPlaceName, onBirthPlaceChange, onGenerate, isGenerating }) => {
-    const { t } = useTranslation(['profile_new', 'common']);
-    const toLocalDateStr = (d: Date) => { const offset = d.getTimezoneOffset(); const local = new Date(d.getTime() - offset * 60000); return local.toISOString().split('T')[0]; };
-    const maxDobDate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 21); return toLocalDateStr(d); })();
-    const minDobDate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 40); return toLocalDateStr(d); })();
-    const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
-        if (val && (val > maxDobDate || val < minDobDate)) { toast.error(t('profile_new:toasts.age_out_of_range')); return; }
-        onDobChange(val);
-    };
-    return (
-        <div className="space-y-6">
-            <div className="bg-ivory border border-gold/20 rounded-xl shadow-sm transition-all hover:shadow-md">
-                <div className="bg-ivory/50 px-6 py-4 border-b border-gold-soft rounded-t-xl flex items-center gap-3">
-                    <div className="size-8 bg-rosewood-gradient text-white rounded-xl shadow-sm flex items-center justify-center text-rosewood"><span className="material-symbols-outlined text-base!">auto_awesome</span></div>
-                    <h3 className="text-sm font-serif font-bold text-rosewood">{t('profile_new:horoscope.auto_generate')}</h3>
-                </div>
-                <div className="p-6 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Input label={t('profile_new:dob')} icon="event" name="dob" type="date" value={dob ? dob.split('T')[0] : ''} onChange={handleDobChange} min={minDobDate} max={maxDobDate} />
-                        <TimePicker value={birthTime} onChange={onBirthTimeChange} label={t('profile_new:horoscope.birth_time')} />
-                    </div>
-                    <LocationAutocomplete
-                        value={birthPlaceName}
-                        onChange={(val) => onBirthPlaceChange({ name: val })}
-                        onSelect={(loc) => onBirthPlaceChange({ name: loc.displayName, lat: loc.latitude, lon: loc.longitude })}
-                        label={t('profile_new:horoscope.birth_place')}
-                    />
-                    <div className="flex justify-center pt-2">
-                        <button type="button" onClick={onGenerate} disabled={isGenerating || !birthTime || !birthPlaceName || !dob}
-                            className="flex items-center justify-center gap-2.5 px-8 py-3 bg-rosewood text-white font-bold rounded-xl shadow-lg shadow-rosewood/20 text-sm hover:bg-rosewood-dark transition-all disabled:opacity-50 active:scale-[0.98]">
-                            {isGenerating ? <Spinner size="sm" color="white" /> : <span className="material-symbols-outlined text-base">auto_awesome</span>}
-                            <span>{isGenerating ? t('profile_new:horoscope.generating') : t('profile_new:horoscope.generate_now')}</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// ═══════════════════════════════════════════════════════════
-// HoroscopeUploadForm
-// ═══════════════════════════════════════════════════════════
-
-const HoroscopeUploadForm: React.FC<{
-    onFileUpload: (e: React.ChangeEvent<HTMLInputElement>, target: 'rasi' | 'navamsa' | 'full') => void;
-    onFileDelete: (type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => Promise<void>;
-    rasiChartUploadId?: string | null; navamsaChartUploadId?: string | null;
-    isUploading?: boolean; uploadingType?: string | null;
-    formData: any; updateField: (field: string, val: any) => void;
-}> = ({ onFileUpload, onFileDelete, rasiChartUploadId, navamsaChartUploadId, isUploading = false, uploadingType, formData, updateField }) => {
-    const { t, i18n } = useTranslation(['profile_new', 'common']);
-    const rasiRef = React.useRef<HTMLInputElement>(null);
-    const navamsaRef = React.useRef<HTMLInputElement>(null);
-    const inputRefs = { rasi: rasiRef, navamsa: navamsaRef };
-    const [previewUploadId, setPreviewUploadId] = React.useState<string | null>(null);
-
-    const renderUploadSlot = (type: 'rasi' | 'navamsa', labelKey: string, chartUploadId?: string | null) => {
-        const isSlotUploading = isUploading && uploadingType === type;
-        return (
-            <motion.div layout className="flex flex-col items-center gap-3">
-                <div className="text-center">
-                    <h4 className="text-sm font-black text-rosewood tracking-wider">{t(`profile_new:horoscope.${labelKey}`)}</h4>
-                    {!chartUploadId && (
-                        <p className="text-[8px] text-slate-400 font-bold tracking-widest uppercase">JPG / PNG · Max 5MB</p>
-                    )}
-                </div>
-                <div className={`relative rounded-2xl transition-all duration-500 overflow-hidden
-                    ${chartUploadId
-                        ? 'ring-2 ring-gold/30 shadow-xl shadow-rosewood/10 p-1.5 bg-white'
-                        : 'border-2 border-dashed border-gold-soft/40 bg-ivory/50 hover:bg-ivory hover:border-gold/60'}`}>
-                    <div className={`relative overflow-hidden rounded-xl size-44 sm:size-52`}>
-                        {chartUploadId ? (
-                            <MediaImage uploadId={chartUploadId} alt={type}
-                                className="w-full h-full object-contain transition-transform duration-700 cursor-pointer"
-                                fallback={<div className="w-full h-full flex items-center justify-center text-slate-300 italic text-xs">Error</div>}
-                                onClick={() => chartUploadId && setPreviewUploadId(chartUploadId)} />
-                        ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-6">
-                                <div className="size-16 rounded-2xl bg-rosewood/5 flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-4xl text-rosewood/40">cloud_upload</span>
-                                </div>
-                                <p className="text-[10px] font-black text-rosewood/30 uppercase tracking-widest text-center leading-relaxed">
-                                    {t(`profile_new:horoscope.upload_${type}`)}
-                                </p>
-                            </div>
-                        )}
-                        {isSlotUploading && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm z-30">
-                                <div className="size-12 rounded-full border-2 border-rosewood/20 border-t-rosewood animate-spin mb-2" />
-                                <p className="text-[8px] animate-pulse text-rosewood font-black tracking-widest uppercase">{t('profile_new:processing')}</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    {!chartUploadId && !isSlotUploading && (
-                        <label className="flex items-center gap-1.5 px-4 py-2 bg-rosewood text-white rounded-xl text-[10px] font-black hover:bg-rosewood/90 hover:shadow-md transition-all cursor-pointer">
-                            <span className="material-symbols-outlined text-sm">cloud_upload</span>
-                            <span>{t('profile_new:horoscope.upload_chart')}</span>
-                            <input type="file" className="hidden" accept="image/*" disabled={isUploading}
-                                onChange={(e) => { const file = e.target.files?.[0]; if (file) onFileUpload(e as any, type); }} />
-                        </label>
-                    )}
-                    {chartUploadId && !isSlotUploading && (
-                        <div className="flex items-center gap-1">
-                            <label className="size-9 rounded-xl bg-ivory border border-gold-soft/30 flex items-center justify-center text-rosewood/60 hover:text-rosewood hover:border-rosewood/40 hover:bg-white hover:shadow-sm transition-all cursor-pointer" title="Change">
-                                <span className="material-symbols-outlined text-lg">edit</span>
-                                <input type="file" className="hidden" accept="image/*" disabled={isUploading}
-                                    onChange={(e) => { const file = e.target.files?.[0]; if (file) onFileUpload(e as any, type); }} />
-                            </label>
-                            <button onClick={() => onFileDelete(type)}
-                                className="size-9 rounded-xl bg-ivory border border-gold-soft/30 flex items-center justify-center text-rosewood/60 hover:text-red-500 hover:border-red-300 hover:bg-red-50 hover:shadow-sm transition-all" title="Remove">
-                                <span className="material-symbols-outlined text-lg">delete</span>
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </motion.div>
-        );
-    };
-
-    return (
-        <div className="space-y-6">
-            <div className="bg-ivory border border-gold/20 rounded-xl shadow-sm transition-all hover:shadow-md">
-                <div className="bg-ivory/50 px-6 py-4 border-b border-gold-soft rounded-t-xl flex items-center gap-3"><div className="size-8 bg-rosewood-gradient text-white rounded-xl shadow-sm flex items-center justify-center text-rosewood"><span className="material-symbols-outlined text-base!">wb_sunny</span></div><h3 className="text-sm font-serif font-bold text-rosewood">{t('profile_new:sections.astrology')}</h3></div>
-                <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    <Select label={t('profile_new:star')} value={formData.star || ''} onChange={(val) => updateField('star', val)} options={NAKSHATRA_OPTIONS} bilingual />
-                    <Select label={t('profile_new:rasi')} value={formData.rasi || ''} onChange={(val) => updateField('rasi', val)} options={RASI_OPTIONS} bilingual />
-                    <Select label={t('profile_new:laganam')} value={formData.laganam || ''} onChange={(val) => updateField('laganam', val)} options={RASI_OPTIONS} bilingual />
-                </div>
-            </div>
-            <div className="bg-ivory border border-gold/20 rounded-xl shadow-sm transition-all hover:shadow-md">
-                <div className="bg-ivory/50 px-6 py-4 border-b border-gold-soft rounded-t-xl flex items-center gap-3"><div className="size-8 bg-rosewood-gradient text-white rounded-xl shadow-sm flex items-center justify-center"><span className="material-symbols-outlined text-base!">auto_awesome</span></div><h3 className="text-sm font-serif font-bold text-rosewood">{t('profile_new:horoscope.upload_your_charts')}</h3></div>
-                <div className="p-8 flex flex-col items-center">
-                    <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                        <div className="flex flex-wrap justify-center gap-8">
-                            {renderUploadSlot('rasi', 'rasi_chart_label', rasiChartUploadId)}
-                            {renderUploadSlot('navamsa', 'navamsa_chart_label', navamsaChartUploadId)}
-                        </div>
-                    </motion.div>
-                </div>
-            </div>
-
-            <AnimatePresence>
-                {previewUploadId && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-                        onClick={() => setPreviewUploadId(null)}>
-                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
-                            className="relative max-w-2xl w-full max-h-[90vh] bg-white rounded-2xl overflow-hidden shadow-2xl"
-                            onClick={(e) => e.stopPropagation()}>
-                            <MediaImage uploadId={previewUploadId} alt="Preview" className="w-full h-full object-contain max-h-[85vh]" />
-                            <button onClick={() => setPreviewUploadId(null)}
-                                className="absolute top-3 right-3 size-9 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-                                <span className="material-symbols-outlined text-lg">close</span>
-                            </button>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
-};
 
 
 
@@ -584,18 +785,12 @@ const HoroscopeUploadForm: React.FC<{
 // Step1Personal
 // ═══════════════════════════════════════════════════════════
 
-interface StepProps { formData: any; updateField: (field: any, value: any) => void; onAction?: () => void; }
+interface StepProps { formData: any; updateField: (field: any, value: any) => void; onAction?: () => void; fieldErrors?: Record<string, string>; touchedFields?: Set<string>; markTouched?: (field: string) => void; }
 
-const Step1Personal: React.FC<StepProps> = ({ formData, updateField, onAction }) => {
+const Step1Personal: React.FC<StepProps> = ({ formData, updateField, onAction, fieldErrors = {}, touchedFields = new Set(), markTouched = () => {} }) => {
     const { t, i18n } = useTranslation(['profile_new', 'common']);
-    const toLocalDateStr = (d: Date) => { const offset = d.getTimezoneOffset(); const local = new Date(d.getTime() - offset * 60000); return local.toISOString().split('T')[0]; };
-    const maxDobDate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 21); return toLocalDateStr(d); })();
-    const minDobDate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 40); return toLocalDateStr(d); })();
-    const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
-        if (val && (val > maxDobDate || val < minDobDate)) { toast.error(t('profile_new:toasts.age_out_of_range')); return; }
-        updateField('dob', val);
-    };
+    const maxDobDate = getMaxDobDate();
+    const minDobDate = getMinDobDate();
     const containerRef = React.useRef<HTMLDivElement>(null);
     useKeyboardFormNavigation({ containerRef, onSubmitLastField: onAction });
 
@@ -608,22 +803,22 @@ const Step1Personal: React.FC<StepProps> = ({ formData, updateField, onAction })
                 <div className="bg-ivory/50 px-6 py-4 border-b border-gold-soft rounded-t-xl flex items-center gap-3"><div className="size-8 bg-rosewood-gradient text-white rounded-xl shadow-sm flex items-center justify-center text-rosewood"><span className="material-symbols-outlined text-base!">groups</span></div><h3 className="text-sm font-serif font-bold text-rosewood">{t('profile_new:sections.connection')}</h3></div>
                 <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <TranslatableInput label={t('profile_new:first_name')} valueEn={formData.firstNameEn || ''} valueTa={formData.firstNameTa || ''} onChangeEn={(val) => updateField('firstNameEn', val)} onChangeTa={(val) => updateField('firstNameTa', val)} icon="person" placeholder={t('profile_new:placeholders.first_name')} />
+                        <TranslatableInput label={t('profile_new:first_name')} valueEn={formData.firstNameEn || ''} valueTa={formData.firstNameTa || ''} onChangeEn={(val) => updateField('firstNameEn', val)} onChangeTa={(val) => updateField('firstNameTa', val)} icon="person" placeholder={t('profile_new:placeholders.first_name')} error={touchedFields.has('firstNameEn') ? fieldErrors.firstNameEn : undefined} onBlur={() => markTouched?.('firstNameEn')} required />
                         <TranslatableInput label={t('profile_new:last_name')} valueEn={formData.lastNameEn || ''} valueTa={formData.lastNameTa || ''} onChangeEn={(val) => updateField('lastNameEn', val)} onChangeTa={(val) => updateField('lastNameTa', val)} icon="person" placeholder={t('profile_new:placeholders.last_name')} />
                     </div>
-                    <Toggle label={t('profile_new:gender')} value={formData.gender || ''} onChange={(val) => updateField('gender', val)} options={GENDER_OPTIONS} name="gender" />
-                    <Input label={t('profile_new:dob')} icon="event" name="dob" type="date" value={formData.dob?.split('T')[0] || ''} onChange={handleDobChange} min={minDobDate} max={maxDobDate} />
-                    <Select label={t('profile_new:profile_for')} value={formData.profileFor || ''} onChange={(val) => updateField('profileFor', val)} options={PROFILE_FOR_OPTIONS} />
+                    <Toggle label={t('profile_new:gender')} value={formData.gender || ''} onChange={(val) => updateField('gender', val)} options={GENDER_OPTIONS} name="gender" error={touchedFields.has('gender') ? fieldErrors.gender : undefined} required />
+                    <DobInput label={t('profile_new:dob')} value={formData.dob?.split('T')[0] || ''} onChange={(val) => updateField('dob', val)} min={minDobDate} max={maxDobDate} error={touchedFields.has('dob') ? fieldErrors.dob : undefined} onBlur={() => markTouched?.('dob')} required />
+                    <Select label={t('profile_new:profile_for')} value={formData.profileFor || ''} onChange={(val) => updateField('profileFor', val)} options={PROFILE_FOR_OPTIONS} error={touchedFields.has('profileFor') ? fieldErrors.profileFor : undefined} onBlur={() => markTouched?.('profileFor')} required />
                 </div>
             </div>
             <div className="bg-ivory border border-gold/20 rounded-xl shadow-sm transition-all hover:shadow-md">
                 <div className="bg-ivory/50 px-6 py-4 border-b border-gold-soft rounded-t-xl flex items-center gap-3"><div className="size-8 bg-rosewood-gradient text-white rounded-xl shadow-sm flex items-center justify-center text-rosewood"><span className="material-symbols-outlined text-base!">accessibility_new</span></div><h3 className="text-sm font-serif font-bold text-rosewood">{t('profile_new:sections.body_lifestyle')}</h3></div>
                 <div className="p-6 space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"><Select label={t('profile_new:marital_status')} value={formData.maritalStatus || ''} onChange={(val) => updateField('maritalStatus', val)} options={MARITAL_STATUS_OPTIONS} /><Toggle label={t('profile_new:diet')} value={formData.diet || ''} onChange={(val) => updateField('diet', val)} options={DIET_OPTIONS} name="diet" /></div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"><Select label={t('profile_new:marital_status')} value={formData.maritalStatus || ''} onChange={(val) => updateField('maritalStatus', val)} options={MARITAL_STATUS_OPTIONS} error={touchedFields.has('maritalStatus') ? fieldErrors.maritalStatus : undefined} onBlur={() => markTouched?.('maritalStatus')} required /><Toggle label={t('profile_new:diet')} value={formData.diet || ''} onChange={(val) => updateField('diet', val)} options={DIET_OPTIONS} name="diet" error={touchedFields.has('diet') ? fieldErrors.diet : undefined} required /></div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 border-t border-gold-soft/5">
-                        <Select label={t('profile_new:blood_group')} value={formData.bloodGroup || ''} onChange={(val) => updateField('bloodGroup', val)} options={BLOOD_GROUP_OPTIONS} />
-                        <Select label={t('profile_new:height')} value={formData.height?.toString() || ''} onChange={(val) => updateField('height', parseInt(val))} options={HEIGHT_OPTIONS} />
-                        <Input label={t('profile_new:weight')} name="weight" value={formData.weight?.toString() || ''} onChange={(e) => { const val = e.target.value.replace(/[^0-9]/g, ''); const numVal = parseInt(val); if (val !== '' && numVal > 250) return; updateField('weight', val === '' ? undefined : numVal); }} icon="monitor_weight" placeholder={t('profile_new:placeholders.weight')} inputMode="numeric"><span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-[10px] text-slate-300 group-hover/input:text-rosewood transition-colors">KG</span></Input>
+                        <Select label={t('profile_new:blood_group')} value={formData.bloodGroup || ''} onChange={(val) => updateField('bloodGroup', val)} options={BLOOD_GROUP_OPTIONS} error={touchedFields.has('bloodGroup') ? fieldErrors.bloodGroup : undefined} onBlur={() => markTouched?.('bloodGroup')} required />
+                        <Select label={t('profile_new:height')} value={formData.height?.toString() || ''} onChange={(val) => updateField('height', parseInt(val))} options={HEIGHT_OPTIONS} error={touchedFields.has('height') ? fieldErrors.height : undefined} required />
+                        <Input label={t('profile_new:weight')} name="weight" value={formData.weight?.toString() || ''} onChange={(e) => { const val = e.target.value.replace(/[^0-9]/g, ''); const numVal = parseInt(val); if (val !== '' && numVal > 150) return; updateField('weight', val === '' ? undefined : numVal); }} icon="monitor_weight" placeholder={t('profile_new:placeholders.weight')} inputMode="numeric" error={touchedFields.has('weight') ? fieldErrors.weight : undefined} onBlur={() => markTouched?.('weight')} required><span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-[10px] text-slate-300 group-hover/input:text-rosewood transition-colors">KG</span></Input>
                         <Select label={t('profile_new:complexion')} value={formData.complexion || 'NOT_SPECIFIED'} onChange={(val) => updateField('complexion', val)} options={COMPLEXION_OPTIONS} />
                     </div>
                 </div>
@@ -632,22 +827,22 @@ const Step1Personal: React.FC<StepProps> = ({ formData, updateField, onAction })
                 <div className="bg-ivory/50 px-6 py-4 border-b border-gold-soft rounded-t-xl flex items-center gap-3"><div className="size-8 bg-rosewood-gradient text-white rounded-xl shadow-sm flex items-center justify-center text-rosewood"><span className="material-symbols-outlined text-base!">location_on</span></div><h3 className="text-sm font-serif font-bold text-rosewood">{t('profile_new:sections.locations')}</h3></div>
                 <div className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Select label={t('profile_new:current_district')} value={formData.currentDistrict || ''} onChange={(val) => { updateField('currentDistrict', val); if (val !== 'OTHER') { updateField('currentDistrictEn', val); updateField('currentDistrictTa', DISTRICT_TAMIL[val] || val); updateField('currentStateEn', 'Tamil Nadu'); updateField('currentStateTa', 'தமிழ்நாடு'); updateField('currentCountryEn', 'India'); updateField('currentCountryTa', 'இந்தியா'); } else { updateField('currentDistrictEn', ''); updateField('currentDistrictTa', ''); updateField('currentTaluk', ''); updateField('currentCityEn', ''); updateField('currentCityTa', ''); } }} options={districtToStringOptions(DISTRICTS)} />
-                        {formData.currentDistrict !== 'OTHER' && <Select label={t('profile_new:current_taluk')} disabled={!formData.currentDistrict} value={formData.currentTaluk || ''} onChange={(val) => { updateField('currentTaluk', val); updateField('currentCityEn', val); updateField('currentCityTa', TALUK_TAMIL[val] || val); }} options={talukToStringOptions(formData.currentDistrict ? TALUKS_BY_DISTRICT[formData.currentDistrict] : [])} placeholder={formData.currentDistrict ? t('profile_new:placeholders.select_taluk') : t('profile_new:placeholders.select_district_first')} />}
+                        <Select label={t('profile_new:current_district')} value={formData.currentDistrict || ''} onChange={(val) => { updateField('currentDistrict', val); if (val !== 'OTHER') { updateField('currentDistrictEn', val); updateField('currentDistrictTa', DISTRICT_TAMIL[val] || val); updateField('currentStateEn', 'Tamil Nadu'); updateField('currentStateTa', 'தமிழ்நாடு'); updateField('currentCountryEn', 'India'); updateField('currentCountryTa', 'இந்தியா'); } else { updateField('currentDistrictEn', ''); updateField('currentDistrictTa', ''); updateField('currentTaluk', ''); updateField('currentCityEn', ''); updateField('currentCityTa', ''); } }} options={districtToStringOptions(DISTRICTS)} error={touchedFields.has('currentDistrict') ? fieldErrors.currentDistrict : undefined} onBlur={() => markTouched?.('currentDistrict')} required />
+                        {formData.currentDistrict !== 'OTHER' && <Select label={t('profile_new:current_taluk')} disabled={!formData.currentDistrict} value={formData.currentTaluk || ''} onChange={(val) => { updateField('currentTaluk', val); updateField('currentCityEn', val); updateField('currentCityTa', TALUK_TAMIL[val] || val); }} options={talukToStringOptions(formData.currentDistrict ? TALUKS_BY_DISTRICT[formData.currentDistrict] : [])} placeholder={formData.currentDistrict ? t('profile_new:placeholders.select_taluk') : t('profile_new:placeholders.select_district_first')} required />}
                     </div>
                     {formData.currentDistrict === 'OTHER' && (<div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-2 duration-300">
-                        <TranslatableInput label={t('profile_new:current_city')} valueEn={formData.currentCityEn || ''} valueTa={formData.currentCityTa || ''} onChangeEn={(val) => updateField('currentCityEn', val)} onChangeTa={(val) => updateField('currentCityTa', val)} placeholder={t('profile_new:placeholders.city')} />
-                        <TranslatableInput label={t('profile_new:current_state')} valueEn={formData.currentStateEn || ''} valueTa={formData.currentStateTa || ''} onChangeEn={(val) => updateField('currentStateEn', val)} onChangeTa={(val) => updateField('currentStateTa', val)} placeholder={t('profile_new:placeholders.state')} />
-                        <TranslatableInput label={t('profile_new:current_country')} valueEn={formData.currentCountryEn || ''} valueTa={formData.currentCountryTa || ''} onChangeEn={(val) => updateField('currentCountryEn', val)} onChangeTa={(val) => updateField('currentCountryTa', val)} placeholder={t('profile_new:placeholders.country')} />
+                        <TranslatableInput label={t('profile_new:current_city')} valueEn={formData.currentCityEn || ''} valueTa={formData.currentCityTa || ''} onChangeEn={(val) => updateField('currentCityEn', val)} onChangeTa={(val) => updateField('currentCityTa', val)} placeholder={t('profile_new:placeholders.city')} required />
+                        <TranslatableInput label={t('profile_new:current_state')} valueEn={formData.currentStateEn || ''} valueTa={formData.currentStateTa || ''} onChangeEn={(val) => updateField('currentStateEn', val)} onChangeTa={(val) => updateField('currentStateTa', val)} placeholder={t('profile_new:placeholders.state')} required />
+                        <TranslatableInput label={t('profile_new:current_country')} valueEn={formData.currentCountryEn || ''} valueTa={formData.currentCountryTa || ''} onChangeEn={(val) => updateField('currentCountryEn', val)} onChangeTa={(val) => updateField('currentCountryTa', val)} placeholder={t('profile_new:placeholders.country')} required />
                     </div>)}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gold-soft/5">
-                        <Select label={t('profile_new:native_district')} value={formData.nativeDistrict || ''} onChange={(val) => { updateField('nativeDistrict', val); updateField('nativeTaluk', ''); }} options={districtToStringOptions(DISTRICTS)} />
-                        {formData.nativeDistrict !== 'OTHER' && <Select label={t('profile_new:native_taluk')} disabled={!formData.nativeDistrict} value={formData.nativeTaluk || ''} onChange={(val) => updateField('nativeTaluk', val)} options={talukToStringOptions(formData.nativeDistrict ? TALUKS_BY_DISTRICT[formData.nativeDistrict] : [])} placeholder={formData.nativeDistrict ? t('profile_new:placeholders.select_taluk') : t('profile_new:placeholders.select_district_first')} />}
+                        <Select label={t('profile_new:native_district')} value={formData.nativeDistrict || ''} onChange={(val) => { updateField('nativeDistrict', val); if (val !== 'OTHER') { updateField('nativeTaluk', ''); } else { updateField('nativeTaluk', ''); updateField('nativeCityEn', ''); updateField('nativeCityTa', ''); updateField('nativeStateEn', ''); updateField('nativeStateTa', ''); updateField('nativeCountryEn', ''); updateField('nativeCountryTa', ''); } }} options={districtToStringOptions(DISTRICTS)} error={touchedFields.has('nativeDistrict') ? fieldErrors.nativeDistrict : undefined} onBlur={() => markTouched?.('nativeDistrict')} required />
+                        {formData.nativeDistrict !== 'OTHER' && <Select label={t('profile_new:native_taluk')} disabled={!formData.nativeDistrict} value={formData.nativeTaluk || ''} onChange={(val) => updateField('nativeTaluk', val)} options={talukToStringOptions(formData.nativeDistrict ? TALUKS_BY_DISTRICT[formData.nativeDistrict] : [])} placeholder={formData.nativeDistrict ? t('profile_new:placeholders.select_taluk') : t('profile_new:placeholders.select_district_first')} error={touchedFields.has('nativeTaluk') ? fieldErrors.nativeTaluk : undefined} onBlur={() => markTouched?.('nativeTaluk')} required />}
                     </div>
                     {formData.nativeDistrict === 'OTHER' && (<div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-2 duration-300">
-                        <TranslatableInput label={t('profile_new:current_city')} valueEn={formData.currentCityEn || ''} valueTa={formData.currentCityTa || ''} onChangeEn={(val) => updateField('currentCityEn', val)} onChangeTa={(val) => updateField('currentCityTa', val)} placeholder={t('profile_new:placeholders.city')} />
-                        <TranslatableInput label={t('profile_new:current_state')} valueEn={formData.currentStateEn || ''} valueTa={formData.currentStateTa || ''} onChangeEn={(val) => updateField('currentStateEn', val)} onChangeTa={(val) => updateField('currentStateTa', val)} placeholder={t('profile_new:placeholders.state')} />
-                        <TranslatableInput label={t('profile_new:current_country')} valueEn={formData.currentCountryEn || ''} valueTa={formData.currentCountryTa || ''} onChangeEn={(val) => updateField('currentCountryEn', val)} onChangeTa={(val) => updateField('currentCountryTa', val)} placeholder={t('profile_new:placeholders.country')} />
+                        <TranslatableInput label={t('profile_new:native_city')} valueEn={formData.nativeCityEn || ''} valueTa={formData.nativeCityTa || ''} onChangeEn={(val) => updateField('nativeCityEn', val)} onChangeTa={(val) => updateField('nativeCityTa', val)} placeholder={t('profile_new:placeholders.city')} required />
+                        <TranslatableInput label={t('profile_new:native_state')} valueEn={formData.nativeStateEn || ''} valueTa={formData.nativeStateTa || ''} onChangeEn={(val) => updateField('nativeStateEn', val)} onChangeTa={(val) => updateField('nativeStateTa', val)} placeholder={t('profile_new:placeholders.state')} required />
+                        <TranslatableInput label={t('profile_new:native_country')} valueEn={formData.nativeCountryEn || ''} valueTa={formData.nativeCountryTa || ''} onChangeEn={(val) => updateField('nativeCountryEn', val)} onChangeTa={(val) => updateField('nativeCountryTa', val)} placeholder={t('profile_new:placeholders.country')} required />
                     </div>)}
                 </div>
             </div>
@@ -659,7 +854,7 @@ const Step1Personal: React.FC<StepProps> = ({ formData, updateField, onAction })
 // Step2Combined — Community + Professional
 // ═══════════════════════════════════════════════════════════
 
-const Step2Combined: React.FC<StepProps> = ({ formData, updateField, onAction }) => {
+const Step2Combined: React.FC<StepProps> = ({ formData, updateField, onAction, fieldErrors = {}, touchedFields = new Set(), markTouched = () => {} }) => {
     const { t } = useTranslation(['profile_new', 'common']);
     const containerRef = React.useRef<HTMLDivElement>(null);
     useKeyboardFormNavigation({ containerRef, onSubmitLastField: onAction });
@@ -674,8 +869,8 @@ const Step2Combined: React.FC<StepProps> = ({ formData, updateField, onAction })
                         <div className="space-y-2"><label className="block text-[11px] sm:text-xs font-bold text-rosewood tracking-tight ml-1">{t('profile_new:community')}</label><div className="w-full h-14 flex items-center px-4 bg-ivory border border-gold-soft/20 rounded-xl text-sm font-medium text-rosewood/60 cursor-not-allowed select-none">{t('profile_new:community_val')}</div></div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gold-soft/5">
-                        <Select label={t('profile_new:kulam')} value={formData.kulam || ''} onChange={(val) => updateField('kulam', val)} options={KULAM_OPTIONS} placeholder={t('profile_new:placeholders.kulam')} />
-                        <TranslatableInput label={t('profile_new:kuladeivam')} valueEn={formData.kuladeivamEn || ''} valueTa={formData.kuladeivamTa || ''} onChangeEn={(val) => updateField('kuladeivamEn', val)} onChangeTa={(val) => updateField('kuladeivamTa', val)} placeholder={t('profile_new:placeholders.kuladeivam')} />
+                        <Select label={t('profile_new:kulam')} value={formData.kulam || ''} onChange={(val) => updateField('kulam', val)} options={KULAM_OPTIONS} placeholder={t('profile_new:placeholders.kulam')} error={touchedFields.has('kulam') ? fieldErrors.kulam : undefined} onBlur={() => markTouched?.('kulam')} required />
+                        <TranslatableInput label={t('profile_new:kuladeivam')} valueEn={formData.kuladeivamEn || ''} valueTa={formData.kuladeivamTa || ''} onChangeEn={(val) => updateField('kuladeivamEn', val)} onChangeTa={(val) => updateField('kuladeivamTa', val)} placeholder={t('profile_new:placeholders.kuladeivam')} error={touchedFields.has('kuladeivamEn') ? fieldErrors.kuladeivamEn : undefined} onBlur={() => markTouched?.('kuladeivamEn')} required />
                     </div>
                 </div>
             </div>
@@ -704,7 +899,7 @@ const Step2Combined: React.FC<StepProps> = ({ formData, updateField, onAction })
 // Step3Family
 // ═══════════════════════════════════════════════════════════
 
-const Step3Family: React.FC<StepProps> = ({ formData, updateField, onAction }) => {
+const Step3Family: React.FC<StepProps> = ({ formData, updateField, onAction, fieldErrors = {}, touchedFields = new Set(), markTouched = () => {} }) => {
     const { t } = useTranslation(['profile_new', 'common']);
     const containerRef = React.useRef<HTMLDivElement>(null);
     useKeyboardFormNavigation({ containerRef, onSubmitLastField: onAction });
@@ -717,7 +912,7 @@ const Step3Family: React.FC<StepProps> = ({ formData, updateField, onAction }) =
                     <label className="flex items-center gap-2 cursor-pointer group px-3 py-1.5 bg-ivory border border-gold-soft/30 rounded-xl transition-all hover:border-rosewood/30 shadow-sm"><input type="checkbox" checked={formData.fatherIsLate || false} onChange={(e) => updateField('fatherIsLate', e.target.checked)} className="peer hidden" /><div className={`size-4 rounded-md flex items-center justify-center transition-all ${formData.fatherIsLate ? 'bg-rosewood text-white shadow-sm' : 'bg-white border border-gold-soft/30'}`}>{formData.fatherIsLate && <span className="material-symbols-outlined text-xs!">check</span>}</div><span className="text-[10px] font-black tracking-wider text-rosewood-dark">{t('profile_new:is_late')}?</span></label>
                 </div>
                 <div className="p-6 space-y-6">
-                    <TranslatableInput label={t('profile_new:father_name')} valueEn={formData.fatherNameEn || ''} valueTa={formData.fatherNameTa || ''} onChangeEn={(val) => updateField('fatherNameEn', val)} onChangeTa={(val) => updateField('fatherNameTa', val)} icon="person" placeholder={t('profile_new:placeholders.father_name')} />
+                    <TranslatableInput label={t('profile_new:father_name')} valueEn={formData.fatherNameEn || ''} valueTa={formData.fatherNameTa || ''} onChangeEn={(val) => updateField('fatherNameEn', val)} onChangeTa={(val) => updateField('fatherNameTa', val)} icon="person" placeholder={t('profile_new:placeholders.father_name')} error={touchedFields.has('fatherNameEn') ? fieldErrors.fatherNameEn : undefined} onBlur={() => markTouched?.('fatherNameEn')} required />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <Input label={t('profile_new:father_job')} icon="work" name="fatherJob" value={formData.fatherJob || ''} onChange={(e) => updateField('fatherJob', e.target.value)} placeholder={t('profile_new:placeholders.father_job')} />
                         <Input label={t('profile_new:father_salary')} icon="payments" name="fatherSalary" type="text" value={formData.fatherSalary ? formData.fatherSalary.toLocaleString('en-IN') : ''} onChange={(e) => { const val = e.target.value.replace(/[^0-9]/g, ''); const numVal = val !== '' ? parseInt(val) : undefined; if (numVal !== undefined && numVal < 0) return; updateField('fatherSalary', numVal); }} placeholder={t('profile_new:placeholders.salary')} inputMode="numeric" />
@@ -731,7 +926,7 @@ const Step3Family: React.FC<StepProps> = ({ formData, updateField, onAction }) =
                     <label className="flex items-center gap-2 cursor-pointer group px-3 py-1.5 bg-ivory border border-gold-soft/30 rounded-xl transition-all hover:border-rosewood/30 shadow-sm"><input type="checkbox" checked={formData.motherIsLate || false} onChange={(e) => updateField('motherIsLate', e.target.checked)} className="peer hidden" /><div className={`size-4 rounded-md flex items-center justify-center transition-all ${formData.motherIsLate ? 'bg-rosewood text-white shadow-sm' : 'bg-white border border-gold-soft/30'}`}>{formData.motherIsLate && <span className="material-symbols-outlined text-xs!">check</span>}</div><span className="text-[10px] font-black tracking-wider text-rosewood-dark">{t('profile_new:is_late')}?</span></label>
                 </div>
                 <div className="p-6 space-y-6">
-                    <TranslatableInput label={t('profile_new:mother_name')} valueEn={formData.motherNameEn || ''} valueTa={formData.motherNameTa || ''} onChangeEn={(val) => updateField('motherNameEn', val)} onChangeTa={(val) => updateField('motherNameTa', val)} icon="person_2" placeholder={t('profile_new:placeholders.mother_name')} />
+                    <TranslatableInput label={t('profile_new:mother_name')} valueEn={formData.motherNameEn || ''} valueTa={formData.motherNameTa || ''} onChangeEn={(val) => updateField('motherNameEn', val)} onChangeTa={(val) => updateField('motherNameTa', val)} icon="person_2" placeholder={t('profile_new:placeholders.mother_name')} error={touchedFields.has('motherNameEn') ? fieldErrors.motherNameEn : undefined} onBlur={() => markTouched?.('motherNameEn')} required />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <Input label={t('profile_new:mother_job')} icon="work" name="motherJob" value={formData.motherJob || ''} onChange={(e) => updateField('motherJob', e.target.value)} placeholder={t('profile_new:placeholders.mother_job')} />
                         <Input label={t('profile_new:mother_salary')} icon="payments" name="motherSalary" type="text" value={formData.motherSalary ? formData.motherSalary.toLocaleString('en-IN') : ''} onChange={(e) => { const val = e.target.value.replace(/[^0-9]/g, ''); const numVal = val !== '' ? parseInt(val) : undefined; if (numVal !== undefined && numVal < 0) return; updateField('motherSalary', numVal); }} placeholder={t('profile_new:placeholders.salary')} inputMode="numeric" />
@@ -780,7 +975,7 @@ const Step3Family: React.FC<StepProps> = ({ formData, updateField, onAction }) =
 // Step4Assets
 // ═══════════════════════════════════════════════════════════
 
-const Step4Assets: React.FC<StepProps> = ({ formData, updateField, onAction }) => {
+const Step4Assets: React.FC<StepProps> = ({ formData, updateField, onAction, fieldErrors = {}, touchedFields = new Set(), markTouched = () => {} }) => {
     const { t } = useTranslation(['profile_new', 'common']);
     const containerRef = React.useRef<HTMLDivElement>(null);
     useKeyboardFormNavigation({ containerRef, onSubmitLastField: onAction });
@@ -791,7 +986,7 @@ const Step4Assets: React.FC<StepProps> = ({ formData, updateField, onAction }) =
                 <div className="bg-ivory/50 px-6 py-4 border-b border-gold-soft rounded-t-xl flex items-center gap-3"><div className="size-8 bg-rosewood-gradient text-white rounded-xl shadow-sm flex items-center justify-center text-rosewood"><span className="material-symbols-outlined text-base!">real_estate_agent</span></div><h3 className="text-sm font-serif font-bold text-rosewood">{t('profile_new:sections.property')}</h3></div>
                 <div className="p-6 space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <Toggle label={t('profile_new:residence')} value={formData.residence || ''} onChange={(val) => updateField('residence', val)} options={RESIDENCE_OPTIONS} name="residence" />
+                        <Toggle label={t('profile_new:residence')} value={formData.residence || ''} onChange={(val) => updateField('residence', val)} options={RESIDENCE_OPTIONS} name="residence" error={touchedFields.has('residence') ? fieldErrors.residence : undefined} onBlur={() => markTouched?.('residence')} required />
                         <Input label={t('profile_new:vehicle')} icon="directions_car" name="vehicle" value={formData.vehicle || ''} onChange={(e) => updateField('vehicle', e.target.value)} placeholder={t('profile_new:placeholders.vehicle')} />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -823,170 +1018,6 @@ const Step4Assets: React.FC<StepProps> = ({ formData, updateField, onAction }) =
 };
 
 // ═══════════════════════════════════════════════════════════
-// Step5Horoscope
-// ═══════════════════════════════════════════════════════════
-
-const Step5Horoscope: React.FC<StepProps & { isUploading?: boolean; uploadingType?: string | null; onFileUpload: (file: File, type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => Promise<void>; onFileDelete: (type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => Promise<void>; }> = ({ formData, updateField, onAction, isUploading: parentIsUploading, uploadingType, onFileUpload, onFileDelete }) => {
-    const { t } = useTranslation(['profile_new', 'common']);
-    const containerRef = React.useRef<HTMLDivElement>(null);
-    useKeyboardFormNavigation({ containerRef, onSubmitLastField: onAction });
-
-    const [activeMethod, setActiveMethod] = useState<'CREATE' | 'UPLOAD' | 'none'>(() => formData.astrology?.mode || 'none');
-    const [isGenerating, setIsGenerating] = useState(false);
-    const isUploading = parentIsUploading || false;
-    const [birthTime, setBirthTime] = useState(formData.astrology?.birthTime || '');
-    const [birthPlace, setBirthPlace] = useState<{ name: string; lat?: number; lon?: number }>({ name: formData.astrology?.birthPlaceName || '', lat: formData.astrology?.latitude, lon: formData.astrology?.longitude });
-    const [generatedResult, setGeneratedResult] = useState<HoroscopeResult | null>(null);
-
-    const handleMethodSelect = (method: 'CREATE' | 'UPLOAD') => { setActiveMethod(method); updateField('astrology', { ...formData.astrology, mode: method }); };
-    const handleResetMethod = () => { setActiveMethod('none'); setGeneratedResult(null); updateField('astrology', { ...formData.astrology, mode: 'none' }); };
-
-    // Helper functions to map indices to form option values
-    const mapRasiToFormValue = (rasiIndex: number): string => {
-        const rasiSign = SIGNS[rasiIndex]; // e.g., 'Aries'
-        // Map from sign name to form value (e.g., 'Aries' -> 'MESHA')
-        const rasiMap: Record<string, string> = {
-            'Aries': 'MESHA',
-            'Taurus': 'VRISHABHA',
-            'Gemini': 'MITHUNA',
-            'Cancer': 'KATAKA',
-            'Leo': 'SIMHA',
-            'Virgo': 'KANYA',
-            'Libra': 'TULA',
-            'Scorpio': 'VRISCHIKA',
-            'Sagittarius': 'DHANUS',
-            'Capricorn': 'MAKARA',
-            'Aquarius': 'KUMBHA',
-            'Pisces': 'MEENA'
-        };
-        return rasiMap[rasiSign] || '';
-    };
-
-    const mapNakshatraToFormValue = (nakshatraIndex: number): string => {
-        const nakshatra = NAKSHATRAS[nakshatraIndex]; // e.g., 'Ashwini'
-        // Map from nakshatra name to form value (e.g., 'Ashwini' -> 'ASHWINI')
-        const nakshatraMap: Record<string, string> = {
-            'Ashwini': 'ASHWINI',
-            'Bharani': 'BHARANI',
-            'Krittika': 'KRITTIKA',
-            'Rohini': 'ROHINI',
-            'Mrigashirsha': 'MRIGASHIRA',
-            'Ardra': 'ARDRA',
-            'Punarvasu': 'PUNARVASU',
-            'Pushya': 'PUSHYA',
-            'Ashlesha': 'ASHLESHA',
-            'Magha': 'MAGHA',
-            'Purva Phalguni': 'PURVA_PHALGUNI',
-            'Uttara Phalguni': 'UTTARA_PHALGUNI',
-            'Hasta': 'HASTA',
-            'Chitra': 'CHITRA',
-            'Swati': 'SWATI',
-            'Vishakha': 'VISHAKHA',
-            'Anuradha': 'ANURADHA',
-            'Jyeshtha': 'JYESHTHA',
-            'Mula': 'MULA',
-            'Purva Ashadha': 'PURVA_ASHADHA',
-            'Uttara Ashadha': 'UTTARA_ASHADHA',
-            'Shravana': 'SHRAVANA',
-            'Dhanistha': 'DHANISHTHA',
-            'Shatabhisha': 'SHATABHISHA',
-            'Purva Bhadrapada': 'PURVA_BHADRAPADA',
-            'Uttara Bhadrapada': 'UTTARA_BHADRAPADA',
-            'Revati': 'REVATI'
-        };
-        return nakshatraMap[nakshatra] || '';
-    };
-
-    const handleGenerate = async () => {
-        if (!formData.dob || !birthTime || !birthPlace.name || birthPlace.lat === undefined || birthPlace.lon === undefined) {
-            toast.error(t('profile_new:toasts.error_missing_birth_details'));
-            return;
-        }
-        setIsGenerating(true);
-        try {
-            const result = await api.post('/horoscope/generate', {
-                dateOfBirth: formData.dob,
-                timeOfBirth: birthTime,
-                location: {
-                    displayName: birthPlace.name,
-                    latitude: birthPlace.lat,
-                    longitude: birthPlace.lon,
-                },
-            }) as unknown as HoroscopeResult;
-            
-            // Auto-populate the celestial chart fields (Star/Rasi/Lagnam) in formData
-            const starValue = mapNakshatraToFormValue(result.summary.nakshatraIndex);
-            const rasiValue = mapRasiToFormValue(result.summary.rasiSignIndex);
-            const laganamValue = mapRasiToFormValue(result.summary.lagnaSignIndex);
-            
-            updateField('astrology', {
-                ...formData.astrology,
-                mode: 'CREATE',
-                birthTime,
-                birthPlaceName: result.summary.locationName || birthPlace.name,
-                birthLatitude: result.input.location.latitude,
-                birthLongitude: result.input.location.longitude,
-                timezone: result.meta.timezone,
-                ayanamsa: result.meta.ayanamsa,
-                horoscopeJson: result,
-                generatedAt: new Date().toISOString(),
-                // Auto-populate celestial chart fields
-                star: starValue,
-                rasi: rasiValue,
-                laganam: laganamValue
-            });
-            // Also set top-level fields for review step display
-            updateField('star', starValue);
-            updateField('rasi', rasiValue);
-            updateField('laganam', laganamValue);
-            setGeneratedResult(result);
-            toast.success(t('profile_new:toasts.horoscope_generated'));
-        } catch {
-            toast.error(t('profile_new:toasts.error_generating_horoscope'));
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'rasi' | 'navamsa' | 'full') => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        try {
-            if (target === 'full') { await onFileUpload(file, 'rasi'); } else { await onFileUpload(file, target as any); }
-        } catch (error: any) { console.error('Horoscope upload error:', error); }
-    };
-
-    return (
-        <div ref={containerRef} className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <AnimatePresence mode="wait">
-                {activeMethod === 'none' ? (<HoroscopeMethodSelector onSelect={handleMethodSelect} />) : (
-                    <motion.div key="active" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} className="space-y-8">
-                        {activeMethod === 'CREATE' && generatedResult ? null : (
-                            <button type="button" onClick={handleResetMethod} className="flex items-center justify-center gap-1.5 px-4 py-3 bg-ivory border border-gold-soft/30 rounded-xl text-xs font-bold text-rosewood/70 hover:text-rosewood hover:border-rosewood/40 hover:shadow-sm transition-all"><span className="material-symbols-outlined text-sm font-black">arrow_back</span><span className="text-[10px] font-black tracking-widest uppercase">{t('common:back')}</span></button>
-                        )}
-                        <div className="">
-                            {activeMethod === 'CREATE' ? (
-                                generatedResult ? (
-                                    <div className="space-y-6">
-                                        <div className="flex items-center justify-between gap-4 flex-wrap">
-                                            <button type="button" onClick={() => setGeneratedResult(null)} className="flex items-center justify-center gap-1.5 px-4 py-3 bg-ivory border border-gold-soft/30 rounded-xl text-xs font-bold text-rosewood/70 hover:text-rosewood hover:border-rosewood/40 hover:shadow-sm transition-all"><span className="material-symbols-outlined text-sm font-black">edit</span><span className="text-[10px] font-black tracking-widest uppercase">{t('profile_new:horoscope.edit_details')}</span></button>
-                                            <button type="button" onClick={onAction} className="flex items-center justify-center gap-2 px-6 py-3 bg-rosewood text-white font-bold rounded-xl shadow-lg shadow-rosewood/20 text-sm hover:bg-rosewood-dark transition-all active:scale-[0.98]"><span>{t('common:next')}</span><span className="material-symbols-outlined text-base">arrow_forward</span></button>
-                                        </div>
-                                        <HoroscopeResults result={generatedResult} loading={false} error={null} />
-                                    </div>
-                                ) : (
-                                    <HoroscopeAutoForm dob={formData.dob} onDobChange={(val) => updateField('dob', val)} birthTime={birthTime} onBirthTimeChange={setBirthTime} birthPlaceName={birthPlace.name} onBirthPlaceChange={setBirthPlace} onGenerate={handleGenerate} isGenerating={isGenerating} />
-                                )
-                            ) : (
-                                <HoroscopeUploadForm onFileUpload={handleFileUpload} onFileDelete={onFileDelete} rasiChartUploadId={formData.astrology?.rasiChartUploadId || null} navamsaChartUploadId={formData.astrology?.navamsaChartUploadId || null} isUploading={isUploading} uploadingType={uploadingType} formData={formData} updateField={updateField} />
-                            )}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
-};
 
 // ═══════════════════════════════════════════════════════════
 // Step6Gallery
@@ -1224,14 +1255,14 @@ const Step6Gallery: React.FC<StepProps & { isUploading?: boolean; uploadingType?
 // Step7Review
 // ═══════════════════════════════════════════════════════════
 
-const Step7Review: React.FC<StepProps> = ({ formData, updateField, onAction }) => {
+const Step7Review: React.FC<StepProps> = ({ formData, updateField, onAction, fieldErrors = {} }) => {
     const { t, i18n } = useTranslation(['profile_new', 'common']);
     const isEn = i18n.language === 'en';
 
     const calculateAge = (dob: string) => { if (!dob) return '---'; const birthDate = new Date(dob); const today = new Date(); let age = today.getFullYear() - birthDate.getFullYear(); const m = today.getMonth() - birthDate.getMonth(); if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--; return age; };
     const getOptionLabel = (options: any[], value: any, bilingual?: boolean) => {
         if (!value) return null;
-        const option = options.find(o => o.value === value);
+        const option = options.find(o => String(o.value) === String(value));
         if (!option) return value;
         if (bilingual) return getBilingualLabel(option.label, i18n.language as 'en' | 'ta');
         return isEn ? option.label.en : option.label.ta;
@@ -1248,7 +1279,7 @@ const Step7Review: React.FC<StepProps> = ({ formData, updateField, onAction }) =
         </div>
     );
 
-    const isCreateMode = formData.astrology?.mode === 'CREATE';
+    const isCreateMode = formData.astrology?.mode === 'GENERATED';
     const horoscopeData = formData.astrology?.horoscopeJson
         ? (typeof formData.astrology.horoscopeJson === 'string' ? JSON.parse(formData.astrology.horoscopeJson) : formData.astrology.horoscopeJson) as HoroscopeResult
         : null;
@@ -1346,9 +1377,17 @@ const Step7Review: React.FC<StepProps> = ({ formData, updateField, onAction }) =
             <div className="w-full">{renderSection(t('profile_new:sections.media'), 'collections', [], (<div className="space-y-4">{formData.primaryUploadId || ((formData.galleryUploadIds?.length ?? 0) > 0) ? (<div>{formData.primaryUploadId && (<div className="mb-4"><p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest mb-2">Glimpse</p><div className="w-28 aspect-4/5 rounded-xl overflow-hidden bg-slate-100 ring-2 ring-white shadow-md"><MediaImage uploadId={formData.primaryUploadId} alt="Glimpse" className="w-full h-full object-cover" /></div></div>)}{((formData.galleryUploadIds?.length ?? 0) > 0) && (<div><p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest mb-2">{t('profile_new:gallery.lifestyle_title')}</p><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">{formData.galleryUploadIds.map((id: string, idx: number) => (<div key={`gallery-${idx}`} className="aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 ring-2 ring-white shadow-md"><MediaImage uploadId={id} alt={`${t('profile_new:gallery.lifestyle_title')} ${idx + 1}`} className="w-full h-full object-cover" /></div>))}</div></div>)}</div>) : (<div className="bg-ivory/30 border-2 border-dashed border-gold-soft/20 rounded-xl p-6 text-center"><span className="material-symbols-outlined text-4xl text-slate-300 mb-2">no_photography</span><p className="text-sm font-bold text-slate-400 italic">{t('common:profile.not_specified')}</p></div>)}</div>))}</div>
 
             <label className="bg-white border border-gold-soft/10 rounded-xl shadow-sm p-4 flex items-center gap-3 cursor-pointer transition-all hover:border-gold/30">
-                <div className="relative flex items-center shrink-0"><input type="checkbox" checked={formData.agreedToTerms || false} onChange={(e) => updateField('agreedToTerms', e.target.checked)} className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-slate-300 transition-all checked:bg-rosewood checked:border-rosewood outline-none" /><span className="absolute text-white material-symbols-outlined text-sm! opacity-0 peer-checked:opacity-100 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">check</span></div>
+                <div className="relative flex items-center shrink-0">
+                    <input type="checkbox" checked={formData.agreedToTerms || false} onChange={(e) => updateField('agreedToTerms', e.target.checked)} className="peer hidden" />
+                    <div className={`size-4 rounded-md flex items-center justify-center transition-all ${formData.agreedToTerms ? 'bg-rosewood text-white shadow-sm' : 'bg-white border border-gold-soft/30'}`}>
+                        {formData.agreedToTerms && <span className="material-symbols-outlined text-xs!">check</span>}
+                    </div>
+                </div>
                 <span className="text-xs text-slate-600 leading-snug"><span className="font-bold text-rosewood">{t('profile_new:review.terms_notice')}</span><br /><span className="text-slate-400">{t('profile_new:review.terms_sub')}</span></span>
             </label>
+            {fieldErrors.agreedToTerms && (
+                <p className="text-[10px] font-bold text-red-500 ml-2 mt-1 animate-in fade-in slide-in-from-top-1">{fieldErrors.agreedToTerms}</p>
+            )}
         </div>
     );
 };

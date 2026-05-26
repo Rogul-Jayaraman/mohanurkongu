@@ -184,29 +184,14 @@ export const ForgotPasswordForm: React.FC = () => {
                 error={otpError || undefined}
                 isVerifying={isVerifying}
                 onComplete={handleVerifyOtp}
+                onResend={handleResendOtp}
+                resendTimer={timer}
               />
-              <div className="flex items-center justify-between px-1">
+              <div className="flex items-center px-1">
                 <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
                   <span className="material-symbols-outlined text-[12px]">schedule</span>
                   {t('forgot.step2.otpWarning')}
                 </span>
-                <button
-                  type="button"
-                  onClick={handleResendOtp}
-                  disabled={!canResend || isSending}
-                  className="text-[10px] font-bold text-rosewood hover:text-rosewood-dark transition-colors flex items-center gap-1 uppercase tracking-tighter disabled:opacity-50"
-                >
-                  {isSending ? (
-                    <Spinner size="sm" color="rosewood" />
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-[14px]">refresh</span>
-                      {canResend
-                        ? t('signup.resend')
-                        : `0:${timer.toString().padStart(2, '0')}`}
-                    </>
-                  )}
-                </button>
               </div>
             </div>
           </>

@@ -42,10 +42,6 @@ export async function stubFetchProfile(id: string): Promise<any> {
   return null;
 }
 
-export async function stubToggleProfileStatus(args: { id: string; status: string }) {}
-
-export async function stubDeleteProfile(id: string) {}
-
 export async function stubSaveDraft(payload: any) {
   return { data: { draftId: 'mock-draft-id' } };
 }

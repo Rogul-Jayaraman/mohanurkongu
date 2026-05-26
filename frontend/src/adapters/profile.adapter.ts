@@ -2,6 +2,7 @@ import type { ProfileDraft } from '../lib/indexeddb';
 
 export function formToDraft(formData: Record<string, unknown>): ProfileDraft {
   return {
+    profileId: formData.profileId as string | undefined,
     basic: {
       profileFor: formData.profileFor || null,
       gender: formData.gender || null,
@@ -22,6 +23,12 @@ export function formToDraft(formData: Record<string, unknown>): ProfileDraft {
       currentCountryTa: formData.currentCountryTa || null,
       nativeDistrict: formData.nativeDistrict || null,
       nativeTaluk: formData.nativeTaluk || null,
+      nativeCityEn: formData.nativeCityEn || null,
+      nativeCityTa: formData.nativeCityTa || null,
+      nativeStateEn: formData.nativeStateEn || null,
+      nativeStateTa: formData.nativeStateTa || null,
+      nativeCountryEn: formData.nativeCountryEn || null,
+      nativeCountryTa: formData.nativeCountryTa || null,
     },
     community: {
       community: formData.community || null,
@@ -35,7 +42,7 @@ export function formToDraft(formData: Record<string, unknown>): ProfileDraft {
       companyName: formData.companyName || null,
       jobLocationEn: formData.jobLocationEn || null,
       jobLocationTa: formData.jobLocationTa || null,
-      monthlySalary: formData.monthlySalary ?? null,
+      monthlySalary: formData.salaryMonthly ?? null,
     },
     family: {
       fatherAlive: formData.fatherIsLate !== true,
@@ -51,12 +58,6 @@ export function formToDraft(formData: Record<string, unknown>): ProfileDraft {
     },
     horoscope: {
       mode: (formData as any).astrology?.mode || null,
-      birthTime: (formData as any).astrology?.birthTime || null,
-      birthPlace: (formData as any).astrology?.birthPlaceName || null,
-      birthLat: (formData as any).astrology?.birthLatitude ?? null,
-      birthLong: (formData as any).astrology?.birthLongitude ?? null,
-      timezone: (formData as any).astrology?.timezone || null,
-      ayanamsa: (formData as any).astrology?.ayanamsa || null,
       rasi: formData.rasi || null,
       nakshatra: formData.star || null,
       lagna: formData.laganam || null,
@@ -71,7 +72,7 @@ export function formToDraft(formData: Record<string, unknown>): ProfileDraft {
     assets: {
       landEn: formData.landEn || null,
       landTa: formData.landTa || null,
-      residenceType: formData.residence || null,
+      residenceType: formData.residence === 'OWN_HOUSE' ? 'OWNED' : (formData.residence || null),
       otherAssetsEn: formData.otherAssetsEn || null,
       otherAssetsTa: formData.otherAssetsTa || null,
       vehicle: formData.vehicle || null,
@@ -111,17 +112,17 @@ export function formToDraft(formData: Record<string, unknown>): ProfileDraft {
   };
 }
 
-export function draftToForm(draft: ProfileDraft): Record<string, unknown> {
-  const en = draft.translations.find(t => t.language === 'EN') || {};
-  const ta = draft.translations.find(t => t.language === 'TA') || {};
+export function draftToForm(draft: Partial<ProfileDraft>): Record<string, unknown> {
+  const en = (draft.translations || []).find(t => t.language === 'EN') || {};
+  const ta = (draft.translations || []).find(t => t.language === 'TA') || {};
 
   return {
-    ...draft.basic,
-    ...draft.community,
-    ...draft.professional,
-    ...draft.family,
-    ...draft.assets,
-    ...draft.partnerPreference,
+    ...(draft.basic || {}),
+    ...(draft.community || {}),
+    ...(draft.professional || {}),
+    ...(draft.family || {}),
+    ...(draft.assets || {}),
+    ...(draft.partnerPreference || {}),
     firstNameEn: en.firstName || null,
     lastNameEn: en.lastName || null,
     kuladeivamEn: en.kuladeivam || null,
@@ -134,27 +135,22 @@ export function draftToForm(draft: ProfileDraft): Record<string, unknown> {
     fatherNameTa: ta.fatherName || null,
     motherNameTa: ta.motherName || null,
     jobLocationTa: ta.jobLocation || null,
-    fatherIsLate: !draft.family.fatherAlive,
-    motherIsLate: !draft.family.motherAlive,
-    noOfBrothers: draft.family.noOfBrother,
-    noOfSisters: draft.family.noOfSister,
-    residence: draft.assets.residenceType,
-    primaryUploadId: draft.photos.primaryUploadId,
-    galleryUploadIds: draft.photos.galleryUploadIds,
+    salaryMonthly: draft.professional?.monthlySalary ?? null,
+    fatherIsLate: !draft.family?.fatherAlive,
+    motherIsLate: !draft.family?.motherAlive,
+    noOfBrothers: draft.family?.noOfBrother ?? null,
+    noOfSisters: draft.family?.noOfSister ?? null,
+    residence: draft.assets?.residenceType === 'OWNED' ? 'OWN_HOUSE' : (draft.assets?.residenceType ?? null),
+    primaryUploadId: draft.photos?.primaryUploadId ?? null,
+    galleryUploadIds: draft.photos?.galleryUploadIds ?? [],
     astrology: {
-      mode: draft.horoscope.mode,
-      birthTime: draft.horoscope.birthTime,
-      birthPlaceName: draft.horoscope.birthPlace,
-      birthLatitude: draft.horoscope.birthLat,
-      birthLongitude: draft.horoscope.birthLong,
-      timezone: draft.horoscope.timezone,
-      ayanamsa: draft.horoscope.ayanamsa,
-      rasiChartUploadId: draft.horoscope.rasiChartUploadId,
-      navamsaChartUploadId: draft.horoscope.navamsaChartUploadId,
-      horoscopeJson: draft.horoscope.horoscopeJson,
+      mode: draft.horoscope?.mode ?? null,
+      rasiChartUploadId: draft.horoscope?.rasiChartUploadId ?? null,
+      navamsaChartUploadId: draft.horoscope?.navamsaChartUploadId ?? null,
+      horoscopeJson: draft.horoscope?.horoscopeJson ?? null,
     },
-    rasi: draft.horoscope.rasi,
-    star: draft.horoscope.nakshatra,
-    laganam: draft.horoscope.lagna,
+    rasi: draft.horoscope?.rasi ?? null,
+    star: draft.horoscope?.nakshatra ?? null,
+    laganam: draft.horoscope?.lagna ?? null,
   };
 }

@@ -168,7 +168,10 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
     };
 
     const resolveImageUrl = (url: string | null | undefined) => {
-      return (url && /^https?:\/\//i.test(url)) ? url : renderPlaceholderImage();
+      if (!url) return renderPlaceholderImage();
+      if (/^https?:\/\//i.test(url)) return url;
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+      return `${API_BASE}/media/${url}`;
     };
 
     const handleViewProfile = () => {
@@ -211,7 +214,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
                         e.stopPropagation();
                         onDelete(profile.id);
                       }}
-                      className="w-9 h-9 rounded-full bg-white flex items-center justify-center transition-all duration-300 shadow-md text-red-500 hover:scale-110"
+                      className="w-9 h-9 rounded-full bg-rosewood-gradient flex items-center justify-center transition-all duration-300 shadow-md shadow-rosewood/20 text-ivory hover:scale-110 hover:brightness-110"
                       title={t("common:delete")}
                     >
                       <Trash2 size={18} />

@@ -17,7 +17,7 @@ interface OtpVerificationModalProps {
     verifyingText: string;
     otpVerifySuccessText: string;
     otpInfoText: string;
-    resendText: string;
+    resendTimer: number;
     isOTPVerified: boolean;
     onOTPChange: (value: string) => void;
     onVerify: () => void;
@@ -36,7 +36,7 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
     verifyingText,
     otpVerifySuccessText,
     otpInfoText,
-    resendText,
+    resendTimer,
     isOTPVerified,
     onOTPChange,
     onVerify,
@@ -117,6 +117,8 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
                                             value={otp}
                                             onChange={onOTPChange}
                                             error={error}
+                                            onResend={onResend}
+                                            resendTimer={resendTimer}
                                         />
                                     </div>
                                 ) : (
@@ -149,21 +151,6 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
                                             </>
                                         )}
                                     </button>
-                                    <div className="flex items-center justify-center">
-                                        <button
-                                            type="button"
-                                            onClick={onResend}
-                                            disabled={sendIsPending}
-                                            className="text-xs font-medium text-rosewood/50 hover:text-rosewood transition-colors flex items-center gap-1.5 py-2 min-h-[44px]"
-                                        >
-                                            {sendIsPending ? (
-                                                <div className="w-3.5 h-3.5 border-2 border-rosewood/20 border-t-rosewood rounded-full animate-spin" />
-                                            ) : (
-                                                <span className="material-symbols-outlined text-sm">refresh</span>
-                                            )}
-                                            {resendText}
-                                        </button>
-                                    </div>
                                 </div>
                             )}
                         </div>

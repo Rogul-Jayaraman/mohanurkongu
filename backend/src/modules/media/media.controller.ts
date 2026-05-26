@@ -7,7 +7,8 @@ export class MediaController {
   stream = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const uploadId = req.params.uploadId as string;
-      const result = await this.mediaService.streamMedia(uploadId, req.account.sub);
+      const requesterAccountId = (req as any).account?.sub ?? null;
+      const result = await this.mediaService.streamMedia(uploadId, requesterAccountId);
 
       if ('error' in result) {
         res.status(result.error.status).json({

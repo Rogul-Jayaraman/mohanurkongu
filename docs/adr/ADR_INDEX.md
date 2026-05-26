@@ -16,3 +16,6 @@ This index catalogs all ADRs documented for the Mohanur Kongu Manamaalai platfor
 | ADR-010 | Two-Language Support (Tamil + English) | ACCEPTED | Initial |
 | ADR-011 | Monorepo Structure with Shared Configs | ACCEPTED | Initial |
 | ADR-012 | Docker Compose for Development and Production Deployment | ACCEPTED | Initial |
+| ADR-013 | Single Profile Create Path (No Separate Publish) | ACCEPTED | 2026-05-25 |
+| ADR-014 | Admin Approval Workflow for Profile Activation | ACCEPTED | 2026-05-25 |
+| ADR-015 | Backend Draft Validation Limited to Structural Checks | ACCEPTED | 2026-05-25 |

@@ -1,69 +1,51 @@
 export interface LoginData {
-    identifier: string;
-    password: string;
-    requiredRole?: 'USER' | 'ADMIN';
+  identifier: string;
+  password: string;
 }
 
 export interface SignupData {
-    firstNameEn: string;
-    lastNameEn: string;
-    firstNameTa: string;
-    lastNameTa: string;
-    email: string;
-    phone: string;
-    password: string;
-    confirmPassword?: string;
-    termsAccepted?: boolean;
-    verificationToken?: string;
+  firstNameEn: string;
+  lastNameEn: string;
+  firstNameTa: string;
+  lastNameTa: string;
+  email: string;
+  phone: string;
+  password: string;
+  confirmPassword: string;
+  termsAccepted: boolean;
 }
 
-export const validateLogin = (data: LoginData) => {
-    const errors: Partial<Record<keyof LoginData, string>> = {};
+const nameRegex = /^[A-Za-z\s'.\-]+$/u;
 
-    if (!data.identifier) {
-        errors.identifier = "errors.required";
-    }
+export function validateName(name: string): boolean {
+  return nameRegex.test(name.trim());
+}
 
-    if (!data.password) {
-        errors.password = "errors.required";
-    } else if (data.password.length < 8) {
-        errors.password = "errors.passwordLength";
-    }
+export function validateLogin(data: LoginData) {
+  const errors: Record<string, string> = {};
+  if (!data.identifier?.trim()) errors.identifier = 'VALIDATION_REQUIRED';
+  if (!data.password) errors.password = 'VALIDATION_REQUIRED';
+  return errors;
+}
 
-    return errors;
-};
+export function validateSignupStep(step: number, data: SignupData) {
+  const errors: Record<string, string> = {};
 
-export const validateSignupStep = (step: number, data: SignupData) => {
-    const errors: Partial<Record<keyof SignupData, string>> = {};
+  if (step === 1) {
+    if (!data.firstNameEn?.trim()) errors.firstNameEn = 'VALIDATION_REQUIRED';
+    else if (!validateName(data.firstNameEn)) errors.firstNameEn = 'VALIDATION_NAME_INVALID';
 
-    if (step === 1) {
-        if (!data.firstNameEn) errors.firstNameEn = "errors.required";
-        if (!data.lastNameEn) errors.lastNameEn = "errors.required";
-        if (!data.firstNameTa) errors.firstNameTa = "errors.required";
-        if (!data.lastNameTa) errors.lastNameTa = "errors.required";
+    if (!data.lastNameEn?.trim()) errors.lastNameEn = 'VALIDATION_REQUIRED';
+    if (!data.firstNameTa?.trim()) errors.firstNameTa = 'VALIDATION_REQUIRED';
+    if (!data.lastNameTa?.trim()) errors.lastNameTa = 'VALIDATION_REQUIRED';
+    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.email = 'VALIDATION_INVALID_EMAIL';
+    if (data.phone && !/^\+[\d\s-]+$/.test(data.phone)) errors.phone = 'VALIDATION_INVALID_PHONE';
+    if (!data.password || data.password.length < 8) errors.password = 'VALIDATION_PASSWORD_WEAK';
+    if (data.password !== data.confirmPassword) errors.confirmPassword = 'VALIDATION_PASSWORD_MISMATCH';
+    if (!data.termsAccepted) errors.termsAccepted = 'VALIDATION_REQUIRED';
+  }
 
-        if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-            errors.email = "errors.invalidEmail";
-        }
+  return errors;
+}
 
-        if (data.phone && (data.phone.length < 10 || data.phone.length > 25 || !/^\+[\d\s-]+$/.test(data.phone))) {
-            errors.phone = "errors.invalidPhone";
-        }
 
-        if (!data.password) {
-            errors.password = "errors.required";
-        } else if (data.password.length < 8) {
-            errors.password = "errors.passwordLength";
-        }
-
-        if (data.password !== data.confirmPassword) {
-            errors.confirmPassword = "errors.passwordMismatch";
-        }
-
-        if (!data.termsAccepted) {
-            errors.termsAccepted = "errors.termsRequired";
-        }
-    }
-
-    return errors;
-};

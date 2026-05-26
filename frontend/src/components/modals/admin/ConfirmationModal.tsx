@@ -37,13 +37,13 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     }, [isOpen]);
 
     const colors = {
-        danger: 'bg-red-600 hover:bg-red-700 text-white shadow-red-200',
+        danger: 'bg-rosewood-gradient shadow-rosewood/30 text-ivory hover:brightness-110',
         warning: 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200',
         info: 'bg-gold hover:bg-gold/90 text-white shadow-gold/20'
     };
 
     const iconColors = {
-        danger: 'text-red-500 bg-red-50',
+        danger: 'bg-rosewood-gradient text-ivory',
         warning: 'text-amber-500 bg-amber-50',
         info: 'text-gold bg-gold-soft/20'
     };

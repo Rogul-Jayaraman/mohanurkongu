@@ -165,7 +165,7 @@ const PrintHoroscopeCharts: React.FC<{ profile: any; isTamil: boolean }> = ({ pr
             ? (isTamil ? 'ராசி' : 'RASI')
             : (isTamil ? 'நவாம்சம்' : 'NAVAMSA');
         const hJson = profile.horoscope?.horoscopeJson;
-        if (profile.horoscope?.mode === 'CREATE' && hJson) {
+        if (profile.horoscope?.mode === 'GENERATED' && hJson) {
             const parsed = typeof hJson === 'string' ? JSON.parse(hJson) : hJson as HoroscopeResult;
             const d9Planets = parsed.planets.map((p: PlanetData) => ({...p, signIndex: p.navamsaSignIndex}));
             const isRasi = type === 'rasi';
@@ -181,7 +181,7 @@ const PrintHoroscopeCharts: React.FC<{ profile: any; isTamil: boolean }> = ({ pr
         return (
             <div className="flex flex-col items-center">
                 <span className="text-[9px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{label}</span>
-                {profile.horoscope?.mode === 'CREATE' ? (
+                {profile.horoscope?.mode === 'GENERATED' ? (
                     <div className="w-[260px] h-[260px] bg-white border border-gray-200 print-chart-box">
                         <SouthIndianChart lagnaSignIndex={0} planets={[]} rotateHouses={type === 'rasi'} />
                     </div>
@@ -472,7 +472,7 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
                         <div className="flex justify-center items-start gap-6">
                             {(() => {
                                 const hJson = profile.horoscope?.horoscopeJson;
-                                if (profile.horoscope?.mode === 'CREATE' && hJson) {
+                                if (profile.horoscope?.mode === 'GENERATED' && hJson) {
                                     const parsed = typeof hJson === 'string' ? JSON.parse(hJson) : hJson as HoroscopeResult;
                                     const d9Planets = parsed.planets.map((p: PlanetData) => ({...p, signIndex: p.navamsaSignIndex}));
                                     return (

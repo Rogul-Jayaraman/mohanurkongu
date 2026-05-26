@@ -17,6 +17,7 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 export interface ProfileDraft {
+  profileId?: string;
   basic: Record<string, unknown>;
   community: Record<string, unknown>;
   professional: Record<string, unknown>;

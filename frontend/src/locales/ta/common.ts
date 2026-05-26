@@ -211,6 +211,16 @@ export const commonTa = {
       fri: "வெள்ளி",
       sat: "சனி"
     },
+    daysShort: {
+      sun: "ஞா",
+      mon: "தி",
+      tue: "செ",
+      wed: "பு",
+      thu: "வி",
+      fri: "வெ",
+      sat: "ச"
+    },
+    select_year: "வருடத்தை தேர்ந்தெடுக்கவும்",
     notFound: {
       meta: {
         title: "பக்கம் கிடைக்கவில்லை - மோகனூர் கொங்கு",

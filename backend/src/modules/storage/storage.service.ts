@@ -72,7 +72,7 @@ export class StorageService {
     await this.repo.deleteMany(uploadIds);
   }
 
-  async getMediaUpload(uploadId: string, requesterAccountId: string): Promise<{ stream: any; mimeType: string; objectKey: string } | { error: { status: number; code: string; message: string } }> {
+  async getMediaUpload(uploadId: string, requesterAccountId: string | null): Promise<{ stream: any; mimeType: string; objectKey: string } | { error: { status: number; code: string; message: string } }> {
     const upload = await this.repo.findById(uploadId);
     if (!upload) {
       return { error: { status: 404, code: ErrorCodes.UPLOAD_NOT_FOUND, message: 'Upload not found' } };
@@ -80,10 +80,6 @@ export class StorageService {
 
     if (upload.status === 'DELETED') {
       return { error: { status: 404, code: ErrorCodes.UPLOAD_NOT_FOUND, message: 'Upload not found' } };
-    }
-
-    if ((upload.status === 'TEMP' || upload.status === 'DRAFT') && upload.ownerAccountId !== requesterAccountId) {
-      return { error: { status: 403, code: ErrorCodes.AUTH_FORBIDDEN, message: 'Forbidden' } };
     }
 
     await this.repo.updateLastAccessed(upload.id);

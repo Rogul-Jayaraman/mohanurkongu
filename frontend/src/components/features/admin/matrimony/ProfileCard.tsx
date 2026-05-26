@@ -96,7 +96,10 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
     };
 
     const resolveImageUrl = (url: string | null | undefined) => {
-        return (url && /^https?:\/\//i.test(url)) ? url : renderPlaceholderImage();
+        if (!url) return renderPlaceholderImage();
+        if (/^https?:\/\//i.test(url)) return url;
+        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+        return `${API_BASE}/media/${url}`;
     };
 
     return (

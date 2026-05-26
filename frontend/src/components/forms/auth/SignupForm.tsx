@@ -122,10 +122,11 @@ export const SignupOtpForm: React.FC<{
     isOTPVerified: boolean;
     verifyIsPending: boolean;
     sendIsPending: boolean;
+    otpTimer: number;
     onOTPChange: (value: string) => void;
     onVerifyOTP: () => void;
     onResendOTP: () => void;
-}> = ({ otpLabel, otpBtnText, verifyingText, otpVerifySuccessText, otpInfoText, resendText, value, error, isOTPVerified, verifyIsPending, sendIsPending, onOTPChange, onVerifyOTP, onResendOTP }) => (
+}> = ({ otpLabel, otpBtnText, verifyingText, otpVerifySuccessText, otpInfoText, resendText, value, error, isOTPVerified, verifyIsPending, sendIsPending, otpTimer, onOTPChange, onVerifyOTP, onResendOTP }) => (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
         <label className="block text-xs font-bold text-rosewood tracking-tight px-1">
             {otpLabel}
@@ -135,6 +136,8 @@ export const SignupOtpForm: React.FC<{
                 value={value}
                 onChange={onOTPChange}
                 error={error}
+                onResend={onResendOTP}
+                resendTimer={otpTimer}
             />
             {!isOTPVerified ? (
                 <button
@@ -163,20 +166,11 @@ export const SignupOtpForm: React.FC<{
             )}
         </div>
         {!isOTPVerified && (
-            <div className="flex items-center justify-between px-1">
+            <div className="flex items-center px-1">
                 <p className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
                     <span className="material-symbols-outlined text-[12px]">info</span>
                     {otpInfoText}
                 </p>
-                <button
-                    type="button"
-                    onClick={onResendOTP}
-                    disabled={sendIsPending}
-                    className="text-[10px] font-bold text-rosewood hover:text-gold transition-colors flex items-center gap-1 uppercase tracking-tighter"
-                >
-                    {sendIsPending ? <LoadingSpinner size="sm" color="rosewood" /> : <span className="material-symbols-outlined text-[12px]">refresh</span>}
-                    {resendText}
-                </button>
             </div>
         )}
     </form>

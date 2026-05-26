@@ -4,11 +4,6 @@ import { getAccessToken, setAccessToken, clearAccessToken } from './session';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
-function getCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
-  return match ? decodeURIComponent(match[2]) : null;
-}
-
 interface FailedRequest {
   resolve: (token: string) => void;
   reject: (err: unknown) => void;
@@ -50,10 +45,6 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   }
   if (config.headers) {
     config.headers['Accept-Language'] = localStorage.getItem('language') || 'en';
-    const csrfToken = getCookie('csrf-token');
-    if (csrfToken) {
-      config.headers['x-csrf-token'] = csrfToken;
-    }
   }
   return config;
 });

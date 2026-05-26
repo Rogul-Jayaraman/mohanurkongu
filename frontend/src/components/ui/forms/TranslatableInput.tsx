@@ -15,6 +15,7 @@ interface TranslatableInputProps {
     icon?: string;
     autoFormat?: boolean;
     hideLangSwitcher?: boolean;
+    onBlur?: () => void;
 }
 
 /**
@@ -37,7 +38,8 @@ const TranslatableInput: React.FC<TranslatableInputProps> = ({
     error,
     icon = 'edit_note',
     autoFormat = false,
-    hideLangSwitcher = true
+    hideLangSwitcher = true,
+    onBlur,
 }) => {
     const { language } = useLanguage();
     const [activeScript, setActiveScript] = React.useState<'en' | 'ta'>(language === 'en' ? 'en' : 'ta');
@@ -91,7 +93,7 @@ const TranslatableInput: React.FC<TranslatableInputProps> = ({
                 value={activeScript === 'en' ? valueEn : valueTa}
                 targetLanguage={activeScript === 'ta' ? 'ta' : undefined}
                 onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
+                onBlur={() => { setIsFocused(false); onBlur?.(); }}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const val = e.target.value;
                     if (activeScript === 'en') {

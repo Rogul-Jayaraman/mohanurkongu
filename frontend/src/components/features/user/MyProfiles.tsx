@@ -6,7 +6,8 @@ import { UserProfileCard, UserProfileCardSkeleton } from '@/components/features/
 import { SearchBar } from '@/components/ui/SearchBar';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { useTranslation } from 'react-i18next';
-import { stubFetchMyProfiles, stubToggleProfileStatus, stubDeleteProfile } from '@/utils/stubs';
+import { fetchMyProfiles, deleteDraft } from '@/api/profile.api';
+import { indexedDBStorage } from '@/lib/indexeddb';
 import { ConfirmationModal } from '@/modals/user/ConfirmationModal';
 import { toast } from 'sonner';
 
@@ -73,9 +74,8 @@ const MyProfiles: React.FC = () => {
     const { t } = useTranslation(['myprofiles', 'common']);
     const [profiles, setProfiles] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [togglePending, setTogglePending] = useState(false);
     const [deletePending, setDeletePending] = useState(false);
-    useEffect(() => { stubFetchMyProfiles().then(setProfiles).finally(() => setLoading(false)); }, []);
+    useEffect(() => { fetchMyProfiles().then(setProfiles).catch(() => toast.error(t('myprofiles:error_fetching'))).finally(() => setLoading(false)); }, []);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [profileToDelete, setProfileToDelete] = useState<string | null>(null);
@@ -88,7 +88,10 @@ const MyProfiles: React.FC = () => {
         return pName.includes(search) || pRegNo.includes(search);
     }) || [];
 
-    const handleCreateNew = () => { navigate('/manamaalai/new-profile'); };
+    const handleCreateNew = async () => {
+        await indexedDBStorage.clearDraft();
+        navigate('/manamaalai/new-profile');
+    };
     const handleCompleteProfile = (id: string) => { navigate(`/manamaalai/new-profile?id=${id}`); };
     const hasAnyProfiles = (profiles || []).length > 0;
     const isSearching = searchQuery.trim().length > 0;
@@ -96,7 +99,8 @@ const MyProfiles: React.FC = () => {
     const confirmDelete = () => {
         if (profileToDelete) {
             setDeletePending(true);
-            stubDeleteProfile(profileToDelete).then(() => {
+            deleteDraft(profileToDelete).then(() => {
+                setProfiles(prev => prev.filter(p => p.id !== profileToDelete));
                 toast.success(t('common:delete_success') || 'Profile deleted successfully');
                 setProfileToDelete(null);
             }).catch(() => {
@@ -150,17 +154,8 @@ const MyProfiles: React.FC = () => {
                                                 profile={p}
                                                 isOwnProfile={true}
                                                 variant="myprofiles"
-                                                onToggleStatus={async (id: string, newStatus: string) => {
-                                                    try {
-                                                        setTogglePending(true);
-                                                        await stubToggleProfileStatus({ id, status: newStatus }).finally(() => setTogglePending(false));
-                                                        toast.success(newStatus === 'ACTIVE' ? 'Profile activated' : 'Profile deactivated');
-                                                    } catch {
-                                                        toast.error('Failed to update profile status');
-                                                    }
-                                                }}
-                                                onDelete={(id: string) => setProfileToDelete(id)}
-                                                onComplete={handleCompleteProfile}
+                                                onDelete={p.status === 'DRAFT' ? (id: string) => setProfileToDelete(id) : undefined}
+                                                onComplete={p.status === 'DRAFT' ? handleCompleteProfile : undefined}
                                             />
                                         </motion.div>
                                     ))}

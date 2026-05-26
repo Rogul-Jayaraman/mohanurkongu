@@ -20,34 +20,72 @@ export class ProfileRepository {
     });
   }
 
-  async findDraftByAccountId(accountId: string) {
+  async findPendingById(profileId: string) {
     return prisma.profile.findFirst({
-      where: { accountId, currentStatus: 'DRAFT' },
+      where: { id: profileId, currentStatus: 'PENDING' },
+    });
+  }
+
+  async findProfileById(profileId: string) {
+    return prisma.profile.findUnique({ where: { id: profileId } });
+  }
+
+  async findAllByAccountId(accountId: string) {
+    return prisma.profile.findMany({
+      where: { accountId, currentStatus: { not: 'DELETED' } },
+      orderBy: { updatedAt: 'desc' },
       include: {
-        basic: true,
-        community: true,
-        professional: true,
+        basic: {
+          include: {
+            profileFor: true,
+            height: true,
+            currentLocation: { include: { district: true, taluk: true } },
+            nativeLocation: { include: { district: true, taluk: true } },
+          },
+        },
+        community: { include: { community: true, caste: true, kulam: true } },
+        professional: { include: { jobSector: true } },
         family: true,
-        horoscope: true,
-        photo: { include: { gallery: true } },
-        assets: true,
-        partnerPreference: true,
+        photo: { include: { primaryUpload: true } },
         translations: true,
       },
     });
   }
 
-  async findActiveByAccountId(accountId: string) {
-    return prisma.profile.findFirst({
-      where: { accountId, currentStatus: 'ACTIVE' },
+  async findFullWithDetails(profileId: string) {
+    return prisma.profile.findUnique({
+      where: { id: profileId },
+      include: {
+        basic: {
+          include: {
+            profileFor: true,
+            height: true,
+            currentLocation: { include: { district: true, taluk: true } },
+            nativeLocation: { include: { district: true, taluk: true } },
+          },
+        },
+        community: { include: { community: true, caste: true, kulam: true } },
+        professional: { include: { jobSector: true } },
+        family: true,
+        horoscope: { include: { rasi: true, nakshatra: true, lagna: true } },
+        photo: { include: { primaryUpload: true, gallery: { include: { upload: true } } } },
+        assets: true,
+        partnerPreference: true,
+        translations: true,
+        history: { orderBy: { createdAt: 'desc' }, take: 5 },
+      },
     });
   }
 
-  async ensureProfile(tx: any, accountId: string, status: ProfileStatus) {
-    return tx.profile.upsert({
-      where: { accountId },
-      create: { accountId, currentStatus: status, visibility: 'PRIVATE' },
-      update: { currentStatus: status, updatedAt: new Date() },
+  async findDraftById(tx: any, profileId: string, accountId: string) {
+    return tx.profile.findFirst({
+      where: { id: profileId, accountId, currentStatus: 'DRAFT' },
+    });
+  }
+
+  async createProfile(tx: any, accountId: string, status: ProfileStatus) {
+    return tx.profile.create({
+      data: { accountId, currentStatus: status, visibility: 'PRIVATE' },
     });
   }
 

@@ -58,16 +58,21 @@ export const useProfileUtils = () => {
             const translatedT = tKey ? TALUK_TAMIL[tKey] : undefined;
 
             const d = (translatedD === 'மற்றவை' || translatedD === 'OTHER') ? (districtTa || districtEn) : (translatedD || districtTa || districtEn);
-            const t_ = (talukTa || cityTa || talukEn || cityEn || translatedT);
+            const t_ = (translatedT || talukTa || cityTa || talukEn || cityEn);
             
-            // Format as "Taluk, District" as requested
+            if (translatedD === 'மற்றவை' || translatedD === 'OTHER') {
+                return [cityTa || cityEn, stateTa || stateEn, countryTa || countryEn].filter(Boolean).join(', ');
+            }
             return [t_, d].filter(Boolean).join(', ');
         }
 
         const d = districtEn;
         const t_ = talukEn || cityEn;
         
-        // Format as "Taluk, District" as requested, and apply title case for English
+        if (districtEn === 'OTHER') {
+            return [cityEn, stateEn, countryEn].filter(Boolean).join(', ');
+        }
+        
         return [toTitleCase(t_), toTitleCase(d)].filter(Boolean).join(', ');
     };
 

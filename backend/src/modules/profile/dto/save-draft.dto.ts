@@ -1,27 +1,46 @@
 import { z } from 'zod';
 
+const basicSchema = z.object({
+  profileFor: z.string().nullable().optional(),
+  gender: z.string().nullable().optional(),
+  dob: z.string().nullable().optional(),
+  diet: z.string().nullable().optional(),
+  bloodGroup: z.string().nullable().optional(),
+  height: z.number().nullable().optional(),
+  weight: z.number().nullable().optional(),
+  complexion: z.string().nullable().optional(),
+  maritalStatus: z.string().nullable().optional(),
+  currentDistrict: z.string().nullable().optional(),
+  currentTaluk: z.string().nullable().optional(),
+  currentCityEn: z.string().nullable().optional(),
+  currentCityTa: z.string().nullable().optional(),
+  currentStateEn: z.string().nullable().optional(),
+  currentStateTa: z.string().nullable().optional(),
+  currentCountryEn: z.string().nullable().optional(),
+  currentCountryTa: z.string().nullable().optional(),
+  nativeDistrict: z.string().nullable().optional(),
+  nativeTaluk: z.string().nullable().optional(),
+  nativeCityEn: z.string().nullable().optional(),
+  nativeCityTa: z.string().nullable().optional(),
+  nativeStateEn: z.string().nullable().optional(),
+  nativeStateTa: z.string().nullable().optional(),
+  nativeCountryEn: z.string().nullable().optional(),
+  nativeCountryTa: z.string().nullable().optional(),
+});
+
+const translationSchema = z.object({
+  language: z.enum(['EN', 'TA']),
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  kuladeivam: z.string().nullable().optional(),
+  fatherName: z.string().nullable().optional(),
+  motherName: z.string().nullable().optional(),
+  jobLocation: z.string().nullable().optional(),
+});
+
 export const saveDraftSchema = z.object({
-  basic: z.object({
-    profileFor: z.string().nullable().optional(),
-    gender: z.string().nullable().optional(),
-    dob: z.string().nullable().optional(),
-    diet: z.string().nullable().optional(),
-    bloodGroup: z.string().nullable().optional(),
-    height: z.number().nullable().optional(),
-    weight: z.number().nullable().optional(),
-    complexion: z.string().nullable().optional(),
-    maritalStatus: z.string().nullable().optional(),
-    currentDistrict: z.string().nullable().optional(),
-    currentTaluk: z.string().nullable().optional(),
-    currentCityEn: z.string().nullable().optional(),
-    currentCityTa: z.string().nullable().optional(),
-    currentStateEn: z.string().nullable().optional(),
-    currentStateTa: z.string().nullable().optional(),
-    currentCountryEn: z.string().nullable().optional(),
-    currentCountryTa: z.string().nullable().optional(),
-    nativeDistrict: z.string().nullable().optional(),
-    nativeTaluk: z.string().nullable().optional(),
-  }).nullable().optional(),
+  profileId: z.string().uuid().optional(),
+  basic: basicSchema.nullable().optional(),
   community: z.object({
     community: z.string().nullable().optional(),
     communityId: z.number().nullable().optional(),
@@ -53,9 +72,7 @@ export const saveDraftSchema = z.object({
     noOfSister: z.number().nullable().optional(),
   }).nullable().optional(),
   horoscope: z.object({
-    mode: z.string().nullable().optional(),
-    birthTime: z.string().nullable().optional(),
-    birthPlace: z.string().nullable().optional(),
+    mode: z.enum(['GENERATED', 'UPLOADED']).nullable().optional(),
     rasi: z.string().nullable().optional(),
     nakshatra: z.string().nullable().optional(),
     lagna: z.string().nullable().optional(),
@@ -89,13 +106,33 @@ export const saveDraftSchema = z.object({
     preferredLocationEn: z.string().nullable().optional(),
     preferredLocationTa: z.string().nullable().optional(),
   }).nullable().optional(),
-  translations: z.array(z.object({
-    language: z.enum(['EN', 'TA']),
-    firstName: z.string().nullable().optional(),
-    lastName: z.string().nullable().optional(),
-    kuladeivam: z.string().nullable().optional(),
-    fatherName: z.string().nullable().optional(),
-    motherName: z.string().nullable().optional(),
-    jobLocation: z.string().nullable().optional(),
-  })).optional(),
+  translations: z.array(translationSchema).optional(),
+}).superRefine((data, ctx) => {
+  const basic = data.basic;
+  const translations = data.translations;
+
+  const hasFirstName = translations?.some(t => t.firstName && t.firstName.trim().length > 0);
+  if (!hasFirstName) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Step 1 incomplete: at least one translation must have a firstName',
+      path: ['translations'],
+    });
+  }
+
+  if (!basic?.gender) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Step 1 incomplete: gender is required',
+      path: ['basic', 'gender'],
+    });
+  }
+
+  if (!basic?.dob) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Step 1 incomplete: date of birth is required',
+      path: ['basic', 'dob'],
+    });
+  }
 });

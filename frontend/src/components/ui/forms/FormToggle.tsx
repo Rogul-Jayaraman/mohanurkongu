@@ -1,20 +1,21 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
+type ToggleOption = {
+    value: string;
+    label: string | { en: string; ta: string };
+    labelTa?: string;
+};
+
 interface FormToggleProps {
     label: string;
     value: string;
     onChange: (value: string) => void;
-    options: Array<{
-        value: string;
-        label: {
-            en: string;
-            ta: string;
-        };
-    }>;
+    options: ToggleOption[];
     required?: boolean;
     name: string;
     error?: string;
+    onBlur?: () => void;
 }
 
 /**
@@ -28,7 +29,8 @@ const FormToggle: React.FC<FormToggleProps> = ({
     options,
     required,
     name,
-    error
+    error,
+    onBlur
 }) => {
     const { i18n } = useTranslation();
     const lang = i18n.language as 'en' | 'ta';
@@ -94,9 +96,10 @@ const FormToggle: React.FC<FormToggleProps> = ({
                             onChange={(e) => onChange(e.target.value)}
                             className="hidden"
                             tabIndex={-1}
+                            onBlur={onBlur}
                         />
                         <span className="text-xs font-black tracking-wider whitespace-nowrap">
-                            {opt.label[lang] || opt.label.en}
+                            {typeof opt.label === 'object' ? (opt.label[lang] || opt.label.en) : (lang === 'ta' && opt.labelTa ? opt.labelTa : opt.label)}
                         </span>
                     </label>
                 ))}

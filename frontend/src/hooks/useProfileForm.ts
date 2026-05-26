@@ -2,7 +2,9 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Profile } from '../types/profile';
 import { useInputFormatting, type InputFormattingMode } from './useInputFormatting';
 import { useIndexedDB } from './useIndexedDB';
+import { indexedDBStorage } from '../lib/indexeddb';
 import { formToDraft, draftToForm } from '../adapters/profile.adapter';
+import { getMinDobDate, getMaxDobDate, validateField, validateStepAtNav } from '../validation/profile-schema';
 
 export const DEFAULT_FORM_DATA = {
     profileFor: 'MYSELF',
@@ -16,19 +18,25 @@ export const DEFAULT_FORM_DATA = {
     fatherIsLate: false,
     motherIsLate: false,
     status: 'ACTIVE' as any,
-    astrology: { mode: 'none' }
+    astrology: { mode: 'none' },
+    residence: '',
 };
 
 export const useProfileForm = () => {
     const { formatValue } = useInputFormatting();
     const [isDirty, setIsDirty] = useState(false);
     const [formData, setFormData] = useState<Partial<Profile>>({ ...DEFAULT_FORM_DATA });
-    const { data: draftData, isLoaded, hydrate, persist, update } = useIndexedDB();
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+    const [stepErrors, setStepErrors] = useState<Record<number, string[]>>({});
+    const { data: draftData, isLoaded, hydrate, update } = useIndexedDB();
     const formDataRef = useRef(formData);
     formDataRef.current = formData;
 
     useEffect(() => {
         if (isLoaded && draftData) {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('draft') || params.has('id')) return;
             const restored = draftToForm(draftData);
             setFormData(prev => ({ ...DEFAULT_FORM_DATA, ...restored }));
             setIsDirty(false);
@@ -65,15 +73,14 @@ export const useProfileForm = () => {
         const current = formDataRef.current;
         if (!current) return;
         const draft = formToDraft(current as any);
+        await indexedDBStorage.saveDraft(draft);
         update(draft);
-        await persist();
-    }, [persist, update]);
+    }, [update]);
 
     const restoreDraft = useCallback((draftData: any) => {
         if (!draftData) return;
-        const toLocalDateStr = (d: Date) => { const offset = d.getTimezoneOffset(); const local = new Date(d.getTime() - offset * 60000); return local.toISOString().split('T')[0]; };
-        const maxDobDate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 21); return toLocalDateStr(d); })();
-        const minDobDate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 40); return toLocalDateStr(d); })();
+        const minDobDate = getMinDobDate();
+        const maxDobDate = getMaxDobDate();
         const rawDob = draftData.basic?.dob || draftData.personal?.dob;
         const validDob = rawDob && rawDob >= minDobDate && rawDob <= maxDobDate ? rawDob : undefined;
         const restored = {
@@ -91,8 +98,39 @@ export const useProfileForm = () => {
         setIsDirty(false);
     }, []);
 
+    const markTouched = useCallback((field: string) => {
+        setTouchedFields(prev => {
+            if (prev.has(field)) return prev;
+            const next = new Set(prev);
+            next.add(field);
+            return next;
+        });
+        setTimeout(() => {
+            const error = validateField(field, formDataRef.current[field as keyof Profile]);
+            setFieldErrors(prev => {
+                const next = { ...prev };
+                if (error) next[field] = error;
+                else delete next[field];
+                return next;
+            });
+        }, 0);
+    }, []);
+
+    const validateStepOnNav = useCallback((step: number): string[] => {
+        const { fieldErrors: errors } = validateStepAtNav(step, formDataRef.current);
+        const errorList = Object.values(errors);
+        setFieldErrors(prev => ({ ...prev, ...errors }));
+        if (errorList.length > 0) {
+            setStepErrors(prev => ({ ...prev, [step]: errorList }));
+        }
+        return errorList;
+    }, []);
+
     const reset = useCallback(() => {
         setFormData({ ...DEFAULT_FORM_DATA });
+        setFieldErrors({});
+        setTouchedFields(new Set());
+        setStepErrors({});
         setIsDirty(false);
     }, []);
 
@@ -106,5 +144,10 @@ export const useProfileForm = () => {
         isDirty,
         setIsDirty,
         formDataRef,
+        fieldErrors,
+        touchedFields,
+        stepErrors,
+        markTouched,
+        validateStepOnNav,
     };
 };

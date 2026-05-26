@@ -14,6 +14,7 @@ interface FormSelectProps {
     disabled?: boolean;
     bilingual?: boolean;
     className?: string;
+    onBlur?: () => void;
 }
 
 /**
@@ -31,7 +32,8 @@ const FormSelect: React.FC<FormSelectProps> = ({
     error,
     disabled = false,
     bilingual = false,
-    className = ''
+    className = '',
+    onBlur
 }) => {
     const { t, i18n } = useTranslation(['common']);
     const lang = i18n.language as 'en' | 'ta';
@@ -46,7 +48,6 @@ const FormSelect: React.FC<FormSelectProps> = ({
 
     return (
         <div className={`space-y-2 ${className}`}>
-            {/* Label */}
             <label className="block text-[11px] sm:text-xs font-bold text-rosewood tracking-tight ml-1">
                 {label}
                 {required && <span className="text-gold ml-1 text-xs">*</span>}
@@ -56,6 +57,7 @@ const FormSelect: React.FC<FormSelectProps> = ({
                 options={options}
                 value={value}
                 onChange={onChange}
+                onBlur={onBlur}
                 placeholder={defaultPlaceholder}
                 disabled={disabled}
                 searchable={options.length > 6}
@@ -63,9 +65,8 @@ const FormSelect: React.FC<FormSelectProps> = ({
                 className="w-full"
             />
 
-            {/* Error Message */}
             {error && (
-                <p className="text-[10px] font-bold text-rose-500 ml-1 mt-1 animate-in fade-in slide-in-from-top-1">
+                <p className="text-[10px] font-bold text-red-500 ml-2 animate-in fade-in slide-in-from-top-1">
                     {error}
                 </p>
             )}

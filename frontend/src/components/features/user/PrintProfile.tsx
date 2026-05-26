@@ -117,7 +117,7 @@ const BiodataJathagam: React.FC<{
         </div>
 
         <div className="grid grid-cols-2 gap-6">
-            {mode === 'CREATE' && horoscope?.horoscopeJson ? (
+            {mode === 'GENERATED' && horoscope?.horoscopeJson ? (
                 (() => {
                     const result = parseHoroscopeData(horoscope.horoscopeJson);
                     const d9Planets = result.planets.map((p: PlanetData) => ({...p, signIndex: p.navamsaSignIndex}));
@@ -141,7 +141,7 @@ const BiodataJathagam: React.FC<{
                     <div className="flex flex-col items-center">
                         <div className="w-full max-w-[280px] chart-container">
                             {horoscope?.rasi ? (
-                                mode === 'CREATE' ? (
+                                mode === 'GENERATED' ? (
                                     <div className="w-full h-full border border-gray-200 bg-white flex items-center justify-center p-2">
                                         <img
                                             src={getImageUrl(horoscope.rasi as string)}
@@ -168,7 +168,7 @@ const BiodataJathagam: React.FC<{
                     <div className="flex flex-col items-center">
                         <div className="w-full max-w-[280px] chart-container">
                             {horoscope?.navamsa ? (
-                                mode === 'CREATE' ? (
+                                mode === 'GENERATED' ? (
                                     <div className="w-full h-full border border-gray-200 bg-white flex items-center justify-center p-2">
                                         <img
                                             src={getImageUrl(horoscope.navamsa as string)}

@@ -10,7 +10,6 @@ import { language } from './common/middleware/language.js';
 import { requestLogger } from './common/middleware/requestLogger.js';
 import { errorHandler } from './common/middleware/errorHandler.js';
 import { requireSession } from './common/middleware/requireAuth.js';
-import { requireCsrf } from './common/middleware/csrf.js';
 import { translate } from './common/utils/translation.js';
 import { ErrorCodes } from './common/errors/ErrorCodes.js';
 import { sendSuccess } from './common/responses/ApiResponse.js';
@@ -89,7 +88,7 @@ export function createApp() {
     origin: appConfig.corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id', 'Accept-Language', 'x-csrf-token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id', 'Accept-Language'],
   }));
 
   app.use(cookieParser(appConfig.cookieSecret));
@@ -174,30 +173,6 @@ export function createApp() {
   app.use(requestId);
   app.use(language);
   app.use(requestLogger);
-
-  // Paths exempt from CSRF (no Bearer token available, e.g. auth flows)
-  const csrfExemptPaths = [
-    '/auth/login',
-    '/auth/register',
-    '/auth/refresh',
-    // Upload/profile routes use CSRF exemption since the client may
-    // not have a CSRF token available when uploading (multipart forms)
-    '/uploads',
-    '/profiles',
-    '/horoscope/generate',
-    '/horoscope/location/search',
-  ];
-
-  app.use((req, res, next) => {
-    const isExempt = csrfExemptPaths.some(p => req.path === p || req.path.startsWith(p + '/'));
-    const hasBearer = req.headers.authorization?.startsWith('Bearer ');
-    if (isExempt || hasBearer) {
-      console.log(`[CSRF] SKIP path=${req.path} exempt=${isExempt} bearer=${hasBearer}`);
-      return next();
-    }
-    console.log(`[CSRF] BLOCK path=${req.path} exempt=${isExempt} bearer=${hasBearer}`);
-    requireCsrf(req, res, next);
-  });
 
   // --- DI ---
   const verificationRepo = new VerificationRepository();

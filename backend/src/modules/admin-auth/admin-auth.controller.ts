@@ -2,7 +2,6 @@ import type { Request, Response, NextFunction } from 'express';
 import { AdminAuthService } from './admin-auth.service.js';
 import { sendSuccess } from '../../common/responses/ApiResponse.js';
 import { getDeviceInfo } from '../../common/utils/device.js';
-import { setCsrfCookie } from '../../common/middleware/csrf.js';
 
 export class AdminAuthController {
   constructor(private adminAuthService: AdminAuthService) {}
@@ -19,8 +18,6 @@ export class AdminAuthController {
         path: '/admin/auth',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
-      setCsrfCookie(res);
-
       sendSuccess(res, {
         accessToken: result.accessToken,
         accountId: result.accountId,

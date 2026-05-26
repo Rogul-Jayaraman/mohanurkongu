@@ -478,7 +478,7 @@ const AdminHoroscopeDetails: React.FC<{
               <div className="aspect-square bg-gold/10 rounded-xl animate-pulse" />
               <div className="aspect-square bg-gold/10 rounded-xl animate-pulse" />
             </div>
-          ) : profile?.horoscope?.mode === 'CREATE' ? (
+          ) : profile?.horoscope?.mode === 'GENERATED' ? (
             (() => {
               const hJson = profile?.horoscope?.horoscopeJson;
               if (hJson) {

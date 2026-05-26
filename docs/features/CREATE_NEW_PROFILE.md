@@ -1,5 +1,8 @@
 # Create New Profile — Complete Documentation
 
+> **Last updated:** 2026-05-25 (Profile Creation Redesign — Phases 1-3)
+> **ADRs:** [ADR-013](../adr/ADR-013.md) (Single Create Path), [ADR-014](../adr/ADR-014.md) (Admin Approval), [ADR-015](../adr/ADR-015.md) (Draft Validation)
+
 ## Table of Contents
 
 1. [Overview](#overview)
@@ -14,6 +17,9 @@
 10. [Error Codes Reference](#error-codes-reference)
 11. [Module Architecture & File Map](#module-architecture--file-map)
 12. [Cleanup Jobs](#cleanup-jobs)
+13. [Validation Matrix](#validation-matrix)
+14. [Security Review](#security-review)
+15. [Migration Impact](#migration-impact)
 
 ---
 
@@ -24,7 +30,7 @@ The "Create New Profile" feature is a 7-step form wizard that allows registered 
 - **Offline draft persistence** via IndexedDB (auto-save on step change, manual save, page unload)
 - **Server-side draft save/resume** (upsert-based, no data loss on partial fills)
 - **Photo upload** with image pipeline processing (resize, checksum)
-- **Idempotent publish** (double-click safe via PublishLog)
+- **Draft → PENDING → Admin approve/reject** workflow (single submit path, no separate publish)
 - **Hard delete** for drafts, **soft delete** for published profiles
 - **1 profile per account** (enforced by `@unique` on `accountId`)
 - **Bilingual** (English + Tamil) via ProfileTranslation
@@ -34,10 +40,13 @@ The "Create New Profile" feature is a 7-step form wizard that allows registered 
 | Principle | Implementation |
 |---|---|
 | No DB writes while typing | IndexedDB is the real-time source of truth |
-| Profile created only on publish | Draft save = upsert; publish = ACTIVE |
-| Uploads happen immediately | TEMP status on upload, transitioned on draft save / publish |
+| Draft ≠ Create | Draft validation is frontend-only; create validates all required fields |
+| Single submission path | `POST /profiles/create` handles both fresh and draft→submit; no separate publish endpoint |
+| Submission → PENDING | Created profiles wait for admin approval before becoming ACTIVE |
+| Permanent regNo | Assigned on create/submit, never draft; persists through rejection/deletion |
+| IndexedDB cleared on success | After successful server save (draft) or create, IndexedDB is cleared |
+| Uploads happen immediately | TEMP status on upload, transitioned on draft save / create |
 | Single transaction | All multi-row ops in `prisma.$transaction` |
-| Idempotent publish | `PublishLog` with unique `idempotencyKey` |
 | Owner-only access | All endpoints verify `req.account.sub` matches ownership |
 
 ---
@@ -50,10 +59,16 @@ The "Create New Profile" feature is a 7-step form wizard that allows registered 
 |---|---|---|---|
 | id | UUID | PK | Auto-generated |
 | accountId | UUID | UNIQUE, FK → accounts | 1:1 with Account |
-| regNo | VARCHAR | UNIQUE, nullable | Format: `{prefix}-{padded}`; set on publish |
-| currentStatus | ProfileStatus | NOT NULL | DRAFT, ACTIVE, INACTIVE, DELETED |
+| regNo | VARCHAR | UNIQUE, nullable | Format: `{prefix}-{padded}`; always set on create, never on draft |
+| currentStatus | ProfileStatus | NOT NULL | DRAFT, PENDING, ACTIVE, INACTIVE, REJECTED, DELETED |
 | visibility | Visibility | NOT NULL | PUBLIC, PRIVATE |
-| activatedAt | TIMESTAMPTZ | nullable | Set on publish |
+| activatedAt | TIMESTAMPTZ | nullable | Set on approval (→ ACTIVE) |
+| approvedAt | TIMESTAMPTZ | nullable | Set when admin approves |
+| approvedBy | UUID | nullable, FK → accounts | Admin who approved |
+| rejectedAt | TIMESTAMPTZ | nullable | Set when admin rejects |
+| rejectedBy | UUID | nullable, FK → accounts | Admin who rejected |
+| rejectionReasonEn | TEXT | nullable | English rejection reason (returned to user) |
+| rejectionReasonTa | TEXT | nullable | Tamil rejection reason (returned to user) |
 | archivedAt | TIMESTAMPTZ | nullable | Set on soft delete |
 
 ### Profile Sections (all 1:1 with Profile, cascade delete)
@@ -95,7 +110,9 @@ The "Create New Profile" feature is a 7-step form wizard that allows registered 
 
 Indexed by: `[ownerAccountId]`, `[status]`, `[publicId]`, `[status, updatedAt]`, `[status, createdAt]`, `[status, lastAccessedAt]`
 
-### PublishLog (`publish_logs`)
+### PublishLog (`publish_logs`) — DEPRECATED
+
+> The `POST /profiles/publish` endpoint has been removed. The `publish_logs` table remains for backward compatibility with existing logs but is no longer written to.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -138,34 +155,46 @@ These are seeded with reference data used by ProfileBasic and related sections:
                     ┌─────────┐
                     │  DRAFT  │
                     └────┬────┘
-                         │ publish
+                         │ create (submit)
                          ▼
                     ┌─────────┐
-           ┌───────│ ACTIVE  │────────┐
-           │       └─────────┘        │
-           │ admin action              │ user archive
-           ▼                           ▼
-     ┌──────────┐              ┌──────────┐
-     │ INACTIVE │              │ DELETED  │ (soft delete)
-     └──────────┘              └──────────┘
+                    │ PENDING │
+                    └────┬────┘
+                    /          \
+             approve            reject
+               ▼                  ▼
+          ┌─────────┐      ┌───────────┐
+          │ ACTIVE  │      │ REJECTED  │
+          └─────────┘      └───────────┘
+               │
+          admin action
+               ▼
+          ┌──────────┐
+          │ INACTIVE │     ┌──────────┐
+          └──────────┘     │ DELETED  │ (soft delete — from any non-draft state)
+                           └──────────┘
 ```
 
 - **DRAFT**: Created via `POST /profiles/draft` (upsert). Not visible to other users. Hard-deleted on request or after 30 days.
-- **ACTIVE**: Created via `POST /profiles/publish`. Visible to other users, assigned regNo.
+- **PENDING**: Created via `POST /profiles/create` (single submission path). Waiting for admin approval. Not visible to other users.
+- **ACTIVE**: Set via admin `POST /admin/profiles/:id/approve`. Visible to other users. regNo already assigned on create (never on draft), persists through status changes.
+- **REJECTED**: Set via admin `POST /admin/profiles/:id/reject`. Returns to user with rejection reason. Can be corrected and re-submitted.
 - **INACTIVE**: Admin action (not yet implemented in API).
 - **DELETED**: Soft delete via `DELETE /profiles/:id`. Status set, `archivedAt` timestamped. Not visible.
 
 ### Upload Status
 
 ```
-TEMP ──→ DRAFT ──→ ACTIVE ──→ DELETED
-  │         │
-  └── deleted ──┘          (if draft deleted)
+TEMP ──→ DRAFT ──────→ ACTIVE ──→ DELETED
+  │         │              │
+  └── deleted ──┘          │ (if draft deleted)
+                           │
+                     PENDING ──→ (same as DRAFT → ACTIVE on approval)
 ```
 
 - **TEMP**: Immediately after upload. Deleted after 24h by cleanup job.
 - **DRAFT**: Transitioned from TEMP when draft is saved with these uploads attached.
-- **ACTIVE**: Transitioned from DRAFT when profile is published.
+- **ACTIVE**: Transitioned from DRAFT/PENDING when profile is approved.
 - **DELETED**: Transitioned from ACTIVE when profile is soft-deleted. Cannot be deleted if already ACTIVE (rejected by service).
 
 ---
@@ -290,17 +319,18 @@ Resume a draft by ID (must own the draft).
 }
 ```
 
-### POST /profiles/publish
+### POST /profiles/create
 
-Publish a draft profile (make it active).
+Submit a profile for admin approval (single path — fresh or draft→submit).
 
 **Auth:** Required (Bearer token)
 **Rate Limit:** 3 per minute
 **Request Body:**
 ```json
 {
-  "draftId": "uuid",
-  "idempotencyKey": "uuid",
+  "firstName": "John",
+  "firstNameTa": "ஜான்",
+  "profileId": "uuid (optional — omitted for fresh, set to draft ID for draft→submit)",
   "agreedToTerms": true
 }
 ```
@@ -310,26 +340,66 @@ Publish a draft profile (make it active).
 {
   "success": true,
   "data": {
-    "regNo": "MKM-000001",
     "profileId": "uuid",
-    "alreadyPublished": false
+    "status": "PENDING"
   }
 }
 ```
 
-**Publish Validation (all required):**
-- Profile exists and is DRAFT status
-- `profile_basic` row exists
+**Create Validation (all required):**
+- Profile exists (if draftId) and is DRAFT status
+- `profile_basic` row exists with all required fields (profileForId, gender, dob, diet, heightId)
 - `profile_communities` row exists
 - `profile_photos` row with `primaryUploadId` set
 - EN translation with `firstName` set
+- `firstName` validated: no symbols or numbers (letters only, supports Unicode for Tamil)
 
 **Flow:**
-1. Load draft with all publish-critical sections
+1. If `profileId` provided, load existing draft; otherwise create fresh profile
 2. Validate all required data present
-3. Generate registration number from Counter table
-4. Transaction: check idempotency (skip if already published), update status to ACTIVE, set regNo + activatedAt, create state history, create PublishLog
-5. Post-transaction: transition uploads from DRAFT → ACTIVE
+3. Generate registration number from Counter table (always; regNo is permanent and survives rejection/deletion)
+4. Transaction: update status to PENDING, set regNo (optional), create state history
+5. Post-transaction: transition uploads from DRAFT → ACTIVE (uploads always become ACTIVE on submit)
+6. Clear IndexedDB on the frontend
+
+### POST /admin/profiles/:id/approve
+
+Approve a PENDING profile (makes it ACTIVE).
+
+**Auth:** Required (Bearer token, `role: ADMIN`)
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "profileId": "uuid",
+    "status": "ACTIVE",
+    "regNo": "MKM-000001"
+  }
+}
+```
+
+**Flow:**
+1. Load profile — must be PENDING status
+2. Transaction: set status to ACTIVE, set regNo (if not already set from create), set approvedAt, approvedBy (admin account ID), create state history
+3. Post-transaction: transition uploads from DRAFT → ACTIVE (if not already)
+
+### POST /admin/profiles/:id/reject
+
+Reject a PENDING profile (returns to user with reason).
+
+**Auth:** Required (Bearer token, `role: ADMIN`)
+**Request Body:**
+```json
+{
+  "reasonEn": "Photos do not meet guidelines",
+  "reasonTa": "புகைப்படங்கள் வழிகாட்டுதல்களை பூர்த்தி செய்யவில்லை"
+}
+```
+
+**Flow:**
+1. Load profile — must be PENDING status
+2. Transaction: set status to REJECTED, set rejectedAt, rejectedBy, rejectionReasonEn, rejectionReasonTa, create state history
 
 ### DELETE /profiles/draft/:id
 
@@ -405,9 +475,11 @@ Serve uploaded files statically.
 
 ---
 
-## Save Draft DTO Schema
+## DTO Schemas
 
-The `saveDraftSchema` (Zod) accepts partial data for all sections:
+### Save Draft (`saveDraftSchema`)
+
+Accepts partial data for all sections — all fields optional:
 
 ```typescript
 {
@@ -668,23 +740,71 @@ User                          Frontend                          Backend         
  │                              ├─ draftToForm(sections)          │                            │
  │  Server draft restored!    │                                 │                            │
  │                              │                                 │                            │
- ├─ Click "Create Profile"    │                                 │                            │
- │  (Step 7 Review)           │                                 │                            │
- │                              ├─ POST /profiles/publish ───────→│                            │
- │                              │                                 ├─ validate required fields  │
- │                              │                                 ├─ generateRegNo()           │
- │                              │                                 ├─ $transaction:             │
- │                              │                                 │   - check idempotency      │
- │                              │                                 │   - update→ACTIVE          │
- │                              │                                 │   - create PublishLog      │
- │                              │                                 │   - create state history   │
- │                              │                                 ├─ bulkTransition(DRAFT→ACTIVE)
- │                              │                                 │←─ { regNo, profileId }    │
- │                              │←─ { regNo, profileId } ────────│                            │
- │                              ├─ clear IndexedDB ──────────────────────────────────────────→│
- │                              │                                 │                            │
- │  Redirect to /my-profiles  │                                 │                            │
+  ├─ Click "Create Profile"    │                                 │                            │
+  │  (Step 7 Review)           │                                 │                            │
+  │                              ├─ POST /profiles/create ───────→│                            │
+  │                              │  { firstName, firstNameTa,     │                            │
+  │                              │    profileId (optional) }      │                            │
+  │                              │                                 ├─ validate required fields  │
+  │                              │                                 ├─ generateRegNo() (if flag) │
+  │                              │                                 ├─ $transaction:             │
+  │                              │                                 │   - update→PENDING         │
+  │                              │                                 │   - create state history   │
+  │                              │                                 ├─ bulkTransition(DRAFT→ACTIVE)
+  │                              │                                 │←─ { profileId, PENDING }  │
+  │                              │←─ { profileId, status } ───────│                            │
+  │                              ├─ clear IndexedDB ──────────────────────────────────────────→│
+  │                              │                                 │                            │
+  │  Redirect to /my-profiles  │                                 │                            │
+  │  (status: PENDING)          │                                 │                            │
+  ```
+
+### Admin Approval Flow
+
 ```
+Admin                         Frontend/API(/admin)           Controller         Service           DB
+  │                                │                            │                  │               │
+  ├─ POST /admin/profiles/        │                            │                  │               │
+  │  :id/approve                   │                            │                  │               │
+  │────────────────────────────────▶│─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─▶│─ ─ ─ ─ ─ ─ ─ ─▶│               │
+  │                                │                            │                  │               │
+  │                                │                            │  1. Load profile │              │
+  │                                │                            │     (PENDING)    │─────────────▶│
+  │                                │                            │                  │               │
+  │                                │                            │  2. $transaction │              │
+  │                                │                            │     - ACTIVE     │─────────────▶│
+  │                                │                            │     - regNo      │              │
+  │                                │                            │     - approvedAt │              │
+  │                                │                            │     - approvedBy │              │
+  │                                │                            │                  │               │
+  │                                │                            │  3. bulkTransition          │
+  │                                │                            │     (→ACTIVE)   │              │
+  │                                │                            │                  │               │
+  │                                │  { status: ACTIVE, regNo } │                  │               │
+  │  { success }                    │◀ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│◀ ─ ─ ─ ─ ─ ─ ─│               │
+  │◀───────────────────────────────│                            │                  │               │
+```
+
+```
+Admin                         Frontend/API(/admin)           Controller         Service           DB
+  │                                │                            │                  │               │
+  ├─ POST /admin/profiles/        │                            │                  │               │
+  │  :id/reject                    │                            │                  │               │
+  │  { reasonEn, reasonTa }        │                            │                  │               │
+  │────────────────────────────────▶│─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─▶│─ ─ ─ ─ ─ ─ ─ ─▶│               │
+  │                                │                            │                  │               │
+  │                                │                            │  1. Load profile │              │
+  │                                │                            │     (PENDING)    │─────────────▶│
+  │                                │                            │                  │               │
+  │                                │                            │  2. $transaction │              │
+  │                                │                            │     - REJECTED   │─────────────▶│
+  │                                │                            │     - rejectedAt │              │
+  │                                │                            │     - rejectedBy │              │
+  │                                │                            │     - reasons    │              │
+  │                                │                            │                  │               │
+  │  { success }                    │◀ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│◀ ─ ─ ─ ─ ─ ─ ─│               │
+  │◀───────────────────────────────│                            │                  │               │
+  ```
 
 ### Resume Flow (from MyProfiles)
 
@@ -712,17 +832,31 @@ User                          Frontend                      Backend
 
 ## Validation Rules
 
-### Publish Validation (backend)
+### Create Validation (backend — `createProfile`)
 
-The `ProfileService.publish()` checks these prerequisites before allowing publish:
+The `ProfileService.createProfile()` checks these prerequisites before allowing submission to PENDING:
 
 | Check | Error Code | Condition |
 |---|---|---|
-| Profile exists and is DRAFT | `PROFILE_NOT_FOUND` | `findFirst(id, accountId, DRAFT)` |
-| Basic section exists | `PROFILE_MISSING_BASIC` | `profile.basic != null` |
+| Profile exists and is DRAFT (if profileId provided) | `PROFILE_NOT_FOUND` | `findFirst(id, accountId, DRAFT)` or fresh |
+| Basic section exists with required fields | `PROFILE_MISSING_BASIC` | `profile.basic != null` |
 | Community section exists | `PROFILE_MISSING_COMMUNITY` | `profile.community != null` |
 | Primary photo uploaded | `PROFILE_MISSING_PHOTO` | `profile.photo?.primaryUploadId != null` |
 | EN translation with firstName | `PROFILE_MISSING_DEFAULT_TRANSLATION` | `enTranslation?.firstName != null` |
+| firstName valid (no symbols/numbers) | `PROFILE_NAME_INVALID` | `regex(/^[\p{L}\s'-]+$/u)` |
+
+### Draft Validation (backend — `saveDraft`)
+
+The backend `saveDraft` performs **NO business completeness validation**. It only performs structural validation:
+
+| Check | Type | Rule |
+|---|---|---|
+| FK reference check | Structural | If `casteId` provided without `communityId`, silently skip (no throw) |
+| Upload ownership | Structural | Validates upload IDs belong to the requesting account |
+| Zod schema | Structural | Type/format validation only; all fields optional |
+| Business rules | None | Left entirely to frontend validation |
+
+> **Rationale:** Drafts are partial by nature. Business validation (required fields, cross-field rules) happens on the frontend before the user clicks "Submit." This follows [ADR-015](../adr/ADR-015.md).
 
 ### Upload Validation (backend)
 
@@ -750,14 +884,18 @@ All draft/profile operations verify `req.account.sub` matches the resource owner
 | HTTP | Code | When |
 |---|---|---|
 | 404 | `PROFILE_NOT_FOUND` | Draft or profile not found / not owned |
-| 400 | `PROFILE_MISSING_BASIC` | Publish attempted without basic section |
-| 400 | `PROFILE_MISSING_COMMUNITY` | Publish attempted without community section |
-| 400 | `PROFILE_MISSING_PHOTO` | Publish attempted without primary photo |
-| 400 | `PROFILE_MISSING_DEFAULT_TRANSLATION` | Publish attempted without EN firstName |
+| 400 | `PROFILE_MISSING_BASIC` | Submit attempted without basic section |
+| 400 | `PROFILE_MISSING_COMMUNITY` | Submit attempted without community section |
+| 400 | `PROFILE_MISSING_PHOTO` | Submit attempted without primary photo |
+| 400 | `PROFILE_MISSING_DEFAULT_TRANSLATION` | Submit attempted without EN firstName |
+| 400 | `PROFILE_NAME_INVALID` | firstName contains symbols or numbers |
+| 400 | `PROFILE_ALREADY_SUBMITTED` | Attempt to submit a profile that is already PENDING |
+| 400 | `PROFILE_REJECTED` | REJECTED profile cannot be acted on without re-submission |
+| 400 | `PROFILE_WRONG_STATUS` | Operation requires a different profile status |
 | 400 | `PROFILE_ALREADY_ACTIVE` | (reserved) |
 | 403 | `AUTH_FORBIDDEN` | Upload ownership mismatch |
 | 400 | `VALIDATION_ERROR` | Request body fails Zod schema |
-| 429 | `RATE_LIMIT_EXCEEDED` | Publish rate limit hit (3/min) |
+| 429 | `RATE_LIMIT_EXCEEDED` | Create rate limit hit (3/min) |
 
 ### Upload Error Codes
 
@@ -783,11 +921,13 @@ modules/
 ├── profile/
 │   ├── profile.routes.ts       # Route definitions (5 endpoints)
 │   ├── profile.controller.ts   # Express request handlers
-│   ├── profile.service.ts      # Business logic (saveDraft, resumeDraft, publish, delete)
+│   ├── profile.service.ts      # Business logic (saveDraft, resumeDraft, createProfile, approveProfile, rejectProfile, deleteProfile)
 │   ├── profile.repository.ts   # Prisma queries (upsertProfile, findFullById, etc.)
 │   └── dto/
-│       ├── save-draft.dto.ts   # Zod schema for draft save
-│       └── publish.dto.ts      # Zod schema for publish
+│       ├── save-draft.dto.ts      # Zod schema for draft save
+│       ├── create-profile.dto.ts  # Zod schema for create/submit (firstName validation)
+│       ├── approve-profile.dto.ts # Zod schema for admin approval
+│       └── reject-profile.dto.ts  # Zod schema for admin rejection (reasonEn required)
 │
 ├── upload/
 │   ├── upload.routes.ts        # Route definitions (POST/DELETE)
@@ -809,7 +949,7 @@ modules/
 ```
 frontend/src/
 ├── api/
-│   └── profile.api.ts          # 7 API client functions (uploadFile, deleteUpload, saveDraft, resumeDraft, publishProfile, deleteDraft, deleteProfile)
+│   └── profile.api.ts          # 8 API client functions (uploadFile, deleteUpload, saveDraft, resumeDraft, createProfile, approveProfile, rejectProfile, deleteDraft, deleteProfile)
 │
 ├── adapters/
 │   └── profile.adapter.ts      # formToDraft() + draftToForm() transforms
@@ -870,7 +1010,7 @@ Both jobs:
 ## Known Gaps & Limitations
 
 | Gap | Impact |
-|---|---|
+|---|---|---|
 | **Current location not persisted** | `reverseMapBasic()` always sets location fields to `null`. Location data saved during saveDraft but not returned during resumeDraft. |
 | **No "list my profiles" endpoint** | `GET /profiles/my` does not exist. MyProfiles page uses stub. |
 | **No multi-draft support** | Repository uses `findFirst` — one draft + one active per account max. |
@@ -879,3 +1019,127 @@ Both jobs:
 | **No admin restore endpoint** | Soft-deleted profiles cannot be restored via API. |
 | **No partial draft PATCH** | Draft updates always replace full sections (no partial field update). |
 | **Translation Tamil fields not mapped** | `jobLocationTa`, `landTa`, etc. saved via API but set to null on resume. |
+| **No "list pending for review" endpoint** | Admin needs a `GET /admin/profiles/pending` to list profiles awaiting approval. |
+| **No re-submit after rejection** | REJECTED profiles cannot be re-submitted via the existing flow. The user must create a new draft. |
+
+---
+
+## Validation Matrix
+
+### Validation Scope by Operation
+
+| Rule | Frontend (Draft) | Backend (Draft) | Frontend (Submit) | Backend (Create) |
+|---|---|---|---|---|
+| Type/format validation | ✅ Reactive | ✅ Zod schema | ✅ Reactive | ✅ Zod schema |
+| Required fields (basic) | ⚠️ Visual hint only | ❌ Skipped | ✅ Block submit | ✅ Enforced |
+| Required fields (community) | ⚠️ Visual hint only | ❌ Skipped | ✅ Block submit | ✅ Enforced |
+| Required fields (photo) | ⚠️ Visual hint only | ❌ Skipped | ✅ Block submit | ✅ Enforced |
+| firstName no symbols/numbers | ✅ Reactive | ❌ Skipped | ✅ Block submit | ✅ Enforced |
+| FK reference validity | ❌ | ✅ Silent skip on missing | ❌ | ✅ Enforced on create |
+| Upload ownership | ❌ | ✅ Enforced | ❌ | ✅ Enforced |
+| agreedToTerms | ❌ | ❌ | ✅ Checkbox | ✅ Must be true |
+
+### Cross-Field Validation Rules (Frontend — Submit)
+
+| Rule | Fields | Condition |
+|---|---|---|
+| firstName required | translations[EN].firstName | Must be non-empty, no symbols/numbers |
+| firstNameTa required | translations[TA].firstName | Must be non-empty (Tamil script) |
+| DOB must be 18+ | basic.dob | Age >= 18 at submission |
+| Photo required | photos.primaryUploadId | Must have at least one photo |
+| Community required | community.communityId | Must select community |
+| Caste required | community.casteId | Must select caste |
+| Agreed to terms | agreedToTerms | Must be true |
+
+### Rejection Re-submit Rules (Future)
+
+| Rule | Description |
+|---|---|
+| REJECTED → new DRAFT | User creates a new draft (current behavior) |
+| REJECTED → EDIT → re-submit | Future: allow editing REJECTED profile and re-submitting to PENDING |
+
+---
+
+## Security Review
+
+### Threat Model
+
+| Threat | Mitigation | Status |
+|---|---|---|
+| **Draft enumeration** | All draft endpoints require authentication + ownership check | ✅ |
+| **Submit as another user** | Profile ownership verified via `accountId` match | ✅ |
+| **Bypass validation via draft** | Draft has no business validation; create endpoint re-validates all required fields | ✅ |
+| **Admin privilege escalation** | `/admin/profiles/:id/approve` and `/admin/profiles/:id/reject` guarded by `requireRole('ADMIN')` middleware | ✅ |
+| **CSRF on admin actions** | JWT Bearer token required on all admin routes; no cookie-based auth for mutations | ✅ |
+| **Rate limit bypass** | 3 req/min rate limit on `/profiles/create` | ✅ |
+| **IDOR on profile access** | Every profile query includes `accountId` filter for non-admin operations | ✅ |
+| **Approval of non-PENDING** | Service checks `currentStatus === 'PENDING'` before approve/reject | ✅ |
+| **Double-approve / race** | Transaction wraps status check + update; second attempt hits `PROFILE_WRONG_STATUS` | ✅ |
+| **IndexedDB XSS** | IndexedDB only stores serialized form data; no executable content | ✅ |
+
+### Data Exposure
+
+| Risk | Assessment |
+|---|---|
+| **Approval metadata in API response** | `approvedAt`, `approvedBy`, `rejectedAt`, `rejectedBy`, `rejectionReasonEn/Ta` returned only to admin and profile owner |
+| **Rejection reason leak** | `getProfile()` returns `rejectionReasonEn` and `rejectionReasonTa` when status is REJECTED — intentional for user feedback |
+| **PII in logs** | No PII logged in approval/rejection actions; only profileId and status changes |
+
+### Audit Trail
+
+| Event | Recorded In |
+|---|---|
+| Draft save | `profile_state_history` with `fromStatus: null, toStatus: 'DRAFT'` |
+| Submit (→ PENDING) | `profile_state_history` with `fromStatus: 'DRAFT', toStatus: 'PENDING'` |
+| Approve (→ ACTIVE) | `profile_state_history` + `approvedAt`/`approvedBy` on profile |
+| Reject (→ REJECTED) | `profile_state_history` + `rejectedAt`/`rejectedBy`/`reason` on profile |
+| Soft delete | `profile_state_history` + `archivedAt` on profile |
+
+---
+
+## Migration Impact
+
+### Database Migration (`20260525153249_add_rejected_status_and_approval_fields`)
+
+| Change | Type | Impact |
+|---|---|---|
+| `ProfileStatus` enum — added `REJECTED` | Enum value | No existing rows affected; new status used going forward |
+| `profiles` — added `approvedAt` | Column (nullable) | No impact on existing profiles |
+| `profiles` — added `approvedBy` | Column (nullable UUID, FK) | No impact; FK allows null |
+| `profiles` — added `rejectedAt` | Column (nullable) | No impact; only set on rejection |
+| `profiles` — added `rejectedBy` | Column (nullable UUID, FK) | No impact |
+| `profiles` — added `rejectionReasonEn` | Column (nullable TEXT) | No impact |
+| `profiles` — added `rejectionReasonTa` | Column (nullable TEXT) | No impact |
+
+### Schema Compatibility
+
+| Existing Data | With New Schema | Notes |
+|---|---|---|
+| `currentStatus = 'DRAFT'` | Fully compatible | Unchanged |
+| `currentStatus = 'ACTIVE'` | Fully compatible | Unchanged |
+| `currentStatus = 'INACTIVE'` | Fully compatible | Unchanged |
+| `currentStatus = 'DELETED'` | Fully compatible | Unchanged |
+| `publish_logs` table | Deprecated | Table kept for read access; no new writes |
+| Existing drafts in IndexedDB | Compatible | `profileId` field added to `ProfileDraft` interface; older entries work with optional field |
+
+### Application-Level Compatibility
+
+| Component | Change | Backward Compatible? |
+|---|---|---|
+| `POST /profiles/publish` | Removed | ❌ Client MUST use `POST /profiles/create` |
+| `POST /profiles/create` | New endpoint | ✅ |
+| `POST /admin/profiles/:id/approve` | New endpoint | ✅ |
+| `POST /admin/profiles/:id/reject` | New endpoint | ✅ |
+| `profile.api.ts` — `publishProfile` | Removed | ❌ Frontend MUST use `createProfile` |
+| `ProfileVisibility` enum (frontend) | → `ProfileStatus` with `PENDING, REJECTED, DELETED` | ⚠️ Requires frontend recompile |
+| `ProfileDraft` interface (frontend) | Added `profileId` field | ✅ Optional field; existing drafts work |
+| `IndexedDB clear behavior` | Now clears on DRAFT save (not just submit) | ⚠️ Behavior change; existing drafts not affected |
+| `saveDraft` backend | Removed business validation | ⚠️ Drafts with incomplete community data now save silently instead of throwing |
+
+### Rollback Strategy
+
+1. **Database**: Run `npx prisma migrate down` to revert the migration
+2. **Backend**: Revert profile service, controller, routes, DTOs to pre-change state
+3. **Frontend**: Revert `profile.api.ts`, `NewProfile.tsx`, enums, types, validation
+4. **IndexedDB**: Clear `kongu_profile_draft` database on next load (version bump)
+5. **Note**: Any profiles in PENDING or REJECTED status must be handled (reset to DRAFT or deleted) before rollback

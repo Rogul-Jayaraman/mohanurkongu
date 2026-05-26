@@ -1,4 +1,4 @@
-import { ProfileVisibility, VerificationStatus } from './enums';
+import { ProfileStatus, VerificationStatus } from './enums';
 
 export interface Profile {
   id: string;
@@ -28,6 +28,12 @@ export interface Profile {
   nativeDistrictTa: string | null;
   nativeTaluk: string;
   nativeTalukTa: string | null;
+  nativeCityEn: string | null;
+  nativeCityTa: string | null;
+  nativeStateEn: string | null;
+  nativeStateTa: string | null;
+  nativeCountryEn: string | null;
+  nativeCountryTa: string | null;
   bloodGroup: string;
   height: number;
   weight: number;
@@ -104,19 +110,13 @@ export interface Profile {
   horoscope?: {
     id: string;
     profileId: string;
-    mode: 'CREATE' | 'UPLOAD';
+    mode: 'GENERATED' | 'UPLOADED';
     rasi: any | null;
     navamsa: any | null;
-    horoscopeVersion?: number;
-    birthDate?: string | null;
+    lagna: any | null;
     birthTime?: string | null;
-    birthLocationName?: string | null;
-    birthLatitude?: number | null;
-    birthLongitude?: number | null;
-    timezone?: string | null;
-    ayanamsa?: number | null;
+    birthPlace?: string | null;
     generatedAt?: string | null;
-    generationHash?: string | null;
     horoscopeJson?: any | null;
   };
   horoscopeFile?: File | null;
@@ -133,7 +133,7 @@ export interface Profile {
   verifiedAt?: string | null;
   verifiedBy?: string | null;
 
-  status: ProfileVisibility;
+  status: ProfileStatus;
   adminVerified: VerificationStatus;
   createdAt: string;
   updatedAt: string;

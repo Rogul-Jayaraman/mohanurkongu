@@ -11,9 +11,10 @@ interface HoroscopeResultsProps {
   loading: boolean;
   error: string | null;
   language?: 'en' | 'ta';
+  onRegenerate?: () => void;
 }
 
-export default function HoroscopeResults({ result, loading, error, language }: HoroscopeResultsProps) {
+export default function HoroscopeResults({ result, loading, error, language, onRegenerate }: HoroscopeResultsProps) {
   const { t, i18n } = useTranslation(['profile_new']);
   const lang = language || i18n.language?.slice(0, 2) as 'en' | 'ta' || 'en';
 
@@ -91,6 +92,16 @@ export default function HoroscopeResults({ result, loading, error, language }: H
           <D9Chart planets={result.planets} lagnaNavamsaSignIndex={result.lagnaNavamsa.signIndex} title={t('horoscope.navamsa_chart')} language={lang} />
         </div>
       </section>
+
+      {onRegenerate && (
+        <div className="flex justify-center pt-2">
+          <button type="button" onClick={onRegenerate}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-ivory border border-gold-soft/30 rounded-xl text-sm font-bold text-rosewood/70 hover:text-rosewood hover:border-rosewood/40 transition-all">
+            <span className="material-symbols-outlined text-base">cached</span>
+            <span>{t('profile_new:horoscope.regenerate')}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
