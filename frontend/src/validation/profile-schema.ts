@@ -50,32 +50,32 @@ const PROFILE_FORS = ['MYSELF', 'MY_SON', 'MY_DAUGHTER', 'MY_SISTER', 'MY_BROTHE
 const RESIDENCES = ['OWN_HOUSE', 'RENTED'] as const;
 
 const schemas: Record<string, z.ZodType> = {
-  firstNameEn: z.string().min(NAME_MIN, `First name must be at least ${NAME_MIN} characters`).max(NAME_MAX).regex(nameRegex, 'Name must not contain symbols or numbers'),
-  gender: z.enum(GENDERS, { errorMap: () => ({ message: 'Gender is required' }) }),
-  dob: z.string().min(1, 'Date of birth is required').refine((val) => {
+  firstNameEn: z.string().min(NAME_MIN, `PROFILE_FIRST_NAME_TOO_SHORT:${NAME_MIN}`).max(NAME_MAX, `PROFILE_FIRST_NAME_TOO_LONG:${NAME_MAX}`).regex(nameRegex, 'PROFILE_FIRST_NAME_INVALID'),
+  gender: z.enum(GENDERS, { errorMap: () => ({ message: 'PROFILE_GENDER_REQUIRED' }) }),
+  dob: z.string().min(1, 'PROFILE_DOB_REQUIRED').refine((val) => {
     if (!val) return true;
     const age = calculateAge(val);
     if (age < 0) return true;
     return age >= MIN_AGE && age <= MAX_AGE;
-  }, { message: `Age must be between ${MIN_AGE} and ${MAX_AGE}` }),
-  diet: z.enum(DIETS, { errorMap: () => ({ message: 'Diet is required' }) }),
-  height: z.number({ errorMap: () => ({ message: 'Height is required' }) }).positive().min(HEIGHT_MIN).max(HEIGHT_MAX),
-  weight: z.number().positive().min(WEIGHT_MIN).max(WEIGHT_MAX).optional(),
-  profileFor: z.enum(PROFILE_FORS, { errorMap: () => ({ message: 'Profile for is required' }) }),
-  maritalStatus: z.enum(MARITAL_STATUSES, { errorMap: () => ({ message: 'Marital status is required' }) }),
-  bloodGroup: z.enum(BLOOD_GROUPS, { errorMap: () => ({ message: 'Blood group is required' }) }),
-  currentDistrict: z.string().min(1, 'Current district is required'),
-  nativeDistrict: z.string().min(1, 'Native district is required'),
+  }, { message: `PROFILE_AGE_OUT_OF_RANGE:${MIN_AGE}:${MAX_AGE}` }),
+  diet: z.enum(DIETS, { errorMap: () => ({ message: 'PROFILE_DIET_REQUIRED' }) }),
+  height: z.number({ errorMap: () => ({ message: 'PROFILE_HEIGHT_REQUIRED' }) }).positive(`PROFILE_HEIGHT_INVALID:${HEIGHT_MIN}:${HEIGHT_MAX}`).min(HEIGHT_MIN, `PROFILE_HEIGHT_INVALID:${HEIGHT_MIN}:${HEIGHT_MAX}`).max(HEIGHT_MAX, `PROFILE_HEIGHT_INVALID:${HEIGHT_MIN}:${HEIGHT_MAX}`),
+  weight: z.number().positive(`PROFILE_WEIGHT_INVALID:${WEIGHT_MIN}:${WEIGHT_MAX}`).min(WEIGHT_MIN, `PROFILE_WEIGHT_INVALID:${WEIGHT_MIN}:${WEIGHT_MAX}`).max(WEIGHT_MAX, `PROFILE_WEIGHT_INVALID:${WEIGHT_MIN}:${WEIGHT_MAX}`).optional(),
+  profileFor: z.enum(PROFILE_FORS, { errorMap: () => ({ message: 'PROFILE_PROFILE_FOR_REQUIRED' }) }),
+  maritalStatus: z.enum(MARITAL_STATUSES, { errorMap: () => ({ message: 'PROFILE_MARITAL_STATUS_REQUIRED' }) }),
+  bloodGroup: z.enum(BLOOD_GROUPS, { errorMap: () => ({ message: 'PROFILE_BLOOD_GROUP_REQUIRED' }) }),
+  currentDistrict: z.string().min(1, 'PROFILE_CURRENT_DISTRICT_REQUIRED'),
+  nativeDistrict: z.string().min(1, 'PROFILE_NATIVE_DISTRICT_REQUIRED'),
   nativeTaluk: z.string().optional(),
-  kulam: z.string().min(1, 'Kulam is required'),
-  kuladeivamEn: z.string().min(1, 'At least one of English or Tamil kuladeivam is required'),
-  fatherNameEn: z.string().min(1, 'Father name (English) is required'),
-  motherNameEn: z.string().min(1, 'Mother name (English) is required'),
-  noOfBrothers: z.number().int().min(SIBLING_MIN).max(SIBLING_MAX, `Number of brothers must be between ${SIBLING_MIN} and ${SIBLING_MAX}`),
-  noOfSisters: z.number().int().min(SIBLING_MIN).max(SIBLING_MAX, `Number of sisters must be between ${SIBLING_MIN} and ${SIBLING_MAX}`),
-  residence: z.enum(RESIDENCES, { errorMap: () => ({ message: 'Residence type is required' }) }),
-  primaryUploadId: z.string().min(1, 'Primary photo is required'),
-  agreedToTerms: z.literal(true, { errorMap: () => ({ message: 'You must agree to the terms' }) }),
+  kulam: z.string().min(1, 'PROFILE_KULAM_REQUIRED'),
+  kuladeivamEn: z.string().min(1, 'PROFILE_KULADEIVAM_REQUIRED'),
+  fatherNameEn: z.string().min(1, 'PROFILE_FATHER_NAME_REQUIRED'),
+  motherNameEn: z.string().min(1, 'PROFILE_MOTHER_NAME_REQUIRED'),
+  noOfBrothers: z.number().int('PROFILE_INVALID_SIBLINGS').min(SIBLING_MIN, 'PROFILE_INVALID_SIBLINGS').max(SIBLING_MAX, 'PROFILE_INVALID_SIBLINGS'),
+  noOfSisters: z.number().int('PROFILE_INVALID_SIBLINGS').min(SIBLING_MIN, 'PROFILE_INVALID_SIBLINGS').max(SIBLING_MAX, 'PROFILE_INVALID_SIBLINGS'),
+  residence: z.enum(RESIDENCES, { errorMap: () => ({ message: 'PROFILE_RESIDENCE_REQUIRED' }) }),
+  primaryUploadId: z.string().optional(),
+  agreedToTerms: z.literal(true, { errorMap: () => ({ message: 'PROFILE_TERMS_REQUIRED' }) }),
 };
 
 export const fieldValidators: Record<string, (value: any) => string | null> = {};
@@ -86,14 +86,14 @@ for (const key of Object.keys(schemas)) {
     if (!schema) return null;
     const result = schema.safeParse(value);
     if (result.success) return null;
-    return result.error.errors[0]?.message || 'Invalid value';
+    return result.error.errors[0]?.message || 'PROFILE_INVALID_VALUE';
   };
 }
 
 export const STEP_REQUIRED_FIELDS: Record<number, string[]> = {
-  1: ['firstNameEn', 'gender', 'dob', 'diet', 'height', 'profileFor', 'maritalStatus', 'bloodGroup', 'currentDistrict', 'currentTaluk', 'nativeDistrict', 'nativeTaluk'],
+  1: ['firstNameEn', 'gender', 'dob', 'diet', 'height', 'weight', 'profileFor', 'maritalStatus', 'bloodGroup', 'currentDistrict', 'currentTaluk', 'nativeDistrict', 'nativeTaluk'],
   2: ['kulam', 'kuladeivamEn'],
-  3: ['fatherNameEn', 'motherNameEn'],
+  3: ['fatherNameEn', 'motherNameEn', 'noOfBrothers', 'noOfSisters'],
   4: ['residence'],
   5: [],
    6: [],
@@ -114,43 +114,43 @@ export function validateStepAtNav(step: number, formData: Record<string, any>): 
       const enVal = formData.kuladeivamEn?.trim();
       const taVal = formData.kuladeivamTa?.trim();
       if (!enVal && !taVal) {
-        fieldErrors.kuladeivamEn = 'At least one of English or Tamil kuladeivam is required';
+        fieldErrors.kuladeivamEn = 'PROFILE_KULADEIVAM_REQUIRED';
       }
       continue;
     }
     if (field === 'currentTaluk') {
         if (formData.currentDistrict === 'OTHER') {
             if (!formData.currentCityEn?.trim() && !formData.currentCityTa?.trim()) {
-                fieldErrors.currentCityEn = 'Current city is required';
+                fieldErrors.currentCityEn = 'PROFILE_CURRENT_CITY_REQUIRED';
             }
             if (!formData.currentStateEn?.trim() && !formData.currentStateTa?.trim()) {
-                fieldErrors.currentStateEn = 'Current state is required';
+                fieldErrors.currentStateEn = 'PROFILE_CURRENT_STATE_REQUIRED';
             }
             if (!formData.currentCountryEn?.trim() && !formData.currentCountryTa?.trim()) {
-                fieldErrors.currentCountryEn = 'Current country is required';
+                fieldErrors.currentCountryEn = 'PROFILE_CURRENT_COUNTRY_REQUIRED';
             }
             continue;
         }
         if (!formData.currentTaluk) {
-            fieldErrors.currentTaluk = 'Current taluk is required';
+            fieldErrors.currentTaluk = 'PROFILE_CURRENT_TALUK_REQUIRED';
         }
         continue;
     }
     if (field === 'nativeTaluk') {
         if (formData.nativeDistrict === 'OTHER') {
             if (!formData.nativeCityEn?.trim() && !formData.nativeCityTa?.trim()) {
-                fieldErrors.nativeCityEn = 'Native city is required';
+                fieldErrors.nativeCityEn = 'PROFILE_NATIVE_CITY_REQUIRED';
             }
             if (!formData.nativeStateEn?.trim() && !formData.nativeStateTa?.trim()) {
-                fieldErrors.nativeStateEn = 'Native state is required';
+                fieldErrors.nativeStateEn = 'PROFILE_NATIVE_STATE_REQUIRED';
             }
             if (!formData.nativeCountryEn?.trim() && !formData.nativeCountryTa?.trim()) {
-                fieldErrors.nativeCountryEn = 'Native country is required';
+                fieldErrors.nativeCountryEn = 'PROFILE_NATIVE_COUNTRY_REQUIRED';
             }
             continue;
         }
         if (!formData.nativeTaluk) {
-            fieldErrors.nativeTaluk = 'Native taluk is required';
+            fieldErrors.nativeTaluk = 'PROFILE_NATIVE_TALUK_REQUIRED';
         }
         continue;
     }
@@ -160,10 +160,10 @@ export function validateStepAtNav(step: number, formData: Record<string, any>): 
 
   if (step === 4) {
     if (formData.ageMin != null && formData.ageMax != null && formData.ageMin > formData.ageMax) {
-      fieldErrors.ageRange = 'Minimum age must not exceed maximum age';
+      fieldErrors.ageRange = 'PROFILE_AGE_RANGE_INVALID';
     }
     if (formData.heightMinId != null && formData.heightMaxId != null && formData.heightMinId > formData.heightMaxId) {
-      fieldErrors.heightRange = 'Minimum height must not exceed maximum height';
+      fieldErrors.heightRange = 'PROFILE_HEIGHT_RANGE_INVALID';
     }
   }
 
@@ -171,14 +171,14 @@ export function validateStepAtNav(step: number, formData: Record<string, any>): 
     const astro = formData.astrology || {};
     const mode = astro.mode;
     if (!mode || mode === 'none') {
-      fieldErrors.horoscopeMode = 'Please select a horoscope method';
+      fieldErrors.horoscopeMode = 'PROFILE_HOROSCOPE_MODE_REQUIRED';
     } else if (mode === 'GENERATED') {
       const star = formData.star || astro.star;
       const rasi = formData.rasi || astro.rasi;
       const laganam = formData.laganam || astro.laganam;
-      if (!star) fieldErrors.star = 'Star/Nakshatra is required for generated horoscope';
-      if (!rasi) fieldErrors.rasi = 'Rasi is required for generated horoscope';
-      if (!laganam) fieldErrors.laganam = 'Lagnam is required for generated horoscope';
+      if (!star) fieldErrors.star = 'PROFILE_STAR_REQUIRED';
+      if (!rasi) fieldErrors.rasi = 'PROFILE_RASI_REQUIRED';
+      if (!laganam) fieldErrors.laganam = 'PROFILE_LAGANAM_REQUIRED';
     }
   }
 

@@ -50,8 +50,6 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
     );
 
     const regNo = profile.regNo || profile.id;
-    const profilePhoto = profile.profilePhoto || profile.photo || (profile.photos && profile.photos[0]);
-
     const createdBy = isTamil ? profile.createdByTa : profile.createdByEn;
 
     const getCommunityLabel = () => {
@@ -97,10 +95,13 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
 
     const resolveImageUrl = (url: string | null | undefined) => {
         if (!url) return renderPlaceholderImage();
-        if (/^https?:\/\//i.test(url)) return url;
+        if (/^(https?:\/\/|\/media\/)/i.test(url)) return url;
         const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
         return `${API_BASE}/media/${url}`;
     };
+
+    const profilePhoto = profile.profilePhoto || profile.photo || (profile.photos && profile.photos[0]);
+    const profilePhotoUrl = typeof profilePhoto === 'string' ? resolveImageUrl(profilePhoto) : profilePhoto?.url || '';
 
     return (
         <div className="p-3.5 rounded-3xl shadow-sm flex flex-col sm:flex-row gap-5 bg-white border border-gold/10 hover:border-gold/30 hover:shadow-xl transition-all duration-500 relative group overflow-hidden">
@@ -116,7 +117,7 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
                 <LazyImage
                     alt={fullName}
                     className="w-full h-full object-cover rounded-[20px] group-hover:scale-105 transition-transform duration-700 ease-out"
-                    src={resolveImageUrl(profilePhoto)}
+                    src={profilePhotoUrl}
                 />
                 <div className="absolute inset-0 kolam-watermark opacity-10 pointer-events-none"></div>
             </div>

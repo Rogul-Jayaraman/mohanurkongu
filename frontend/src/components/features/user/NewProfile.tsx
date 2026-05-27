@@ -13,7 +13,7 @@ import { useKeyboardFormNavigation } from '../../../hooks/useKeyboardFormNavigat
 import { useLanguage } from '../../../context/LanguageContext';
 import { Spinner } from '../../ui/feedback/Spinner';
 import TranslatableInput from '../../ui/forms/TranslatableInput';
-import TranslatableTextarea from '../../ui/forms/TranslatableTextarea';
+import { TextArea } from '../../ui/forms/TextArea';
 import { Input } from '../../ui/forms/Input';
 import DobInput from '../../ui/forms/DobInput';
 import Select from '../../ui/forms/Select';
@@ -125,19 +125,20 @@ const HoroscopeAutoForm: React.FC<{
 const HoroscopeUploadForm: React.FC<{
     onFileUpload: (e: React.ChangeEvent<HTMLInputElement>, target: 'rasi' | 'navamsa' | 'full') => void;
     onFileDelete: (type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => Promise<void>;
-    rasiChartUploadId?: string | null; navamsaChartUploadId?: string | null;
+    rasiChartUploadId?: string | null; rasiChartUploadUrl?: string | null; navamsaChartUploadId?: string | null; navamsaChartUploadUrl?: string | null;
     isUploading?: boolean; uploadingType?: string | null;
     formData: any; updateField: (field: string, val: any) => void;
     fieldErrors?: Record<string, string>;
     touchedFields?: Set<string>; markTouched?: (field: string) => void;
-}> = ({ onFileUpload, onFileDelete, rasiChartUploadId, navamsaChartUploadId, isUploading = false, uploadingType, formData, updateField, fieldErrors = {}, touchedFields = new Set(), markTouched = () => {} }) => {
+}> = ({ onFileUpload, onFileDelete, rasiChartUploadId, rasiChartUploadUrl, navamsaChartUploadId, navamsaChartUploadUrl, isUploading = false, uploadingType, formData, updateField, fieldErrors = {}, touchedFields = new Set(), markTouched = () => {} }) => {
     const { t, i18n } = useTranslation(['profile_new', 'common']);
     const rasiRef = React.useRef<HTMLInputElement>(null);
     const navamsaRef = React.useRef<HTMLInputElement>(null);
     const inputRefs = { rasi: rasiRef, navamsa: navamsaRef };
     const [previewUploadId, setPreviewUploadId] = React.useState<string | null>(null);
+    const [previewUploadUrl, setPreviewUploadUrl] = React.useState<string | null>(null);
 
-    const renderUploadSlot = (type: 'rasi' | 'navamsa', labelKey: string, chartUploadId?: string | null) => {
+    const renderUploadSlot = (type: 'rasi' | 'navamsa', labelKey: string, chartUploadId?: string | null, chartUploadUrl?: string | null) => {
         const isSlotUploading = isUploading && uploadingType === type;
         return (
             <motion.div layout className="flex flex-col items-center gap-3">
@@ -153,10 +154,10 @@ const HoroscopeUploadForm: React.FC<{
                         : 'border-2 border-dashed border-gold-soft/40 bg-ivory/50 hover:bg-ivory hover:border-gold/60'}`}>
                     <div className={`relative overflow-hidden rounded-xl size-44 sm:size-52`}>
                         {chartUploadId ? (
-                            <MediaImage uploadId={chartUploadId} alt={type}
-                                className="w-full h-full object-contain transition-transform duration-700 cursor-pointer"
-                                fallback={<div className="w-full h-full flex items-center justify-center text-slate-300 italic text-xs">Error</div>}
-                                onClick={() => chartUploadId && setPreviewUploadId(chartUploadId)} />
+                            <MediaImage {...(chartUploadUrl ? { image: { url: chartUploadUrl } } : { uploadId: chartUploadId })} alt={type}
+                                                                className="w-full h-full object-contain transition-transform duration-700 cursor-pointer"
+                                                                fallback={<div className="w-full h-full flex items-center justify-center text-slate-300 italic text-xs">Error</div>}
+                                                                onClick={() => { if (chartUploadId) { setPreviewUploadId(chartUploadId); setPreviewUploadUrl(chartUploadUrl || null); } }} />
                         ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-6">
                                 <div className="size-16 rounded-2xl bg-rosewood/5 flex items-center justify-center">
@@ -217,8 +218,8 @@ const HoroscopeUploadForm: React.FC<{
                 <div className="p-8 flex flex-col items-center">
                     <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                         <div className="flex flex-wrap justify-center gap-8">
-                            {renderUploadSlot('rasi', 'rasi_chart_label', rasiChartUploadId)}
-                            {renderUploadSlot('navamsa', 'navamsa_chart_label', navamsaChartUploadId)}
+                            {renderUploadSlot('rasi', 'rasi_chart_label', rasiChartUploadId, rasiChartUploadUrl)}
+                            {renderUploadSlot('navamsa', 'navamsa_chart_label', navamsaChartUploadId, navamsaChartUploadUrl)}
                         </div>
                     </motion.div>
                 </div>
@@ -228,12 +229,12 @@ const HoroscopeUploadForm: React.FC<{
                 {previewUploadId && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-                        onClick={() => setPreviewUploadId(null)}>
+                        onClick={() => { setPreviewUploadId(null); setPreviewUploadUrl(null); }}>
                         <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
                             className="relative max-w-2xl w-full max-h-[90vh] bg-white rounded-2xl overflow-hidden shadow-2xl"
                             onClick={(e) => e.stopPropagation()}>
-                            <MediaImage uploadId={previewUploadId} alt="Preview" className="w-full h-full object-contain max-h-[85vh]" />
-                            <button onClick={() => setPreviewUploadId(null)}
+                            <MediaImage {...(previewUploadUrl ? { image: { url: previewUploadUrl } } : { uploadId: previewUploadId })} alt="Preview" className="w-full h-full object-contain max-h-[85vh]" />
+                            <button onClick={() => { setPreviewUploadId(null); setPreviewUploadUrl(null); }}
                                 className="absolute top-3 right-3 size-9 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
                                 <span className="material-symbols-outlined text-lg">close</span>
                             </button>
@@ -416,7 +417,7 @@ const Step5Horoscope: React.FC<StepProps & { isUploading?: boolean; uploadingTyp
                                     <HoroscopeAutoForm dob={formData.dob} onDobChange={(val) => updateField('dob', val)} birthTime={birthTime} onBirthTimeChange={setBirthTime} birthPlaceName={birthPlace.name} onBirthPlaceChange={setBirthPlace} onGenerate={handleGenerate} isGenerating={isGenerating} />
                                 )
                             ) : (
-                                <HoroscopeUploadForm onFileUpload={handleFileUpload} onFileDelete={onFileDelete} rasiChartUploadId={formData.astrology?.rasiChartUploadId || null} navamsaChartUploadId={formData.astrology?.navamsaChartUploadId || null} isUploading={isUploading} uploadingType={uploadingType} formData={formData} updateField={updateField} fieldErrors={fieldErrors} touchedFields={touchedFields} markTouched={markTouched} />
+                                <HoroscopeUploadForm onFileUpload={handleFileUpload} onFileDelete={onFileDelete} rasiChartUploadId={formData.astrology?.rasiChartUploadId || null} rasiChartUploadUrl={formData.astrology?.rasiChartUploadUrl || null} navamsaChartUploadId={formData.astrology?.navamsaChartUploadId || null} navamsaChartUploadUrl={formData.astrology?.navamsaChartUploadUrl || null} isUploading={isUploading} uploadingType={uploadingType} formData={formData} updateField={updateField} fieldErrors={fieldErrors} touchedFields={touchedFields} markTouched={markTouched} />
                             )}
                         </div>
                     </motion.div>
@@ -583,17 +584,23 @@ const NewProfile: React.FC = () => {
             const result = await uploadFile(fd);
             if (type === 'photo') {
                 updateField('primaryUploadId', result.uploadId);
+                updateField('primaryUploadUrl', result.url);
             } else if (type === 'rasi' || type === 'navamsa') {
-                const key = type === 'rasi' ? 'rasiChartUploadId' : 'navamsaChartUploadId';
-                updateField('astrology' as any, { ...formData.astrology, [key]: result.uploadId });
+                const idKey = type === 'rasi' ? 'rasiChartUploadId' : 'navamsaChartUploadId';
+                const urlKey = type === 'rasi' ? 'rasiChartUploadUrl' : 'navamsaChartUploadUrl';
+                updateField('astrology' as any, { ...formData.astrology, [idKey]: result.uploadId, [urlKey]: result.url });
             } else {
                 const currentIds = [...(formData.galleryUploadIds || [])];
+                const currentUrls = [...(formData.galleryUploadUrls || [])];
                 if (index !== undefined && index < currentIds.length) {
                     currentIds[index] = result.uploadId;
+                    currentUrls[index] = result.url;
                 } else {
                     currentIds.push(result.uploadId);
+                    currentUrls.push(result.url);
                 }
                 updateField('galleryUploadIds' as any, currentIds);
+                updateField('galleryUploadUrls' as any, currentUrls);
             }
             toast.success(t('profile_new:toasts.upload_success'));
         } catch (err) { toast.error(getErrorMessage(err, t('profile_new:toasts.upload_error'))); } finally { setUploadingType(null); }
@@ -605,17 +612,22 @@ const NewProfile: React.FC = () => {
                 const id = (formData as any).primaryUploadId;
                 if (id) await deleteUpload(id);
                 updateField('primaryUploadId', null);
+                updateField('primaryUploadUrl', null);
             } else if (type === 'rasi' || type === 'navamsa') {
-                const key = type === 'rasi' ? 'rasiChartUploadId' : 'navamsaChartUploadId';
-                const id = (formData as any).astrology?.[key];
+                const idKey = type === 'rasi' ? 'rasiChartUploadId' : 'navamsaChartUploadId';
+                const urlKey = type === 'rasi' ? 'rasiChartUploadUrl' : 'navamsaChartUploadUrl';
+                const id = (formData as any).astrology?.[idKey];
                 if (id) await deleteUpload(id);
-                updateField('astrology' as any, { ...(formData as any).astrology, [key]: null });
+                updateField('astrology' as any, { ...(formData as any).astrology, [idKey]: null, [urlKey]: null });
             } else if (type === 'gallery' && index !== undefined) {
                 const ids = [...((formData as any).galleryUploadIds || [])];
+                const urls = [...((formData as any).galleryUploadUrls || [])];
                 const id = ids[index];
                 if (id) await deleteUpload(id);
                 ids.splice(index, 1);
+                urls.splice(index, 1);
                 updateField('galleryUploadIds' as any, ids);
+                updateField('galleryUploadUrls' as any, urls);
             }
             toast.success(t('profile_new:toasts.delete_success'));
         } catch { toast.error(t('profile_new:toasts.delete_error')); }
@@ -640,7 +652,8 @@ const NewProfile: React.FC = () => {
 
     const handleSubmit = async () => {
         const { validateCreate } = await import('../../../validation/profile-schema');
-        const errors = validateCreate(formData);
+        const { translateError } = await import('../../../utils/translateError');
+        const errors = validateCreate(formData).map(translateError);
         if (errors.length > 0) { toast.error(errors[0]); return; }
 
         try {
@@ -818,7 +831,7 @@ const Step1Personal: React.FC<StepProps> = ({ formData, updateField, onAction, f
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 border-t border-gold-soft/5">
                         <Select label={t('profile_new:blood_group')} value={formData.bloodGroup || ''} onChange={(val) => updateField('bloodGroup', val)} options={BLOOD_GROUP_OPTIONS} error={touchedFields.has('bloodGroup') ? fieldErrors.bloodGroup : undefined} onBlur={() => markTouched?.('bloodGroup')} required />
                         <Select label={t('profile_new:height')} value={formData.height?.toString() || ''} onChange={(val) => updateField('height', parseInt(val))} options={HEIGHT_OPTIONS} error={touchedFields.has('height') ? fieldErrors.height : undefined} required />
-                        <Input label={t('profile_new:weight')} name="weight" value={formData.weight?.toString() || ''} onChange={(e) => { const val = e.target.value.replace(/[^0-9]/g, ''); const numVal = parseInt(val); if (val !== '' && numVal > 150) return; updateField('weight', val === '' ? undefined : numVal); }} icon="monitor_weight" placeholder={t('profile_new:placeholders.weight')} inputMode="numeric" error={touchedFields.has('weight') ? fieldErrors.weight : undefined} onBlur={() => markTouched?.('weight')} required><span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-[10px] text-slate-300 group-hover/input:text-rosewood transition-colors">KG</span></Input>
+                        <Input label={t('profile_new:weight')} name="weight" value={formData.weight?.toString() || ''} onChange={(e) => { const val = e.target.value.replace(/[^0-9]/g, ''); if (val === '') { updateField('weight', undefined); return; } const numVal = parseInt(val); if (isNaN(numVal)) return; updateField('weight', numVal); }} icon="monitor_weight" placeholder={t('profile_new:placeholders.weight')} inputMode="numeric" error={touchedFields.has('weight') ? fieldErrors.weight : undefined} onBlur={() => markTouched?.('weight')} required><span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-[10px] text-slate-300 group-hover/input:text-rosewood transition-colors">KG</span></Input>
                         <Select label={t('profile_new:complexion')} value={formData.complexion || 'NOT_SPECIFIED'} onChange={(val) => updateField('complexion', val)} options={COMPLEXION_OPTIONS} />
                     </div>
                 </div>
@@ -990,8 +1003,8 @@ const Step4Assets: React.FC<StepProps> = ({ formData, updateField, onAction, fie
                         <Input label={t('profile_new:vehicle')} icon="directions_car" name="vehicle" value={formData.vehicle || ''} onChange={(e) => updateField('vehicle', e.target.value)} placeholder={t('profile_new:placeholders.vehicle')} />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <TranslatableTextarea label={t('profile_new:land')} valueEn={formData.landEn || ''} valueTa={formData.landTa || ''} onChangeEn={(val) => updateField('landEn', val)} onChangeTa={(val) => updateField('landTa', val)} placeholder={t('profile_new:placeholders.land')} icon="landscape" />
-                        <TranslatableTextarea label={t('profile_new:other_assets')} valueEn={formData.otherAssetsEn || ''} valueTa={formData.otherAssetsTa || ''} onChangeEn={(val) => updateField('otherAssetsEn', val)} onChangeTa={(val) => updateField('otherAssetsTa', val)} placeholder={t('profile_new:placeholders.other_assets')} icon="inventory_2" />
+                        <TextArea label={t('profile_new:land')} name="land" value={formData.land || ''} onChange={(e) => updateField('land', e.target.value)} placeholder={t('profile_new:placeholders.land')} icon="landscape" />
+                        <TextArea label={t('profile_new:other_assets')} name="otherAssets" value={formData.otherAssets || ''} onChange={(e) => updateField('otherAssets', e.target.value)} placeholder={t('profile_new:placeholders.other_assets')} icon="inventory_2" />
                     </div>
                 </div>
             </div>
@@ -1010,7 +1023,7 @@ const Step4Assets: React.FC<StepProps> = ({ formData, updateField, onAction, fie
                         </div>
                         <TranslatableInput label={t('profile_new:preferred_location')} valueEn={formData.preferredLocationEn || ''} valueTa={formData.preferredLocationTa || ''} onChangeEn={(val) => updateField('preferredLocationEn', val)} onChangeTa={(val) => updateField('preferredLocationTa', val)} placeholder={t('profile_new:placeholders.preferred_location')} icon="location_on" />
                     </div>
-                    <TranslatableTextarea label={t('profile_new:expectation')} valueEn={formData.expectationEn || ''} valueTa={formData.expectationTa || ''} onChangeEn={(val) => updateField('expectationEn', val)} onChangeTa={(val) => updateField('expectationTa', val)} placeholder={t('profile_new:placeholders.partner_expectations')} icon="favorite" />
+                    <TextArea label={t('profile_new:expectation')} name="expectation" value={formData.expectation || ''} onChange={(e) => updateField('expectation', e.target.value)} placeholder={t('profile_new:placeholders.partner_expectations')} icon="favorite" />
                 </div>
             </div>
         </div>
@@ -1028,9 +1041,9 @@ const Step4Assets: React.FC<StepProps> = ({ formData, updateField, onAction, fie
 // ───────────────────────────────────────────────────────────
 
 const IdentityPortraitUpload: React.FC<{
-    uploadId: string | null; isUploading: boolean; uploadingType?: string | null;
+    uploadId: string | null; uploadUrl?: string | null; isUploading: boolean; uploadingType?: string | null;
     onUpload: (f: File) => Promise<void>; onReplace: (f: File) => Promise<void>; onRemove: () => Promise<void>;
-}> = ({ uploadId, isUploading, uploadingType, onUpload, onReplace, onRemove }) => {
+}> = ({ uploadId, uploadUrl, isUploading, uploadingType, onUpload, onReplace, onRemove }) => {
     const { t } = useTranslation(['profile_new', 'common']);
     const isProcessing = isUploading && uploadingType === 'photo';
 
@@ -1063,7 +1076,7 @@ const IdentityPortraitUpload: React.FC<{
                             <motion.div layout className={`rounded-2xl overflow-hidden transition-all duration-500 ${uploadId ? 'ring-2 ring-gold/30 shadow-xl shadow-rosewood/10' : 'border-2 border-dashed border-gold-soft/40'}`}>
                                 <div className="relative w-48 md:w-56 aspect-4/5 bg-ivory">
                                     {uploadId ? (
-                                        <MediaImage uploadId={uploadId} alt="Portrait" className="w-full h-full object-cover" />
+                                        <MediaImage {...(uploadUrl ? { image: { url: uploadUrl } } : { uploadId })} alt="Portrait" className="w-full h-full object-cover" />
                                     ) : isProcessing ? null : (
                                         <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-8">
                                             <div className="size-20 rounded-full bg-rosewood/5 flex items-center justify-center">
@@ -1120,9 +1133,9 @@ const IdentityPortraitUpload: React.FC<{
 // ───────────────────────────────────────────────────────────
 
 const PhotoSlot: React.FC<{
-    uploadId: string | null; index: number; isProcessing: boolean;
+    uploadId: string | null; uploadUrl?: string | null; index: number; isProcessing: boolean;
     onUpload: (f: File) => Promise<void>; onReplace: (f: File) => Promise<void>; onRemove: () => Promise<void>;
-}> = ({ uploadId, index, isProcessing, onUpload, onReplace, onRemove }) => {
+}> = ({ uploadId, uploadUrl, index, isProcessing, onUpload, onReplace, onRemove }) => {
     const { t } = useTranslation(['profile_new', 'common']);
 
     return (
@@ -1130,7 +1143,7 @@ const PhotoSlot: React.FC<{
             <div className={`rounded-xl overflow-hidden w-full transition-all duration-500 ${uploadId ? 'ring-2 ring-gold/20 shadow-md p-0.5 bg-white' : 'border-2 border-dashed border-gold-soft/30 bg-ivory/50'}`}>
                 <div className="relative aspect-[3/4] w-full">
                     {uploadId ? (
-                        <MediaImage uploadId={uploadId} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                        <MediaImage {...(uploadUrl ? { image: { url: uploadUrl } } : { uploadId })} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
                     ) : !isProcessing ? (
                         <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4">
                             <span className="material-symbols-outlined text-3xl text-rosewood/25">image</span>
@@ -1177,9 +1190,9 @@ const PhotoSlot: React.FC<{
 // ───────────────────────────────────────────────────────────
 
 const LifestyleGallery: React.FC<{
-    uploadIds: string[]; count: number; isUploading: boolean; uploadingType?: string | null;
+    uploadIds: string[]; uploadUrls?: string[]; count: number; isUploading: boolean; uploadingType?: string | null;
     onUpload: (f: File, idx: number) => Promise<void>; onReplace: (f: File, idx: number) => Promise<void>; onRemove: (idx: number) => Promise<void>;
-}> = ({ uploadIds, count, isUploading, uploadingType, onUpload, onReplace, onRemove }) => {
+}> = ({ uploadIds, uploadUrls = [], count, isUploading, uploadingType, onUpload, onReplace, onRemove }) => {
     const { t } = useTranslation(['profile_new', 'common']);
 
     const visibleSlots = Math.min(count + 1, 4);
@@ -1205,10 +1218,11 @@ const LifestyleGallery: React.FC<{
                 <div className="grid grid-cols-2 gap-5 max-w-lg mx-auto">
                     {Array.from({ length: visibleSlots }).map((_, idx) => {
                         const uploadId = uploadIds[idx] || null;
+                        const uploadUrl = uploadUrls?.[idx] || null;
                         const isProcessing = isUploading && uploadingType === `gallery_${idx}`;
                         return (
                             <PhotoSlot
-                                key={`slot-${idx}`} uploadId={uploadId} index={idx} isProcessing={isProcessing}
+                                key={`slot-${idx}`} uploadId={uploadId} uploadUrl={uploadUrl} index={idx} isProcessing={isProcessing}
                                 onUpload={(f) => onUpload(f, idx)}
                                 onReplace={(f) => onReplace(f, idx)}
                                 onRemove={() => onRemove(idx)} />
@@ -1231,18 +1245,20 @@ const LifestyleGallery: React.FC<{
 const Step6Gallery: React.FC<StepProps & { isUploading?: boolean; uploadingType?: string | null; onFileUpload: (file: File, type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => Promise<void>; onFileDelete: (type: 'photo' | 'rasi' | 'navamsa' | 'gallery', index?: number) => Promise<void>; }> = ({ formData, updateField, onAction, isUploading = false, uploadingType, onFileUpload, onFileDelete }) => {
     const { t } = useTranslation(['profile_new', 'common']);
     const galleryUploadIds: string[] = (formData as any).galleryUploadIds || [];
+    const galleryUploadUrls: string[] = (formData as any).galleryUploadUrls || [];
     const primaryUploadId = (formData as any).primaryUploadId || null;
+    const primaryUploadUrl = (formData as any).primaryUploadUrl || null;
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-700 pb-10">
             <IdentityPortraitUpload
-                uploadId={primaryUploadId} isUploading={isUploading} uploadingType={uploadingType}
+                uploadId={primaryUploadId} uploadUrl={primaryUploadUrl} isUploading={isUploading} uploadingType={uploadingType}
                 onUpload={async (f) => await onFileUpload(f, 'photo')}
                 onReplace={async (f) => { await onFileDelete('photo'); await onFileUpload(f, 'photo'); }}
                 onRemove={async () => await onFileDelete('photo')} />
 
             <LifestyleGallery
-                uploadIds={galleryUploadIds} count={galleryUploadIds.length}
+                uploadIds={galleryUploadIds} uploadUrls={galleryUploadUrls} count={galleryUploadIds.length}
                 isUploading={isUploading} uploadingType={uploadingType}
                 onUpload={async (f, idx) => await onFileUpload(f, 'gallery', idx)}
                 onReplace={async (f, idx) => { await onFileDelete('gallery', idx); await onFileUpload(f, 'gallery', idx); }}
@@ -1291,7 +1307,7 @@ const Step7Review: React.FC<StepProps> = ({ formData, updateField, onAction, fie
                 <div className="flex flex-col md:flex-row">
                     <div className="md:w-72 shrink-0 bg-linear-to-br from-rosewood/5 to-ivory flex items-center justify-center p-6 md:p-8">
                         <div className="w-32 h-40 md:w-44 md:h-56 rounded-2xl overflow-hidden ring-4 ring-white/80 shadow-xl bg-ivory">
-                            {(formData as any).primaryUploadId ? (<MediaImage uploadId={(formData as any).primaryUploadId} alt="Profile" className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center bg-ivory text-rosewood/20 text-5xl font-serif font-black">{(formData.firstNameEn || formData.firstNameTa || '?')[0].toUpperCase()}</div>)}
+                            {(formData as any).primaryUploadId ? (<MediaImage {...((formData as any).primaryUploadUrl ? { image: { url: (formData as any).primaryUploadUrl } } : { uploadId: (formData as any).primaryUploadId })} alt="Profile" className="w-full h-full object-cover" />) : (<div className="w-full h-full flex items-center justify-center bg-ivory text-rosewood/20 text-5xl font-serif font-black">{(formData.firstNameEn || formData.firstNameTa || '?')[0].toUpperCase()}</div>)}
                         </div>
                     </div>
                     <div className="flex-1 p-6 md:p-8">
@@ -1353,17 +1369,17 @@ const Step7Review: React.FC<StepProps> = ({ formData, updateField, onAction, fie
                 ])}
                 {renderSection(t('profile_new:sections.partner_preferences'), 'favorite', [
                     { label: t('profile_new:age_range'), value: formData.ageMin && formData.ageMax ? `${formData.ageMin} - ${formData.ageMax} ${t('common:yrs')}` : (formData.ageMin ? `${formData.ageMin}+` : (formData.ageMax ? `Up to ${formData.ageMax}` : null)) },
-                    { label: t('profile_new:height_min'), value: getOptionLabel(HEIGHT_OPTIONS, formData.heightMinId, true) },
-                    { label: t('profile_new:height_max'), value: getOptionLabel(HEIGHT_OPTIONS, formData.heightMaxId, true) },
+                    { label: t('profile_new:height_min'), value: getOptionLabel(HEIGHT_OPTIONS, formData.heightMinId) },
+                    { label: t('profile_new:height_max'), value: getOptionLabel(HEIGHT_OPTIONS, formData.heightMaxId) },
                     { label: t('profile_new:monthly_salary'), value: formData.monthlySalary ? `₹${formData.monthlySalary.toLocaleString()}` : null },
                     { label: t('profile_new:preferred_location'), value: isEn ? formData.preferredLocationEn : (formData.preferredLocationTa || formData.preferredLocationEn), fullWidth: true },
-                    { label: t('profile_new:expectation'), value: isEn ? formData.expectationEn : (formData.expectationTa || formData.expectationEn), fullWidth: true },
+                    { label: t('profile_new:expectation'), value: formData.expectation, fullWidth: true },
                 ])}
                 {renderSection(t('profile_new:sections.property'), 'real_estate_agent', [
                     { label: t('profile_new:residence'), value: getOptionLabel(RESIDENCE_OPTIONS, formData.residence) },
-                    { label: t('profile_new:land'), value: isEn ? formData.landEn : (formData.landTa || formData.landEn) },
                     { label: t('profile_new:vehicle'), value: formData.vehicle },
-                    { label: t('profile_new:other_assets'), value: isEn ? formData.otherAssetsEn : (formData.otherAssetsTa || formData.otherAssetsEn) },
+                    { label: t('profile_new:land'), value: formData.land },
+                    { label: t('profile_new:other_assets'), value: formData.otherAssets },
                 ])}
             </div>
 
@@ -1372,9 +1388,9 @@ const Step7Review: React.FC<StepProps> = ({ formData, updateField, onAction, fie
                         { label: t('profile_new:rasi'), value: getOptionLabel(RASI_OPTIONS, formData.rasi, true) },
                         { label: t('profile_new:laganam'), value: getOptionLabel(RASI_OPTIONS, formData.laganam, true) },
                         { label: t('profile_new:review.chart_generation'), value: isCreateMode ? t('common:create') : t('common:upload') },
-                    ], (<div className="space-y-6">{(!formData.astrology?.mode) ? (<div className="bg-ivory/30 border-2 border-dashed border-gold-soft/20 rounded-xl p-6 text-center"><span className="material-symbols-outlined text-3xl text-slate-300 mb-1">auto_awesome_motion</span><p className="text-sm font-bold text-slate-400 italic">{t('common:profile.not_specified')}</p></div>) : (<div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:px-12"><div className="space-y-4"><p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest text-center">{t('profile_new:horoscope.rasi_chart')}</p><div className="bg-ivory/20 rounded-xl p-4 ring-1 ring-gold-soft/10 shadow-inner">{isCreateMode && horoscopeData ? (<D1Chart lagnaSign={horoscopeData.lagna.signIndex} planets={horoscopeData.planets} />) : (<div className="aspect-square rounded-xl overflow-hidden bg-white shadow-sm ring-4 ring-white">{formData.astrology?.rasiChartUploadId ? (<MediaImage uploadId={formData.astrology.rasiChartUploadId} alt="Rasi" className="w-full h-full object-contain" />) : (<div className="w-full h-full flex items-center justify-center text-slate-300 italic text-xs">{t('common:profile.not_specified')}</div>)}</div>)}</div></div><div className="space-y-4"><p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest text-center">{t('profile_new:horoscope.navamsa_chart')}</p><div className="bg-ivory/20 rounded-xl p-4 ring-1 ring-gold-soft/10 shadow-inner">{isCreateMode && horoscopeData ? (<D9Chart planets={horoscopeData.planets} lagnaNavamsaSignIndex={horoscopeData.lagnaNavamsa.signIndex} />) : (<div className="aspect-square rounded-xl overflow-hidden bg-white shadow-sm ring-4 ring-white">{formData.astrology?.navamsaChartUploadId ? (<MediaImage uploadId={formData.astrology.navamsaChartUploadId} alt="Navamsa" className="w-full h-full object-contain" />) : (<div className="w-full h-full flex items-center justify-center text-slate-300 italic text-xs">{t('common:profile.not_specified')}</div>)}</div>)}</div></div></div>)}</div>))}</div>
+                    ], (<div className="space-y-6">{(!formData.astrology?.mode) ? (<div className="bg-ivory/30 border-2 border-dashed border-gold-soft/20 rounded-xl p-6 text-center"><span className="material-symbols-outlined text-3xl text-slate-300 mb-1">auto_awesome_motion</span><p className="text-sm font-bold text-slate-400 italic">{t('common:profile.not_specified')}</p></div>) : (<div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:px-12"><div className="space-y-4"><p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest text-center">{t('profile_new:horoscope.rasi_chart')}</p><div className="bg-ivory/20 rounded-xl p-4 ring-1 ring-gold-soft/10 shadow-inner">{isCreateMode && horoscopeData ? (<D1Chart lagnaSign={horoscopeData.lagna.signIndex} planets={horoscopeData.planets} />) : (<div className="aspect-square rounded-xl overflow-hidden bg-white shadow-sm ring-4 ring-white">{formData.astrology?.rasiChartUploadId ? (<MediaImage {...(formData.astrology?.rasiChartUploadUrl ? { image: { url: formData.astrology.rasiChartUploadUrl } } : { uploadId: formData.astrology.rasiChartUploadId })} alt="Rasi" className="w-full h-full object-contain" />) : (<div className="w-full h-full flex items-center justify-center text-slate-300 italic text-xs">{t('common:profile.not_specified')}</div>)}</div>)}</div></div><div className="space-y-4"><p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest text-center">{t('profile_new:horoscope.navamsa_chart')}</p><div className="bg-ivory/20 rounded-xl p-4 ring-1 ring-gold-soft/10 shadow-inner">{isCreateMode && horoscopeData ? (<D9Chart planets={horoscopeData.planets} lagnaNavamsaSignIndex={horoscopeData.lagnaNavamsa.signIndex} />) : (<div className="aspect-square rounded-xl overflow-hidden bg-white shadow-sm ring-4 ring-white">{formData.astrology?.navamsaChartUploadId ? (<MediaImage {...(formData.astrology?.navamsaChartUploadUrl ? { image: { url: formData.astrology.navamsaChartUploadUrl } } : { uploadId: formData.astrology.navamsaChartUploadId })} alt="Navamsa" className="w-full h-full object-contain" />) : (<div className="w-full h-full flex items-center justify-center text-slate-300 italic text-xs">{t('common:profile.not_specified')}</div>)}</div>)}</div></div></div>)}</div>))}</div>
 
-            <div className="w-full">{renderSection(t('profile_new:sections.media'), 'collections', [], (<div className="space-y-4">{formData.primaryUploadId || ((formData.galleryUploadIds?.length ?? 0) > 0) ? (<div>{formData.primaryUploadId && (<div className="mb-4"><p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest mb-2">Glimpse</p><div className="w-28 aspect-4/5 rounded-xl overflow-hidden bg-slate-100 ring-2 ring-white shadow-md"><MediaImage uploadId={formData.primaryUploadId} alt="Glimpse" className="w-full h-full object-cover" /></div></div>)}{((formData.galleryUploadIds?.length ?? 0) > 0) && (<div><p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest mb-2">{t('profile_new:gallery.lifestyle_title')}</p><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">{formData.galleryUploadIds.map((id: string, idx: number) => (<div key={`gallery-${idx}`} className="aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 ring-2 ring-white shadow-md"><MediaImage uploadId={id} alt={`${t('profile_new:gallery.lifestyle_title')} ${idx + 1}`} className="w-full h-full object-cover" /></div>))}</div></div>)}</div>) : (<div className="bg-ivory/30 border-2 border-dashed border-gold-soft/20 rounded-xl p-6 text-center"><span className="material-symbols-outlined text-4xl text-slate-300 mb-2">no_photography</span><p className="text-sm font-bold text-slate-400 italic">{t('common:profile.not_specified')}</p></div>)}</div>))}</div>
+            <div className="w-full">{renderSection(t('profile_new:sections.media'), 'collections', [], (<div className="space-y-4">{formData.primaryUploadId || ((formData.galleryUploadIds?.length ?? 0) > 0) ? (<div>{formData.primaryUploadId && (<div className="mb-4"><p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest mb-2">Glimpse</p><div className="w-28 aspect-4/5 rounded-xl overflow-hidden bg-slate-100 ring-2 ring-white shadow-md"><MediaImage {...(formData.primaryUploadUrl ? { image: { url: formData.primaryUploadUrl } } : { uploadId: formData.primaryUploadId })} alt="Glimpse" className="w-full h-full object-cover" /></div></div>)}{((formData.galleryUploadIds?.length ?? 0) > 0) && (<div><p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest mb-2">{t('profile_new:gallery.lifestyle_title')}</p><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">{formData.galleryUploadIds.map((id: string, idx: number) => (<div key={`gallery-${idx}`} className="aspect-[3/4] rounded-xl overflow-hidden bg-slate-100 ring-2 ring-white shadow-md"><MediaImage {...(formData.galleryUploadUrls?.[idx] ? { image: { url: formData.galleryUploadUrls[idx] } } : { uploadId: id })} alt={`${t('profile_new:gallery.lifestyle_title')} ${idx + 1}`} className="w-full h-full object-cover" /></div>))}</div></div>)}</div>) : (<div className="bg-ivory/30 border-2 border-dashed border-gold-soft/20 rounded-xl p-6 text-center"><span className="material-symbols-outlined text-4xl text-slate-300 mb-2">no_photography</span><p className="text-sm font-bold text-slate-400 italic">{t('common:profile.not_specified')}</p></div>)}</div>))}</div>
 
             <label className="bg-white border border-gold-soft/10 rounded-xl shadow-sm p-4 flex items-center gap-3 cursor-pointer transition-all hover:border-gold/30">
                 <div className="relative flex items-center shrink-0">

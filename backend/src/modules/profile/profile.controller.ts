@@ -3,7 +3,9 @@ import { ProfileService } from './profile.service.js';
 import { sendSuccess } from '../../common/responses/ApiResponse.js';
 
 export class ProfileController {
-  constructor(private profileService: ProfileService) {}
+  constructor(
+    private profileService: ProfileService,
+  ) {}
 
   saveDraft = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -43,12 +45,7 @@ export class ProfileController {
 
   viewMyProfiles = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const profiles = await this.profileService.getMyProfiles(req.account.sub);
-      const base = `${req.protocol}://${req.get('host')}`;
-      const result = profiles.map((p: any) => ({
-        ...p,
-        profilePhoto: p.profilePhoto ? `${base}/media/${p.profilePhoto}` : null,
-      }));
+      const result = await this.profileService.getMyProfiles(req.account.sub);
       sendSuccess(res, result);
     } catch (err) {
       next(err);
@@ -57,24 +54,7 @@ export class ProfileController {
 
   viewProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const base = `${req.protocol}://${req.get('host')}`;
-      const result: any = await this.profileService.getProfile(req.account.sub, req.params.id as string);
-
-      if (result.profilePhoto) {
-        result.profilePhoto = `${base}/media/${result.profilePhoto}`;
-      }
-      if (result.gallery?.length) {
-        result.gallery = result.gallery.map((id: string) => `${base}/media/${id}`);
-      }
-      if (result.horoscope) {
-        result.horoscope.rasi = result.horoscope.rasiChartUploadId
-          ? `${base}/media/${result.horoscope.rasiChartUploadId}` : null;
-        result.horoscope.navamsa = result.horoscope.navamsaChartUploadId
-          ? `${base}/media/${result.horoscope.navamsaChartUploadId}` : null;
-        delete result.horoscope.rasiChartUploadId;
-        delete result.horoscope.navamsaChartUploadId;
-      }
-
+      const result = await this.profileService.getProfile(req.account.sub, req.params.id as string);
       sendSuccess(res, result);
     } catch (err) {
       next(err);

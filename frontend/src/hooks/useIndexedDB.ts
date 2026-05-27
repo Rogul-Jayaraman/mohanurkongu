@@ -11,7 +11,7 @@ export function useIndexedDB() {
     try {
       const draft = await indexedDBStorage.getDraft();
       if (draft) setData(draft);
-    } catch { /* ignore */ }
+    } catch { console.warn('IndexedDB hydrate failed'); }
     setIsLoaded(true);
   }, []);
 
@@ -20,7 +20,7 @@ export function useIndexedDB() {
     if (!current) return;
     try {
       await indexedDBStorage.saveDraft(current);
-    } catch { /* ignore */ }
+    } catch { console.warn('IndexedDB persist failed'); }
   }, []);
 
   const update = useCallback((partial: Partial<ProfileDraft>) => {
@@ -31,7 +31,7 @@ export function useIndexedDB() {
     try {
       await indexedDBStorage.clearDraft();
       setData(null);
-    } catch { /* ignore */ }
+    } catch { console.warn('IndexedDB clear failed'); }
   }, []);
 
   useEffect(() => {

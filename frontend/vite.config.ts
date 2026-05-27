@@ -15,4 +15,9 @@ export default defineConfig({
       { find: '@', replacement: path.resolve(__dirname, './src') },
     ],
   },
+  server: {
+    watch: {
+      usePolling: true,
+    },
+  },
 })

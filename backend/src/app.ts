@@ -40,7 +40,6 @@ import type { IStorageProvider } from './modules/storage/providers/storage-provi
 import { UploadService } from './modules/upload/upload.service.js';
 import { ProfileService } from './modules/profile/profile.service.js';
 import { ImagePipelineService } from './modules/image/image-pipeline.service.js';
-import { MediaService } from './modules/media/media.service.js';
 
 // Controllers
 import { AuthController } from './modules/auth/auth.controller.js';
@@ -50,7 +49,6 @@ import { AdminAuthController } from './modules/admin-auth/admin-auth.controller.
 import { AdminAccountController } from './modules/admin-auth/admin-account.controller.js';
 import { UploadController } from './modules/upload/upload.controller.js';
 import { ProfileController } from './modules/profile/profile.controller.js';
-import { MediaController } from './modules/media/media.controller.js';
 
 // Routes
 import { createAuthRoutes } from './modules/auth/auth.routes.js';
@@ -60,7 +58,6 @@ import { createAdminAuthRoutes } from './modules/admin-auth/admin-auth.routes.js
 import { createAdminAccountRoutes } from './modules/admin-auth/admin-account.routes.js';
 import { createUploadRoutes } from './modules/upload/upload.routes.js';
 import { createProfileRoutes } from './modules/profile/profile.routes.js';
-import { createMediaRoutes } from './modules/media/media.routes.js';
 import horoscopeRouter from './modules/horoscope/index.js';
 
 export function createApp() {
@@ -77,6 +74,7 @@ export function createApp() {
         imgSrc: ["'self'", 'data:', 'https:'],
       },
     },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
     hsts: {
       maxAge: 31536000,
       includeSubDomains: true,
@@ -213,10 +211,6 @@ export function createApp() {
   const uploadService = new UploadService(storageService, imagePipelineService);
   const uploadController = new UploadController(uploadService);
 
-  // MediaModule
-  const mediaService = new MediaService(storageService);
-  const mediaController = new MediaController(mediaService);
-
   // ProfileModule
   const profileRepo = new ProfileRepository();
   const profileService = new ProfileService(profileRepo, storageService, accountService);
@@ -231,6 +225,9 @@ export function createApp() {
   });
   app.use('/admin/queues', serverAdapter.getRouter());
 
+  // Serve uploaded media (local dev)
+  app.use('/media', express.static(appConfig.storageDir));
+
   // --- Routes ---
   app.use('/', createAuthRoutes(authController));
   app.use('/', createVerificationRoutes(verificationController));
@@ -240,7 +237,6 @@ export function createApp() {
   app.use('/horoscope', horoscopeRouter);
   app.use('/', createUploadRoutes(uploadController));
   app.use('/', createProfileRoutes(profileController));
-  app.use('/', createMediaRoutes(mediaController));
 
   // 404
   app.use((_req, res) => {

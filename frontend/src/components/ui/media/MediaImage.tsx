@@ -1,93 +1,61 @@
-import React, { useState, useEffect, useRef } from 'react';
-import api from '@/lib/api';
+import React from 'react';
+
+interface ImageObject {
+  url: string;
+  width?: number | null;
+  height?: number | null;
+}
 
 interface MediaImageProps {
-  uploadId: string | null;
+  image?: ImageObject | null;
+  uploadId?: string | null;
   alt?: string;
   className?: string;
   fallback?: React.ReactNode;
   onClick?: React.MouseEventHandler<HTMLImageElement>;
 }
 
+const resolveUrl = (url: string): string => {
+  if (/^(https?:\/\/)/.test(url)) return url;
+  if (url.startsWith('/media/')) {
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+    return `${API_BASE}${url}`;
+  }
+  return url;
+};
+
+const getMediaUrl = (uploadId: string): string => {
+  if (/^(https?:\/\/)/.test(uploadId)) return uploadId;
+  if (uploadId.startsWith('/media/')) return resolveUrl(uploadId);
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+  return `${API_BASE}/media/${uploadId}.webp`;
+};
+
 export const MediaImage: React.FC<MediaImageProps> = ({
+  image,
   uploadId,
   alt = '',
   className = '',
   fallback,
   onClick,
 }) => {
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
-  const objectUrlRef = useRef<string | null>(null);
+  const rawSrc = image?.url || (uploadId ? getMediaUrl(uploadId) : null);
+  const src = rawSrc ? resolveUrl(rawSrc) : null;
 
-  const revoke = (url: string | null) => {
-    if (url) {
-      URL.revokeObjectURL(url);
-    }
-  };
-
-  useEffect(() => {
-    if (!uploadId) {
-      revoke(objectUrlRef.current);
-      objectUrlRef.current = null;
-      setObjectUrl(null);
-      setLoading(false);
-      setError(false);
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-    setError(false);
-
-    api
-      .get(`/media/${uploadId}`, { responseType: 'blob' })
-      .then((res: any) => {
-        if (cancelled) return;
-        const blob = res instanceof Blob ? res : (res.data instanceof Blob ? res.data : null);
-        if (!blob) {
-          setError(true);
-          setLoading(false);
-          return;
-        }
-        revoke(objectUrlRef.current);
-        const url = URL.createObjectURL(blob);
-        objectUrlRef.current = url;
-        setObjectUrl(url);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setError(true);
-        setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [uploadId]);
-
-  useEffect(() => {
-    return () => {
-      revoke(objectUrlRef.current);
-      objectUrlRef.current = null;
-    };
-  }, []);
-
-  if (!uploadId || error) {
+  if (!src) {
     return fallback ? <>{fallback}</> : null;
   }
 
-  if (loading) {
-    return (
-      <div className={`flex items-center justify-center bg-ivory/50 ${className}`}>
-        <div className="size-8 rounded-full border-2 border-rosewood/20 border-t-rosewood animate-spin" />
-      </div>
-    );
-  }
-
-  if (!objectUrl) return null;
-
-  return <img src={objectUrl} alt={alt} className={className} onClick={onClick} />;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      width={image?.width ?? undefined}
+      height={image?.height ?? undefined}
+      className={className}
+      loading="lazy"
+      decoding="async"
+      onClick={onClick}
+    />
+  );
 };

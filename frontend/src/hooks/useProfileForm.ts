@@ -5,6 +5,7 @@ import { useIndexedDB } from './useIndexedDB';
 import { indexedDBStorage } from '../lib/indexeddb';
 import { formToDraft, draftToForm } from '../adapters/profile.adapter';
 import { getMinDobDate, getMaxDobDate, validateField, validateStepAtNav } from '../validation/profile-schema';
+import { translateError } from '../utils/translateError';
 
 export const DEFAULT_FORM_DATA = {
     profileFor: 'MYSELF',
@@ -20,6 +21,10 @@ export const DEFAULT_FORM_DATA = {
     status: 'ACTIVE' as any,
     astrology: { mode: 'none' },
     residence: '',
+    ageMin: 21,
+    ageMax: 40,
+    heightMinId: 122,
+    heightMaxId: 231,
 };
 
 export const useProfileForm = () => {
@@ -47,13 +52,13 @@ export const useProfileForm = () => {
         let formattedValue = value;
 
         if (typeof value === 'string' && value.length > 0) {
-            const excluded = ['dob', 'birthTime', 'mobile', 'status', 'adminVerified'];
+            const excluded = ['dob', 'birthTime', 'mobile', 'status', 'adminVerified', 'primaryUploadId', 'rasiChartUploadId', 'navamsaChartUploadId'];
             const titleCaseFields = [
                 'nameEn', 'fatherNameEn', 'motherNameEn', 'companyName', 
                 'birthPlace', 'jobLocationEn', 'kuladeivamEn', 'jobDetail',
                 'fatherJob', 'motherJob', 'community', 'education',
                 'currentDistrictEn', 'currentCityEn', 'currentStateEn', 'currentCountryEn',
-                'landEn', 'otherAssetsEn', 'expectationNoteEn', 'preferredLocationEn'
+                'land', 'otherAssets', 'expectation', 'preferredLocationEn'
             ];
             
             let mode: InputFormattingMode = 'sentence';
@@ -83,6 +88,7 @@ export const useProfileForm = () => {
         const maxDobDate = getMaxDobDate();
         const rawDob = draftData.basic?.dob || draftData.personal?.dob;
         const validDob = rawDob && rawDob >= minDobDate && rawDob <= maxDobDate ? rawDob : undefined;
+        const partnerPref = { ...(draftData.partnerPreference || {}) };
         const restored = {
             ...DEFAULT_FORM_DATA,
             ...draftData.basic,
@@ -91,6 +97,10 @@ export const useProfileForm = () => {
             ...draftData.professional,
             ...draftData.family,
             ...draftData.assets,
+            ...partnerPref,
+            land: draftData.assets?.landEn ?? null,
+            otherAssets: draftData.assets?.otherAssetsEn ?? null,
+            expectation: draftData.partnerPreference?.expectationNoteEn ?? null,
             dob: validDob,
             astrology: draftData.basic?.astrology || { mode: 'none' },
         };
@@ -109,7 +119,7 @@ export const useProfileForm = () => {
             const error = validateField(field, formDataRef.current[field as keyof Profile]);
             setFieldErrors(prev => {
                 const next = { ...prev };
-                if (error) next[field] = error;
+                if (error) next[field] = translateError(error);
                 else delete next[field];
                 return next;
             });
@@ -118,8 +128,12 @@ export const useProfileForm = () => {
 
     const validateStepOnNav = useCallback((step: number): string[] => {
         const { fieldErrors: errors } = validateStepAtNav(step, formDataRef.current);
-        const errorList = Object.values(errors);
-        setFieldErrors(prev => ({ ...prev, ...errors }));
+        const translated: Record<string, string> = {};
+        for (const [field, msg] of Object.entries(errors)) {
+            translated[field] = translateError(msg);
+        }
+        const errorList = Object.values(translated);
+        setFieldErrors(prev => ({ ...prev, ...translated }));
         if (errorList.length > 0) {
             setStepErrors(prev => ({ ...prev, [step]: errorList }));
         }

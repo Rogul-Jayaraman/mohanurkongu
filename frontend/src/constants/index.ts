@@ -44,8 +44,10 @@ export const JOB_SECTOR_OPTIONS = [
 ];
 
 export const RESIDENCE_OPTIONS = [
-  { value: 'OWN_HOUSE', label: { en: 'Own House', ta: 'சொந்த வீடு' } },
+  { value: 'OWNED', label: { en: 'Own House', ta: 'சொந்த வீடு' } },
   { value: 'RENTED', label: { en: 'Rented', ta: 'வாடகை வீடு' } },
+  { value: 'PARENTAL', label: { en: 'Parental Home', ta: 'பெற்றோர் வீடு' } },
+  { value: 'LEASED', label: { en: 'Leased', ta: 'குத்தகை' } },
 ];
 
 // Rasi & Nakshatra simplified mapping

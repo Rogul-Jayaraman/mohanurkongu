@@ -84,7 +84,7 @@ const GenderToggle: React.FC<GenderToggleProps> = ({ selectedGender, onGenderCha
     }, [selectedGender, i18n.language]);
 
     return (
-        <div className="relative p-1.5 rounded-2xl flex items-center border border-gold/10 bg-ivory shadow-inner w-fit">
+        <div className="relative p-1.5 rounded-2xl flex items-center border border-gold/10 bg-ivory shadow-inner w-full md:w-fit">
             <motion.div
                 className="absolute top-1.5 bottom-1.5 rounded-xl bg-linear-to-br from-rosewood/90 via-dark-rosewood/95 to-rosewood/90 shadow-lg shadow-rosewood/20 z-0"
                 animate={{ left: indicator.left, width: indicator.width }}
@@ -93,7 +93,7 @@ const GenderToggle: React.FC<GenderToggleProps> = ({ selectedGender, onGenderCha
             <button
                 ref={brideRef}
                 onClick={() => onGenderChange('FEMALE')}
-                className={`px-6 py-2.5 rounded-xl relative z-10 text-[10px] font-black tracking-widest uppercase flex items-center gap-2 transition-colors duration-300 ${
+                className={`flex-1 px-6 py-2.5 rounded-xl relative z-10 text-[10px] font-black tracking-widest uppercase flex items-center justify-center gap-2 transition-colors duration-300 ${
                     selectedGender === 'FEMALE'
                         ? 'text-white'
                         : 'text-rosewood/40 hover:text-rosewood'
@@ -105,7 +105,7 @@ const GenderToggle: React.FC<GenderToggleProps> = ({ selectedGender, onGenderCha
             <button
                 ref={groomRef}
                 onClick={() => onGenderChange('MALE')}
-                className={`px-6 py-2.5 rounded-xl relative z-10 text-[10px] font-black tracking-widest uppercase flex items-center gap-2 transition-colors duration-300 ${
+                className={`flex-1 px-6 py-2.5 rounded-xl relative z-10 text-[10px] font-black tracking-widest uppercase flex items-center justify-center gap-2 transition-colors duration-300 ${
                     selectedGender === 'MALE'
                         ? 'text-white'
                         : 'text-rosewood/40 hover:text-rosewood'
@@ -141,25 +141,26 @@ const BrowseProfilesHeader: React.FC<BrowseProfilesHeaderProps> = ({
     const lang = i18n.language as 'en' | 'ta';
 
     return (
-        <div className=" top-0 z-40 bg-ivory/95 backdrop-blur-md border-b border-gold/10 pt-4 pb-2 px-4 -mx-4 md:mx-0 md:rounded-b-2xl shadow-sm transition-all duration-300">
-            <div className="max-w-7xl mx-auto space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
+        <div className="bg-ivory/95 backdrop-blur-md border-b border-gold/10 pt-3 md:pt-4 pb-1 md:pb-2 px-4 -mx-4 md:mx-0 md:rounded-b-2xl shadow-sm transition-all duration-300">
+            <div className="max-w-7xl mx-auto space-y-2 md:space-y-4">
+                <div className="hidden md:flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
                         <div className="w-12 h-12 rounded-xl bg-linear-to-br from-rosewood/80 via-dark-rosewood/95 to-rosewood/80 flex items-center justify-center shrink-0 shadow-lg border border-gold/20 relative group overflow-hidden">
                             <div className="absolute inset-0 bg-kolam-pattern opacity-10 group-hover:scale-125 transition-transform duration-700" />
                             <span className="material-symbols-outlined text-ivory/90 !text-xl relative z-10">groups</span>
                         </div>
-                        <div className="space-y-0.5">
-                            <h1 className="text-xl font-serif font-bold text-rosewood">{title}</h1>
+                        <div className="space-y-0.5 min-w-0">
+                            <h1 className="text-xl font-serif font-bold text-rosewood truncate">{title}</h1>
                             {description && <p className="text-rosewood/50 text-[10px] font-bold uppercase tracking-wider">{description}</p>}
                         </div>
                     </div>
                     {children && <div className="shrink-0 flex items-center justify-end">{children}</div>}
                 </div>
-                <div className="w-full">
+                {children && <div className="flex md:hidden justify-center w-full px-4">{children}</div>}
+                <div className="w-full px-2 md:px-0">
                     <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} onFilterClick={() => onFilterClick('advanced')} placeholder={t('common:search')} />
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="overflow-x-auto no-scrollbar -mx-4 md:mx-0 px-4 md:px-0 text-center">
                     <QuickFilters filters={filters} onFilterChange={onFilterChange} onFilterClick={onFilterClick} />
                 </div>
             </div>
@@ -200,6 +201,65 @@ const NoResultsView: React.FC<NoResultsViewProps> = ({ isSearching, selectedGend
 };
 
 // ═══════════════════════════════════════════════════════════
+// ErrorStateView
+// ═══════════════════════════════════════════════════════════
+const ErrorStateView: React.FC<{
+    message?: string;
+    onRetry: () => void;
+}> = ({ message, onRetry }) => {
+    const { t } = useTranslation(['dashboard', 'browse']);
+
+    return (
+        <div className="py-24 md:py-32 bg-white rounded-[32px] border border-rosewood/10 shadow-sm flex flex-col items-center justify-center text-center px-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-red/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-red/10 transition-colors" />
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-gold/5 rounded-full -ml-16 -mb-16 blur-3xl group-hover:bg-gold/10 transition-colors" />
+            <div className="w-24 h-24 rounded-3xl bg-ivory flex items-center justify-center mb-8 rotate-3 group-hover:rotate-6 transition-transform duration-500 shadow-inner border border-red/5">
+                <span className="material-symbols-outlined text-5xl text-rosewood/20">error_outline</span>
+            </div>
+            <h3 className="text-2xl font-serif text-dark-brown font-black mb-3">
+                {t('browse:error_loading')}
+            </h3>
+            <p className="text-rosewood/60 text-sm italic font-medium max-w-sm leading-relaxed mb-8">
+                {message || t('dashboard:error_desc')}
+            </p>
+            <button onClick={onRetry} className="px-8 py-3 rounded-xl bg-gold text-white text-xs uppercase tracking-widest font-bold hover:bg-rosewood transition-all duration-300 shadow-md transform hover:-translate-y-1">
+                {t('browse:try_again')}
+            </button>
+        </div>
+    );
+};
+
+// ═══════════════════════════════════════════════════════════
+// NoDataView
+// ═══════════════════════════════════════════════════════════
+const NoDataView: React.FC<{
+    selectedGender: 'FEMALE' | 'MALE';
+}> = ({ selectedGender }) => {
+    const { t, i18n } = useTranslation(['browse', 'dashboard']);
+    const lang = i18n.language === 'ta';
+    const genderLabel = selectedGender === 'FEMALE'
+        ? t('dashboard:bride').toLowerCase()
+        : t('dashboard:groom').toLowerCase();
+
+    return (
+        <div className="py-24 md:py-32 bg-ivory/30 rounded-[32px] border-2 border-dashed border-gold/20 flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
+            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <span className="material-symbols-outlined text-4xl text-gold/40">person_off</span>
+            </div>
+            <h3 className="text-xl font-serif font-bold text-rosewood mb-2">
+                {t('browse:no_profiles_found')}
+            </h3>
+            <p className="text-rosewood/60 text-sm italic font-medium max-w-sm mx-auto leading-relaxed mb-8">
+                {t('dashboard:no_suggestions', { gender: genderLabel })}
+            </p>
+            <button onClick={() => window.location.reload()} className="px-8 py-3 rounded-xl bg-ivory border border-gold/20 text-gold font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-white transition-all duration-300">
+                {lang ? 'மீண்டும் முயலவும்' : 'Refresh Search'}
+            </button>
+        </div>
+    );
+};
+
+// ═══════════════════════════════════════════════════════════
 // BrowseProfiles (Main Orchestrator)
 // ═══════════════════════════════════════════════════════════
 const BrowseProfiles: React.FC = () => {
@@ -216,8 +276,8 @@ const BrowseProfiles: React.FC = () => {
     const fetchNextPage = () => {};
     const hasNextPage = false;
     const isFetchingNextPage = false;
-    const isSearching = false;
-    const handleGenderChange = () => {};
+    const handleGenderChange = (gender: 'MALE' | 'FEMALE') => { setSelectedGender(gender); };
+    const hasActiveFilters = searchQuery.trim().length > 0 || Object.keys(filters).length > 0;
 
     const handleFilterChange = (key: string, value: any) => {
         setFilters((prev: any) => {
@@ -244,7 +304,7 @@ const BrowseProfiles: React.FC = () => {
                         resultCount={data.length}
                         loading={loading}
                     >
-                        {!isSearching && (
+                        {!hasActiveFilters && (
                             <GenderToggle selectedGender={selectedGender} onGenderChange={handleGenderChange} />
                         )}
                     </BrowseProfilesHeader>
@@ -257,13 +317,7 @@ const BrowseProfiles: React.FC = () => {
                     {loading && data.length === 0 ? (
                         <BrowseProfilesSkeleton />
                     ) : error ? (
-                        <div className="py-20 text-center glass-card rounded-3xl border border-rosewood/10 shadow-sm bg-white">
-                            <span className="material-symbols-outlined text-5xl text-rosewood/40 mb-4 font-variation-light">error</span>
-                            <p className="text-rosewood/70 font-serif font-bold">{t('dashboard:error_title')}</p>
-                            <button onClick={() => refetch()} className="mt-4 px-6 py-2 bg-gold text-white rounded-full text-sm font-bold hover:bg-rosewood transition-colors shadow-sm">
-                                {t('dashboard:try_again')}
-                            </button>
-                        </div>
+                        <ErrorStateView onRetry={() => refetch()} />
                     ) : data && data.length > 0 ? (
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 gap-6">
@@ -273,8 +327,10 @@ const BrowseProfiles: React.FC = () => {
                             </div>
                             <InfiniteScrollTrigger onIntersect={() => fetchNextPage()} hasMore={!!hasNextPage} isLoading={isFetchingNextPage} />
                         </>
+                    ) : hasActiveFilters ? (
+                        <NoResultsView isSearching={true} selectedGender={selectedGender} />
                     ) : (
-                        <NoResultsView isSearching={isSearching} selectedGender={selectedGender} />
+                        <NoDataView selectedGender={selectedGender} />
                     )}
                     </AnimatedSection>
                 </div>

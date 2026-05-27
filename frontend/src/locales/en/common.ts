@@ -110,6 +110,7 @@ export const commonEn = {
       professional: "Professional",
       family: "Family",
       assets: "Assets",
+      partner_preference: "Partner Preference",
       horoscope: "Horoscope",
       gallery: "Gallery",
       owner: "Owner",

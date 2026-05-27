@@ -1,6 +1,7 @@
 export interface LoginData {
   identifier: string;
   password: string;
+  requiredRole?: string;
 }
 
 export interface SignupData {

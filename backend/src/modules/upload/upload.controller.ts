@@ -10,17 +10,19 @@ export class UploadController {
   upload = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const file = req.file;
-      console.log(`[upload.controller] file=${JSON.stringify({originalname:file?.originalname, size:file?.size, mimetype:file?.mimetype})}`);
       if (!file) {
         res.status(400).json({ success: false, error: { code: 'UPLOAD_INVALID_TYPE', message: 'No file provided' } });
         return;
       }
       const category = (req.body.category || 'profiles') as 'profiles' | 'gallery' | 'horoscope';
       const result = await this.uploadService.upload(req.account.sub, file, category);
-      console.log(`[upload.controller] success uploadId=${result.uploadId}`);
-      sendSuccess(res, { uploadId: result.uploadId }, 201);
+      sendSuccess(res, {
+        uploadToken: result.uploadToken,
+        url: result.url,
+        width: result.width,
+        height: result.height,
+      }, 201);
     } catch (err) {
-      console.log(`[upload.controller] CAUGHT err=`, err);
       next(err);
     }
   };

@@ -1,10 +1,10 @@
 import api from '../lib/api';
 
-export async function uploadFile(formData: FormData): Promise<{ uploadId: string }> {
+export async function uploadFile(formData: FormData): Promise<{ uploadId: string; url: string }> {
   const res = await api.post('/uploads', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }) as any;
-  return { uploadId: res.data?.uploadId || res.uploadId };
+  return { uploadId: res.uploadToken, url: res.url };
 }
 
 export async function deleteUpload(uploadId: string): Promise<void> {

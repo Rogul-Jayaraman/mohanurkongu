@@ -21,7 +21,7 @@ export const profileNewTa = {
       community_details: "சமுதாய விவரங்கள்",
       professional_details: "தொழில்முறை விவரங்கள்",
       family_details: "குடும்ப விவரங்கள்",
-      assets_and_expectations: "சொத்துக்கள் மற்றும் எதிர்பார்ப்புகள்",
+      assets_and_expectations: "சொத்துக்கள்",
       horoscope_details: "ஜாதக விவரங்கள்",
       horoscope_main: "ஜாதக விவரங்கள்",
       digital_chart: "டிஜிட்டல் ஜாதகம் உருவாக்கம்",

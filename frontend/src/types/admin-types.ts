@@ -1,3 +1,9 @@
+export interface ImageObject {
+  url: string;
+  width?: number | null;
+  height?: number | null;
+}
+
 export interface AdminAccount {
   id: string;
   customId: string;
@@ -28,8 +34,8 @@ export interface AdminManagedProfile {
   dob: string;
   adminVerified: string;
   status: string;
-  profilePhoto: string | null;
-  photo?: string | null;
+  profilePhoto: string | ImageObject | null;
+  photo?: string | ImageObject | null;
   createdAt: string;
   user?: any;
   owner?: any;

@@ -2,6 +2,12 @@ import React from 'react';
 import { LazyImage } from '@/components/ui/atoms/LazyImage';
 
 
+interface ImageObject {
+  url: string;
+  width?: number | null;
+  height?: number | null;
+}
+
 interface ProfileShowcaseCardProps {
   profile: {
     id: string;
@@ -10,7 +16,7 @@ interface ProfileShowcaseCardProps {
     lastNameEn?: string | null;
     firstNameTa?: string | null;
     lastNameTa?: string | null;
-    profilePhoto?: string | null;
+    profilePhoto?: string | ImageObject | null;
     gender?: string;
   };
   isTamil?: boolean;
@@ -43,7 +49,12 @@ export const ProfileShowcaseCard: React.FC<ProfileShowcaseCardProps> = React.mem
     ? [profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' ') || [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ') || 'Profile'
     : [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ') || [profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' ') || 'Profile';
 
-  const imageUrl = (profile.profilePhoto && /^https?:\/\//i.test(profile.profilePhoto)) ? profile.profilePhoto : renderPlaceholderSVG(fullName, isTamil);
+  const photoUrl = typeof profile.profilePhoto === 'string'
+    ? profile.profilePhoto
+    : profile.profilePhoto?.url || '';
+  const imageUrl = photoUrl && (/^https?:\/\//i.test(photoUrl) || photoUrl.startsWith('/media/'))
+    ? photoUrl
+    : renderPlaceholderSVG(fullName, isTamil);
 
   return (
     <div className="

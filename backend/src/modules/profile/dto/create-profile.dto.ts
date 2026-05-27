@@ -38,7 +38,7 @@ export const createProfileSchema = z.object({
     diet: z.nativeEnum(Diet),
     bloodGroup: z.string().max(20).nullable().optional(),
     height: z.number().positive().min(120).max(250),
-    weight: z.number().positive().min(20).max(250).nullable().optional(),
+    weight: z.number().positive().min(30).max(150).nullable().optional(),
     complexion: z.string().nullable().optional(),
     maritalStatus: z.nativeEnum(MaritalStatus).nullable().optional(),
     currentDistrict: z.string().nullable().optional(),
@@ -108,7 +108,7 @@ export const createProfileSchema = z.object({
     }
   }).nullable().optional(),
   photos: z.object({
-    primaryUploadId: z.string().uuid(),
+    primaryUploadId: z.string().min(4),
     galleryUploadIds: z.array(z.string()).optional(),
   }),
   assets: z.object({

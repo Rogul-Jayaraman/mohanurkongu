@@ -22,6 +22,13 @@ document.addEventListener('wheel', () => {
     }
 });
 
+window.onerror = (_msg, _url, _line, _col, err) => {
+  console.error('Uncaught error:', err);
+};
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('Unhandled promise rejection:', e.reason);
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <I18nextProvider i18n={i18n}>

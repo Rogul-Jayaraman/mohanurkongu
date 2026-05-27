@@ -1,0 +1,136 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mkm-postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: mohanurkongu
+      POSTGRES_PASSWORD: mohanurkongu
+      POSTGRES_DB: mohanurkongu
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mohanurkongu"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mkm-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: mkm-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mkm-network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mkm-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - mkm-network
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../docker/backend/Dockerfile.dev
+    container_name: mkm-backend-dev
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - ../backend/.env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://mohanurkongu:mohanurkongu@postgres:5432/mohanurkongu?schema=public
+      REDIS_HOST: redis
+      SMTP_HOST: mailpit
+      CORS_ORIGIN: http://localhost:5173,http://localhost
+      STORAGE_DIR: /storage/media
+    volumes:
+      - ../backend/src:/app/src
+      - ../backend/prisma:/app/prisma
+      - ../backend/package.json:/app/package.json
+      - backend_node_modules:/app/node_modules
+      - media_storage:/storage
+    command: sh -c "npx prisma generate && npx nodemon --legacy-watch --exec tsx src/server.ts --watch src -e ts"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - mkm-network
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/frontend/Dockerfile.dev
+    container_name: mkm-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:4000
+      VITE_TRANSLITERATE_API_URL: https://inputtools.google.com/request
+    volumes:
+      - ../frontend/src:/app/src
+      - ../frontend/public:/app/public
+      - ../frontend/index.html:/app/index.html
+      - ../frontend/vite.config.ts:/app/vite.config.ts
+      - ../frontend/tsconfig.json:/app/tsconfig.json
+      - ../frontend/package.json:/app/package.json
+      - frontend_node_modules:/app/node_modules
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - backend
+    networks:
+      - mkm-network
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: mkm-nginx-dev
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ../docker/nginx/templates:/etc/nginx/templates
+      - media_storage:/storage:ro
+    environment:
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx/conf.d
+      BACKEND_HOST: backend
+      BACKEND_PORT: 4000
+      FRONTEND_HOST: frontend
+      FRONTEND_PORT: 5173
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - mkm-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  backend_node_modules:
+  frontend_node_modules:
+  media_storage:
+
+networks:
+  mkm-network:
+    driver: bridge

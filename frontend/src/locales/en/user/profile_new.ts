@@ -21,7 +21,7 @@ export const profileNewEn = {
       community_details: "Community Details",
       professional_details: "Professional Details",
       family_details: "Family Details",
-      assets_and_expectations: "Assets & Expectations",
+      assets_and_expectations: "Assets",
       horoscope_details: "Horoscope Details",
       horoscope_main: "Horoscope Details (Jadagam)",
       digital_chart: "Digital Chart Generation",

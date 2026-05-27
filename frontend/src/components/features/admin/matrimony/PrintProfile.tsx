@@ -10,7 +10,7 @@ import {
     HEIGHT_OPTIONS, KULAM_OPTIONS, RESIDENCE_OPTIONS, DOSHAM_OPTIONS
 } from '@/constants/index';
 import logo from '@/assets/images/logo.png';
-const getImageUrl = (url: string | null | undefined): string | null => { if (!url || typeof url !== 'string') return null; if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url; return null; };
+const getImageUrl = (url: string | null | undefined): string | null => { if (!url || typeof url !== 'string') return null; if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url; if (url.startsWith('/media/')) { const b = import.meta.env.VITE_API_URL || 'http://localhost:4000'; return `${b}${url}`; } return null; };
 
 /* ---------- Shared helpers ---------- */
 
@@ -181,17 +181,11 @@ const PrintHoroscopeCharts: React.FC<{ profile: any; isTamil: boolean }> = ({ pr
         return (
             <div className="flex flex-col items-center">
                 <span className="text-[9px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{label}</span>
-                {profile.horoscope?.mode === 'GENERATED' ? (
-                    <div className="w-[260px] h-[260px] bg-white border border-gray-200 print-chart-box">
-                        <SouthIndianChart lagnaSignIndex={0} planets={[]} rotateHouses={type === 'rasi'} />
-                    </div>
-                ) : (
-                    <img
-                        src={typeof data === 'string' ? getImageUrl(data) || '' : ''}
-                        alt={label}
-                        className="w-[260px] h-[260px] object-contain border border-gray-200 bg-white"
-                    />
-                )}
+                <img
+                    src={getImageUrl(data?.url || data) || ''}
+                    alt={label}
+                    className="w-[260px] h-[260px] object-contain border border-gray-200 bg-white"
+                />
             </div>
         );
     };
@@ -206,13 +200,14 @@ const PrintHoroscopeCharts: React.FC<{ profile: any; isTamil: boolean }> = ({ pr
     );
 };
 
-const PrintAssets: React.FC<{ profile: any; isTamil: boolean; residence: string; property: string }> = ({ isTamil, residence, property }) => (
+const PrintAssets: React.FC<{ isTamil: boolean; residence: string; vehicle: string; land: string; otherAssets: string }> = ({ isTamil, residence, vehicle, land, otherAssets }) => (
     <div className="col-span-6 p-4 border border-gray-200">
         <SectionTitle title={isTamil ? 'சொத்துக்கள்' : 'Assets'} />
         <DataRow label={isTamil ? 'இருப்பிடம்' : 'Residence'} value={residence} />
+        <DataRow label={isTamil ? 'வாகனம்' : 'Vehicle'} value={vehicle || '-'} />
         <div className="mt-2 pt-2 border-t border-gray-100">
-            <p className="text-[9px] uppercase font-semibold tracking-wider text-gray-500 mb-1">{isTamil ? 'சொத்து விவரங்கள்' : 'Property Details'}</p>
-            <p className="text-[11px] leading-relaxed text-gray-700">{property || (isTamil ? 'குறிப்பிடப்படவில்லை' : 'Not specified')}</p>
+            <p className="text-[9px] uppercase font-semibold tracking-wider text-gray-500 mb-1">{isTamil ? 'நிலம்/சொத்து' : 'Land / Other Assets'}</p>
+            <p className="text-[11px] leading-relaxed text-gray-700">{(land || otherAssets) ? [land, otherAssets].filter(Boolean).join(', ') : (isTamil ? 'குறிப்பிடப்படவில்லை' : 'Not specified')}</p>
         </div>
     </div>
 );
@@ -284,11 +279,13 @@ const PrintProfile: React.FC<{ profile: any }> = ({ profile }) => {
     const lang = i18n.language as 'en' | 'ta';
     const star = profile.star ? getBilingualValue(NAKSHATRA_OPTIONS, profile.star, lang) : '-';
     const rasi = profile.rasi ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang) : '-';
-    const lagna = profile.laganam ? getBilingualValue(RASI_OPTIONS, profile.laganam, lang) : '-';
+    const lagna = profile.lagnam ? getBilingualValue(RASI_OPTIONS, profile.lagnam, lang) : '-';
     const dosham = profile.dosham ? getEnumLabel(profile.dosham, DOSHAM_OPTIONS) : '-';
 
-    const property = (isTamil ? (profile.propertyDetailsTa || profile.propertyDetailsEn) : profile.propertyDetailsEn) || '';
-    const expectations = (isTamil ? (profile.expectationTa || profile.expectationEn) : profile.expectationEn) || '';
+    const vehicle = profile?.vehicle || '';
+    const land = isTamil ? (profile.landTa || profile.landEn) : profile.landEn;
+    const otherAssets = isTamil ? (profile.otherAssetsTa || profile.otherAssetsEn) : profile.otherAssetsEn;
+    const expectationNote = isTamil ? (profile.expectationNoteTa || profile.expectationNoteEn) : profile.expectationNoteEn;
 
     const maritalStatus = profile.maritalStatus ? getEnumLabel(profile.maritalStatus, MARITAL_STATUS_OPTIONS) : '-';
     const height = profile.height ? getEnumLabel(profile.height.toString(), HEIGHT_OPTIONS) : '-';
@@ -297,7 +294,11 @@ const PrintProfile: React.FC<{ profile: any }> = ({ profile }) => {
 
     const currentLocation = getLocationLabel(profile.currentDistrictEn || profile.currentDistrict, profile.currentTaluk || profile.currentCityEn, profile.currentDistrictTa, profile.currentTalukTa, profile.currentCityEn, profile.currentStateEn, profile.currentCountryEn, profile.currentCityTa, profile.currentStateTa, profile.currentCountryTa);
 
-    const profilePhotoUrl = getImageUrl(profile.profilePhoto) || '';
+    const profilePhotoUrl = profile.profilePhoto
+      ? (typeof profile.profilePhoto === 'object' && profile.profilePhoto?.url
+          ? getImageUrl(profile.profilePhoto.url)
+          : getImageUrl(profile.profilePhoto as string)) || ''
+      : '';
 
     return (
         <div id="premium-print-layout" className="hidden-print-container bg-white min-h-screen flex flex-col text-gray-900 overflow-visible relative font-sans">
@@ -354,8 +355,8 @@ const PrintProfile: React.FC<{ profile: any }> = ({ profile }) => {
                     <PrintHoroscopeCharts profile={profile} isTamil={isTamil} />
 
                     <div className="col-span-12 grid grid-cols-2 gap-3">
-                        <PrintAssets profile={profile} isTamil={isTamil} residence={residence} property={property} />
-                        <PrintExpectations isTamil={isTamil} expectations={expectations} />
+                        <PrintAssets isTamil={isTamil} residence={residence} vehicle={vehicle} land={land || ''} otherAssets={otherAssets || ''} />
+                        <PrintExpectations isTamil={isTamil} expectations={expectationNote} />
                     </div>
                 </main>
 
@@ -404,7 +405,7 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
     const lang = i18n.language as 'en' | 'ta';
     const star = profile.star ? getBilingualValue(NAKSHATRA_OPTIONS, profile.star, lang) : '-';
     const rasi = profile.rasi ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang) : '-';
-    const lagna = profile.laganam ? getBilingualValue(RASI_OPTIONS, profile.laganam, lang) : '-';
+    const lagna = profile.lagnam ? getBilingualValue(RASI_OPTIONS, profile.lagnam, lang) : '-';
     const dosham = profile.dosham ? getEnumLabel(profile.dosham, DOSHAM_OPTIONS) : '-';
     const birthTime = profile.birthTime || '-';
     const kuladeivam = (isTamil ? (profile.kuladeivamTa || profile.kuladeivamEn) : profile.kuladeivamEn) || '-';
@@ -412,8 +413,6 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
     const nativeLocation = getLocationLabel(profile.nativeDistrictEn || profile.nativeDistrict, profile.nativeTaluk || undefined, profile.nativeDistrictTa, profile.nativeTalukTa) || '-';
 
     const currentLocation = getLocationLabel(profile.currentDistrictEn || profile.currentDistrict, profile.currentTaluk || profile.currentCityEn, profile.currentDistrictTa, profile.currentTalukTa, profile.currentCityEn, profile.currentStateEn, profile.currentCountryEn, profile.currentCityTa, profile.currentStateTa, profile.currentCountryTa);
-
-    const hasCharts = profile?.horoscope && (profile.horoscope.rasi || profile.horoscope.navamsa);
 
     return (
         <div className="hidden-jathagam-container bg-white min-h-screen">
@@ -468,68 +467,54 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
                     <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-700 mb-4 text-center pb-2 border-b border-gray-200">
                         {isTamil ? 'ஜாதக கட்டங்கள்' : 'Horoscope Charts'}
                     </h2>
-                    {hasCharts ? (
-                        <div className="flex justify-center items-start gap-6">
-                            {(() => {
-                                const hJson = profile.horoscope?.horoscopeJson;
-                                if (profile.horoscope?.mode === 'GENERATED' && hJson) {
-                                    const parsed = typeof hJson === 'string' ? JSON.parse(hJson) : hJson as HoroscopeResult;
-                                    const d9Planets = parsed.planets.map((p: PlanetData) => ({...p, signIndex: p.navamsaSignIndex}));
-                                    return (
-                                        <>
-                                            <div className="flex flex-col items-center">
-                                                <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'ராசி' : 'RASI'}</span>
-                                                <div className="w-[260px] h-[260px] bg-white border border-gray-200 print-chart-box">
-                                                    <SouthIndianChart lagnaSignIndex={parsed.lagna.signIndex} planets={parsed.planets} rotateHouses={true} />
-                                                </div>
-                                            </div>
-                                            <div className="flex flex-col items-center">
-                                                <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'நவாம்சம்' : 'NAVAMSA'}</span>
-                                                <div className="w-[260px] h-[260px] bg-white border border-gray-200 print-chart-box">
-                                                    <SouthIndianChart lagnaSignIndex={parsed.lagnaNavamsa.signIndex} planets={d9Planets} rotateHouses={false} />
-                                                </div>
-                                            </div>
-                                        </>
-                                    );
-                                }
-                                return (
-                                    <>
-                                        {profile.horoscope.rasi && (
-                                            <div className="flex flex-col items-center">
-                                                <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'ராசி' : 'RASI'}</span>
-                                                <div className="w-[260px] h-[260px] bg-white border border-gray-200 print-chart-box">
-                                                    <SouthIndianChart lagnaSignIndex={0} planets={[]} rotateHouses={true} />
-                                                </div>
-                                            </div>
-                                        )}
-                                        {profile.horoscope.navamsa && (
-                                            <div className="flex flex-col items-center">
-                                                <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'நவாம்சம்' : 'NAVAMSA'}</span>
-                                                <div className="w-[260px] h-[260px] bg-white border border-gray-200 print-chart-box">
-                                                    <SouthIndianChart lagnaSignIndex={0} planets={[]} rotateHouses={false} />
-                                                </div>
-                                            </div>
-                                        )}
-                                    </>
-                                );
-                            })()}
-                        </div>
-                    ) : (
-                        <>
-                            {profile.horoscope?.rasi && (
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'ராசி' : 'RASI'}</span>
-                                    <img src={typeof profile.horoscope.rasi === 'string' ? getImageUrl(profile.horoscope.rasi) || '' : ''} alt="Rasi" className="w-[260px] h-[260px] object-contain border border-gray-200 bg-white" />
+                    {(() => {
+                        const hJson = profile.horoscope?.horoscopeJson;
+                        if (profile.horoscope?.mode === 'GENERATED' && hJson) {
+                            const parsed = typeof hJson === 'string' ? JSON.parse(hJson) : hJson as HoroscopeResult;
+                            const d9Planets = parsed.planets.map((p: PlanetData) => ({...p, signIndex: p.navamsaSignIndex}));
+                            return (
+                                <div className="flex justify-center items-start gap-6">
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'ராசி' : 'RASI'}</span>
+                                        <div className="w-[260px] h-[260px] bg-white border border-gray-200 print-chart-box">
+                                            <SouthIndianChart lagnaSignIndex={parsed.lagna.signIndex} planets={parsed.planets} rotateHouses={true} />
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'நவாம்சம்' : 'NAVAMSA'}</span>
+                                        <div className="w-[260px] h-[260px] bg-white border border-gray-200 print-chart-box">
+                                            <SouthIndianChart lagnaSignIndex={parsed.lagnaNavamsa.signIndex} planets={d9Planets} rotateHouses={false} />
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
-                            {profile.horoscope?.navamsa && (
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'நவாம்சம்' : 'NAVAMSA'}</span>
-                                    <img src={typeof profile.horoscope.navamsa === 'string' ? getImageUrl(profile.horoscope.navamsa) || '' : ''} alt="Navamsa" className="w-[260px] h-[260px] object-contain border border-gray-200 bg-white" />
+                            );
+                        }
+                        const hasRasi = profile.horoscope?.rasi?.url;
+                        const hasNavamsa = profile.horoscope?.navamsa?.url;
+                        if (hasRasi || hasNavamsa) {
+                            return (
+                                <div className="flex justify-center items-start gap-6">
+                                    {hasRasi && (
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'ராசி' : 'RASI'}</span>
+                                            <img src={getImageUrl(profile.horoscope.rasi.url) || ''} alt="Rasi" className="w-[260px] h-[260px] object-contain border border-gray-200 bg-white" />
+                                        </div>
+                                    )}
+                                    {hasNavamsa && (
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'நவாம்சம்' : 'NAVAMSA'}</span>
+                                            <img src={getImageUrl(profile.horoscope.navamsa.url) || ''} alt="Navamsa" className="w-[260px] h-[260px] object-contain border border-gray-200 bg-white" />
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </>
-                    )}
+                            );
+                        }
+                        return (
+                            <div className="col-span-12 p-4 border border-gray-200">
+                                <p className="text-sm text-gray-400 italic text-center py-6">{isTamil ? 'ஜாதக கட்டங்கள் வழங்கப்படவில்லை' : 'Horoscope charts not provided'}</p>
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 <div className="pt-2 border-t border-gray-200">

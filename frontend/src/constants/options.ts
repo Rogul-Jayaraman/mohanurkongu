@@ -41,8 +41,10 @@ export const JOB_SECTOR_OPTIONS = [
 ];
 
 export const RESIDENCE_OPTIONS = [
-  { value: 'OWN_HOUSE', label: 'Own House', labelTa: 'சொந்த வீடு' },
+  { value: 'OWNED', label: 'Own House', labelTa: 'சொந்த வீடு' },
   { value: 'RENTED', label: 'Rented', labelTa: 'வாடகை வீடு' },
+  { value: 'PARENTAL', label: 'Parental Home', labelTa: 'பெற்றோர் வீடு' },
+  { value: 'LEASED', label: 'Leased', labelTa: 'குத்தகை' },
 ];
 
 export const RASI_OPTIONS = [

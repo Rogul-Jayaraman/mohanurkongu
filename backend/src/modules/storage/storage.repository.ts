@@ -1,8 +1,13 @@
 import { prisma } from '../../database/prisma.js';
+import { generatePublicId } from '../upload/public-id.helper.js';
 
 export class StorageRepository {
   async findById(id: string) {
     return prisma.upload.findUnique({ where: { id } });
+  }
+
+  async findByUploadToken(token: string) {
+    return prisma.upload.findUnique({ where: { uploadToken: token } });
   }
 
   async findByAccountId(accountId: string) {
@@ -15,23 +20,32 @@ export class StorageRepository {
     });
   }
 
-  async findByOwnerAndChecksum(accountId: string, checksum: string) {
-    return prisma.upload.findFirst({
-      where: { ownerAccountId: accountId, checksum, status: 'TEMP' },
-    });
-  }
-
   async create(data: {
-    publicId: string;
+    uploadToken: string;
     ownerAccountId: string;
     objectKey: string;
-    originalFileName: string;
-    mimeType: string;
-    extension: string;
     size: number;
     checksum: string;
+    status: string;
+    width: number;
+    height: number;
   }) {
-    return prisma.upload.create({ data });
+    return prisma.upload.create({
+      data: {
+        publicId: generatePublicId(), // kept until Phase 10 cleanup
+        uploadToken: data.uploadToken,
+        ownerAccountId: data.ownerAccountId,
+        objectKey: data.objectKey,
+        originalFileName: '',
+        mimeType: 'image/webp',
+        extension: 'webp',
+        size: data.size,
+        checksum: data.checksum,
+        status: data.status as any,
+        width: data.width,
+        height: data.height,
+      },
+    });
   }
 
   async updateStatus(id: string, status: string) {
@@ -52,13 +66,6 @@ export class StorageRepository {
     });
   }
 
-  async updateLastAccessed(id: string): Promise<void> {
-    await prisma.upload.update({
-      where: { id },
-      data: { lastAccessedAt: new Date() },
-    }).catch(() => {});
-  }
-
   async deleteMany(ids: string[]) {
     return prisma.upload.deleteMany({ where: { id: { in: ids } } });
   }
@@ -66,41 +73,61 @@ export class StorageRepository {
   async findTempOlderThan(hours: number) {
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
     return prisma.upload.findMany({
-      where: { status: 'TEMP', updatedAt: { lt: cutoff } },
+      where: { status: 'TEMP', createdAt: { lt: cutoff } },
     });
   }
 
-  async findDraftUploadsByProfileId(profileId: string) {
-    const profile = await prisma.profile.findUnique({
-      where: { id: profileId },
-      select: {
-        photo: {
-          select: {
-            primaryUpload: true,
-            gallery: { select: { upload: true } },
-          },
-        },
-        horoscope: {
-          select: {
-            rasiChart: true,
-            navamsaChart: true,
-          },
-        },
+  // ── v9.0 Cleanup helpers ──────────────────────────────────────
+
+  async findExpiredTemp(hours: number) {
+    const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+    return prisma.upload.findMany({
+      where: { status: 'TEMP', createdAt: { lt: cutoff } },
+      take: 100,
+    });
+  }
+
+  async findExpiredDraftProfiles(days: number) {
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    return prisma.profile.findMany({
+      where: { currentStatus: 'DRAFT', updatedAt: { lt: cutoff } },
+      take: 100,
+      include: {
+        photo: { include: { gallery: true } },
+        horoscope: true,
       },
     });
+  }
 
-    if (!profile) return [];
+  async findDeletePendingBatch(limit: number) {
+    return prisma.upload.findMany({
+      where: {
+        status: 'DELETE_PENDING',
+        cleanupAbandonedAt: null,
+        cleanupAttempts: { lt: 5 },
+      },
+      take: limit,
+    });
+  }
 
-    const uploads: any[] = [];
-    if (profile.photo?.primaryUpload) uploads.push(profile.photo.primaryUpload);
-    if (profile.photo?.gallery) {
-      for (const g of profile.photo.gallery) {
-        if (g.upload) uploads.push(g.upload);
-      }
+  async updateCleanupFailure(id: string, attempts: number, error: string) {
+    const data: any = {
+      cleanupAttempts: attempts,
+      cleanupLastError: error,
+    };
+    if (attempts >= 5) {
+      data.cleanupAbandonedAt = new Date();
     }
-    if (profile.horoscope?.rasiChart) uploads.push(profile.horoscope.rasiChart);
-    if (profile.horoscope?.navamsaChart) uploads.push(profile.horoscope.navamsaChart);
+    return prisma.upload.update({ where: { id }, data });
+  }
 
-    return uploads.filter((u) => u.status === 'DRAFT');
+  async markDeleted(id: string) {
+    return prisma.upload.update({
+      where: { id },
+      data: {
+        status: 'DELETED',
+        deletedAt: new Date(),
+      },
+    });
   }
 }

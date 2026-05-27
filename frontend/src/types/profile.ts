@@ -1,5 +1,11 @@
 import { ProfileStatus, VerificationStatus } from './enums';
 
+export interface ImageObject {
+  url: string;
+  width?: number | null;
+  height?: number | null;
+}
+
 export interface Profile {
   id: string;
   userId: string;
@@ -121,7 +127,7 @@ export interface Profile {
   };
   horoscopeFile?: File | null;
 
-  profilePhoto: string | File | null;
+  profilePhoto: string | File | ImageObject | null;
   gallery: string[];
   galleryPhotos?: string[];
   galleryFiles?: File[];
@@ -158,6 +164,6 @@ export interface ProfileSummary {
   currentDistrictTa: string | null;
   currentCityEn: string | null;
   currentCityTa: string | null;
-  profilePhoto: string | null;
+  profilePhoto: string | ImageObject | null;
   isShortlisted: boolean;
 }

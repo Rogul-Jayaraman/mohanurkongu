@@ -3,6 +3,7 @@ import { AccountRepository } from '../account/account.repository.js';
 import { AccountService } from '../account/account.service.js';
 import { NotificationService } from '../notification/notification.service.js';
 import { authConfig } from '../../config/auth.config.js';
+import { appConfig } from '../../config/app.config.js';
 import { hashPassword, verifyPassword } from '../../common/utils/crypto.js';
 import {
   signVerificationToken,
@@ -185,7 +186,7 @@ export class AuthService {
       };
     });
 
-    this.notificationService.sendWelcomeEmail(result.email, dto.firstNameEn, '').catch(() => {});
+    this.notificationService.sendWelcomeEmail(result.email, dto.firstNameEn, `${appConfig.appUrl}/profile/create`).catch(() => {});
 
     return result;
   }

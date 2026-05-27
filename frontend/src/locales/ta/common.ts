@@ -106,6 +106,7 @@ export const commonTa = {
       professional: "தொழில்",
       family: "குடும்பம்",
       assets: "சொத்துகள்",
+      partner_preference: "துணை விருப்பங்கள்",
       horoscope: "ஜாதகம்",
       gallery: "படங்கள்",
       owner: "உரிமையாளர்",

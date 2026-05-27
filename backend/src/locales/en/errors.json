@@ -31,5 +31,21 @@
   "ACCOUNT_DELETED": "Account not found",
   "RATE_LIMIT_EXCEEDED": "Too many requests. Please try again later",
   "INTERNAL_ERROR": "An unexpected error occurred",
-  "NOT_FOUND": "Resource not found"
+  "NOT_FOUND": "Resource not found",
+  "UPLOAD_NOT_FOUND": "Upload not found",
+  "UPLOAD_INVALID_TYPE": "Invalid file type",
+  "UPLOAD_TOO_LARGE": "File is too large",
+  "UPLOAD_ACTIVE": "Upload is still in use",
+  "UPLOAD_DELETED": "Upload has already been deleted",
+  "UPLOAD_INVALID_STATUS": "Upload status does not allow this operation",
+  "PROFILE_NOT_FOUND": "Profile not found",
+  "PROFILE_ALREADY_ACTIVE": "Profile is already active",
+  "PROFILE_MISSING_BASIC": "Basic details are required",
+  "PROFILE_MISSING_COMMUNITY": "Community details are required",
+  "PROFILE_MISSING_PHOTO": "At least one photo is required",
+  "PROFILE_MISSING_DEFAULT_TRANSLATION": "Default language translation is required",
+  "PROFILE_ALREADY_SUBMITTED": "Profile has already been submitted for review",
+  "PROFILE_REJECTED": "Profile has been rejected",
+  "PROFILE_WRONG_STATUS": "Profile is not in the expected status",
+  "PROFILE_NAME_INVALID": "Invalid profile name"
 }

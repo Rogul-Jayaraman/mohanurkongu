@@ -23,7 +23,7 @@ export interface ProfileDraft {
   professional: Record<string, unknown>;
   family: Record<string, unknown>;
   horoscope: Record<string, unknown>;
-  photos: { primaryUploadId: string | null; galleryUploadIds: string[] };
+  photos: { primaryUploadId: string | null; primaryUploadUrl: string | null; galleryUploadIds: string[]; galleryUploadUrls: string[] };
   assets: Record<string, unknown>;
   partnerPreference: Record<string, unknown>;
   translations: Array<Record<string, unknown>>;

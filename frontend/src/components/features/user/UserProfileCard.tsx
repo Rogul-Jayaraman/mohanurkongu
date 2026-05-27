@@ -81,11 +81,6 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
     const profession =
       profile.profession || profile.jobDetail || profile.jobSector;
     const regNo = profile.regNo || profile.id;
-    const profilePhoto =
-      profile.profilePhoto ||
-      profile.photo ||
-      (profile.photos && profile.photos[0]);
-
     const getCommunityLabel = () => {
       const comm = profile.community || "Kongu Vellalar";
       if (
@@ -169,10 +164,20 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
 
     const resolveImageUrl = (url: string | null | undefined) => {
       if (!url) return renderPlaceholderImage();
-      if (/^https?:\/\//i.test(url)) return url;
+      if (/^(https?:\/\/)/i.test(url)) return url;
       const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-      return `${API_BASE}/media/${url}`;
+      const path = url.startsWith('/media/') ? url : `/media/${url}.webp`;
+      return `${API_BASE}${path}`;
     };
+
+    const profilePhotoObj =
+      profile.profilePhoto ||
+      profile.photo ||
+      (profile.photos && profile.photos[0]);
+
+    const profilePhotoUrl = typeof profilePhotoObj === 'string'
+      ? resolveImageUrl(profilePhotoObj)
+      : profilePhotoObj?.url ? resolveImageUrl(profilePhotoObj.url) : renderPlaceholderImage();
 
     const handleViewProfile = () => {
       navigate(`/manamaalai/view-profile/${profile.id}`);
@@ -256,7 +261,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
           <LazyImage
             alt={fullName}
             className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-700 ease-out"
-            src={resolveImageUrl(profilePhoto)}
+            src={profilePhotoUrl}
           />
           <div className="absolute inset-0 kolam-watermark opacity-10 pointer-events-none"></div>
         </div>

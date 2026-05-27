@@ -500,7 +500,7 @@ export const BrowseProfileFilters: React.FC<BrowseProfileFiltersProps> = ({ isOp
                                         <RangeSlider min={140} max={210} unit="cm" value={[Number(localFilters.minHeight) || 140, Number(localFilters.maxHeight) || 210]} onChange={(val: number[]) => { handleChange('minHeight', val[0]); handleChange('maxHeight', val[1]); }} label={t('browse:height_range')} />
                                     </div>
                                     <div className="">
-                                        <RangeSlider min={40} max={150} unit="kg" value={[Number(localFilters.minWeight) || 40, Number(localFilters.maxWeight) || 150]} onChange={(val: number[]) => { handleChange('minWeight', val[0]); handleChange('maxWeight', val[1]); }} label={t('browse:weight_range')} />
+                                        <RangeSlider min={30} max={150} unit="kg" value={[Number(localFilters.minWeight) || 30, Number(localFilters.maxWeight) || 150]} onChange={(val: number[]) => { handleChange('minWeight', val[0]); handleChange('maxWeight', val[1]); }} label={t('browse:weight_range')} />
                                     </div>
                                     <FilterDropdown label={t('browse:marital_status')} options={maritalStatusOpts} value={localFilters.maritalStatus || ''} onChange={v => handleChange('maritalStatus', v)} />
                                     <FilterDropdown label={t('browse:complexion')} options={complexionOpts} value={localFilters.complexion || ''} onChange={v => handleChange('complexion', v)} />

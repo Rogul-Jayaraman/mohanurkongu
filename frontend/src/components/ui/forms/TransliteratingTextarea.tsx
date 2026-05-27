@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, forwardRef } from 'react';
-import { getTransliteration } from '@/utils/transliterationService';
+import { getLocalTransliteration } from '@/utils/transliterationService';
 import { useInputFormatting } from '@/hooks/useInputFormatting';
 
 export interface TransliteratingTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -48,8 +48,8 @@ export const TransliteratingTextarea = forwardRef<HTMLTextAreaElement, Translite
 
             if (debounceRef.current) clearTimeout(debounceRef.current);
 
-            debounceRef.current = setTimeout(async () => {
-                const transliterated = await getTransliteration(rawVal);
+            debounceRef.current = setTimeout(() => {
+                const transliterated = getLocalTransliteration(rawVal);
                 if (transliterated && transliterated !== rawVal) {
                     setLocalValue(transliterated);
                     

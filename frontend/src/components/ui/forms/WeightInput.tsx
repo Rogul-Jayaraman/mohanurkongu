@@ -53,7 +53,10 @@ const WeightInput: React.FC<WeightInputProps> = ({
 
   useEffect(() => {
     if (!touched && value != null) {
-      setRawInput(value.toString());
+      let val = value;
+      if (val < MIN) val = MIN;
+      else if (val > MAX) val = MAX;
+      setRawInput(val.toString());
     }
   }, [value, touched]);
 
@@ -68,7 +71,9 @@ const WeightInput: React.FC<WeightInputProps> = ({
     setInternalError(err);
     if (!err && rawInput) {
       const num = parseFloat(rawInput);
-      if (!isNaN(num)) onChange(num);
+      if (!isNaN(num)) {
+        onChange(num);
+      }
     } else if (!rawInput && !required) {
       onChange(undefined);
     }

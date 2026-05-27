@@ -13,7 +13,12 @@ export class ProfileRepository {
         horoscope: true,
         photo: { include: { gallery: true } },
         assets: true,
-        partnerPreference: true,
+        partnerPreference: {
+          include: {
+            heightMin: true,
+            heightMax: true,
+          },
+        },
         translations: true,
         history: { orderBy: { createdAt: 'desc' }, take: 5 },
       },
@@ -46,7 +51,11 @@ export class ProfileRepository {
         community: { include: { community: true, caste: true, kulam: true } },
         professional: { include: { jobSector: true } },
         family: true,
-        photo: { include: { primaryUpload: true } },
+        photo: {
+          include: {
+            primaryUpload: { select: { uploadToken: true, objectKey: true, width: true, height: true } },
+          },
+        },
         translations: true,
       },
     });
@@ -67,10 +76,28 @@ export class ProfileRepository {
         community: { include: { community: true, caste: true, kulam: true } },
         professional: { include: { jobSector: true } },
         family: true,
-        horoscope: { include: { rasi: true, nakshatra: true, lagna: true } },
-        photo: { include: { primaryUpload: true, gallery: { include: { upload: true } } } },
+        horoscope: {
+          include: {
+            rasi: true,
+            nakshatra: true,
+            lagna: true,
+            rasiChart: { select: { uploadToken: true, objectKey: true, width: true, height: true } },
+            navamsaChart: { select: { uploadToken: true, objectKey: true, width: true, height: true } },
+          },
+        },
+        photo: {
+          include: {
+            primaryUpload: { select: { uploadToken: true, objectKey: true, width: true, height: true } },
+            gallery: { include: { upload: { select: { uploadToken: true, objectKey: true, width: true, height: true } } } },
+          },
+        },
         assets: true,
-        partnerPreference: true,
+        partnerPreference: {
+          include: {
+            heightMin: true,
+            heightMax: true,
+          },
+        },
         translations: true,
         history: { orderBy: { createdAt: 'desc' }, take: 5 },
       },

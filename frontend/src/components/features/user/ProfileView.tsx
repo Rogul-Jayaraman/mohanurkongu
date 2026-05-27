@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfileUtils } from "@/hooks/useProfileUtils";
 import { useDateFormatter } from "@/hooks/useDateFormatter";
 import { getBilingualValue } from "@/utils/bilingual";
-const getImageUrl = (url: string | null | undefined): string | null => { if (!url || typeof url !== 'string') return null; if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url; return null; };
+const getImageUrl = (url: string | null | undefined): string | null => { if (!url || typeof url !== 'string') return null; if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url; if (url.startsWith('/media/')) { const b = import.meta.env.VITE_API_URL || 'http://localhost:4000'; return `${b}${url}`; } return null; };
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { toast } from "sonner";
 import {
@@ -65,6 +65,7 @@ const NAV_KEYS: { id: string; key: string }[] = [
   { id: "assets", key: "assets" },
   { id: "horoscope", key: "horoscope" },
   { id: "gallery", key: "gallery" },
+  { id: "partner-preference", key: "partner_preference" },
 ];
 
 const QuickNav: React.FC = () => {
@@ -159,7 +160,11 @@ const ProfileViewHeader: React.FC<{ profile: any; isLoading: boolean }> = ({
       )
     : "";
 
-  const profilePhotoUrl = getImageUrl(profile?.profilePhoto) || "";
+  const profilePhotoUrl = profile?.profilePhoto
+    ? (typeof profile.profilePhoto === 'object' && profile.profilePhoto?.url
+        ? getImageUrl(profile.profilePhoto.url)
+        : getImageUrl(profile.profilePhoto as string)) || ""
+    : "";
   const ageDisplay = profile?.dob
     ? `${calculateAge(profile.dob)} ${tCommon("yrs")}`
     : "";
@@ -260,7 +265,11 @@ const ProfileViewHeader: React.FC<{ profile: any; isLoading: boolean }> = ({
               <img
                 src={profilePhotoUrl}
                 alt={name}
+                width={typeof profile?.profilePhoto === 'object' ? profile?.profilePhoto?.width ?? undefined : undefined}
+                height={typeof profile?.profilePhoto === 'object' ? profile?.profilePhoto?.height ?? undefined : undefined}
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
               />
             ) : (
               <div className="w-full h-full bg-ivory flex items-center justify-center">
@@ -340,7 +349,7 @@ const ProfileViewPersonal: React.FC<{ profile: any; isLoading: boolean }> = ({
       <SectionHeaderRedesigned
         title={tCommon("personal_info")}
         icon={<User size={16} />}
-        gradient="bg-rosewood-gradient text-white"
+        gradient="bg-ivory-gold-gradient text-rosewood"
         isLoading={isLoading}
         isTamil={isTamil}
       />
@@ -434,7 +443,7 @@ const ProfileViewCommunity: React.FC<{
       <SectionHeaderRedesigned
         title={t("profile_new:sections.community_details")}
         icon={<Users size={16} />}
-        gradient="bg-ivory-gold-gradient text-rosewood"
+        gradient="bg-rosewood-gradient"
         isTamil={isTamil}
         isLoading={isLoading}
       />
@@ -694,15 +703,15 @@ const ProfileViewAssets: React.FC<{
   const { t, getEnumLabel } = useProfileUtils();
 
   const isTamil = i18n.language === "ta";
-  const property = profile
+  const land = profile
     ? (isTamil
-        ? profile.propertyDetailsTa || profile.propertyDetailsEn
-        : profile.propertyDetailsEn) || ""
+        ? profile.landTa || profile.landEn
+        : profile.landEn) || ""
     : "";
-  const expectations = profile
+  const otherAssets = profile
     ? (isTamil
-        ? profile.expectationTa || profile.expectationEn
-        : profile.expectationEn) || ""
+        ? profile.otherAssetsTa || profile.otherAssetsEn
+        : profile.otherAssetsEn) || ""
     : "";
 
   return (
@@ -715,29 +724,117 @@ const ProfileViewAssets: React.FC<{
         isLoading={isLoading}
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
-        <div>
-          <DetailRow
-            label={t("profile_new:residence")}
-            value={
-              profile?.residence
-                ? getEnumLabel(profile.residence, RESIDENCE_OPTIONS)
-                : ""
-            }
-            isLoading={isLoading}
-          />
-          <DetailRow
-            label={t("profile_new:property_details")}
-            value={property || "-"}
-            isLoading={isLoading}
-          />
-        </div>
-        <div>
-          <DetailRow
-            label={t("profile_new:expectation")}
-            value={expectations || "-"}
-            isLoading={isLoading}
-          />
-        </div>
+        <DetailRow
+          label={t("profile_new:residence")}
+          value={
+            profile?.residence
+              ? getEnumLabel(profile.residence, RESIDENCE_OPTIONS)
+              : ""
+          }
+          isLoading={isLoading}
+        />
+        <DetailRow
+          label={t("profile_new:vehicle")}
+          value={profile?.vehicle || "-"}
+          isLoading={isLoading}
+        />
+        <DetailRow
+          label={t("profile_new:other_assets")}
+          value={otherAssets || "-"}
+          isLoading={isLoading}
+        />
+        <DetailRow
+          label={t("profile_new:land")}
+          value={land || "-"}
+          isLoading={isLoading}
+        />
+      </div>
+    </SectionCard3D>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// ProfileViewPartnerPreference
+// ═══════════════════════════════════════════════════════════
+const ProfileViewPartnerPreference: React.FC<{
+  profile: any;
+  isLoading: boolean;
+}> = ({ profile, isLoading }) => {
+  const { t: tCommon, i18n } = useTranslation(["common"]);
+  const { t, getEnumLabel, formatSalary } = useProfileUtils();
+
+  const isTamil = i18n.language === "ta";
+  const ageRange =
+    profile?.ageMin && profile?.ageMax
+      ? `${profile.ageMin} - ${profile.ageMax} ${tCommon("yrs")}`
+      : profile?.ageMin
+        ? `${profile.ageMin}+ ${tCommon("yrs")}`
+        : profile?.ageMax
+          ? `Up to ${profile.ageMax} ${tCommon("yrs")}`
+          : "";
+  const expectationNote = profile
+    ? (isTamil
+        ? profile.expectationNoteTa || profile.expectationNoteEn
+        : profile.expectationNoteEn) || ""
+    : "";
+  const preferredLocation = profile
+    ? (isTamil
+        ? profile.preferredLocationTa || profile.preferredLocationEn
+        : profile.preferredLocationEn) || ""
+    : "";
+
+  return (
+    <SectionCard3D isLoading={isLoading}>
+      <SectionHeaderRedesigned
+        title={t("profile_new:sections.partner_preferences")}
+        icon={<Heart size={16} />}
+        gradient="bg-ivory-gold-gradient text-rosewood"
+        isTamil={isTamil}
+        isLoading={isLoading}
+      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
+        <DetailRow
+          label={t("profile_new:age_range")}
+          value={ageRange || "-"}
+          isLoading={isLoading}
+        />
+        <DetailRow
+          label={t("profile_new:height_min")}
+          value={
+            profile?.heightMinId
+              ? getEnumLabel(profile.heightMinId.toString(), HEIGHT_OPTIONS)
+              : ""
+          }
+          isLoading={isLoading}
+        />
+        <DetailRow
+          label={t("profile_new:height_max")}
+          value={
+            profile?.heightMaxId
+              ? getEnumLabel(profile.heightMaxId.toString(), HEIGHT_OPTIONS)
+              : ""
+          }
+          isLoading={isLoading}
+        />
+        <DetailRow
+          label={t("profile_new:monthly_salary")}
+          value={
+            profile?.monthlySalary
+              ? formatSalary(profile.monthlySalary)
+              : ""
+          }
+          isLoading={isLoading}
+        />
+        <DetailRow
+          label={t("profile_new:preferred_location")}
+          value={preferredLocation || "-"}
+          isLoading={isLoading}
+        />
+        <DetailRow
+          label={t("profile_new:expectation")}
+          value={expectationNote || "-"}
+          isLoading={isLoading}
+        />
       </div>
     </SectionCard3D>
   );
@@ -761,8 +858,8 @@ const ProfileViewHoroscope: React.FC<{ profile: any; isLoading: boolean }> = ({
   const rasiLabel = profile?.rasi
     ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang)
     : "";
-  const lagnam = profile?.laganam
-    ? getBilingualValue(RASI_OPTIONS, profile.laganam, lang)
+  const lagnam = profile?.lagnam
+    ? getBilingualValue(RASI_OPTIONS, profile.lagnam, lang)
     : "";
   const dosham = profile?.dosham
     ? getEnumLabel(profile.dosham, DOSHAM_OPTIONS)
@@ -775,7 +872,7 @@ const ProfileViewHoroscope: React.FC<{ profile: any; isLoading: boolean }> = ({
       <SectionHeaderRedesigned
         title={t("profile_new:sections.horoscope_details")}
         icon={<Map size={16} />}
-        gradient="bg-ivory-gold-gradient text-rosewood"
+        gradient="bg-rosewood-gradient"
         isTamil={isTamil}
         isLoading={isLoading}
       />
@@ -816,17 +913,17 @@ const ProfileViewHoroscope: React.FC<{ profile: any; isLoading: boolean }> = ({
             })()
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {profile?.horoscope?.rasi && (
+              {profile?.horoscope?.rasi?.url && (
                 <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
-                  <img src={typeof profile.horoscope.rasi === "string" ? getImageUrl(profile.horoscope.rasi) || "" : ""} alt="Rasi" className="w-full h-full object-contain p-4" />
+                  <img src={getImageUrl(profile.horoscope.rasi.url) || ""} alt="Rasi" className="w-full h-full object-contain p-4" />
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{t("profile_new:horoscope.rasi_chart_label")}</span>
                   </div>
                 </motion.div>
               )}
-              {profile?.horoscope?.navamsa && (
+              {profile?.horoscope?.navamsa?.url && (
                 <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
-                  <img src={typeof profile.horoscope.navamsa === "string" ? getImageUrl(profile.horoscope.navamsa) || "" : ""} alt="Navamsa" className="w-full h-full object-contain p-4" />
+                  <img src={getImageUrl(profile.horoscope.navamsa.url) || ""} alt="Navamsa" className="w-full h-full object-contain p-4" />
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{t("profile_new:horoscope.navamsa_chart_label")}</span>
                   </div>
@@ -855,7 +952,7 @@ const ProfileViewGallery: React.FC<{
   const isTamil = i18n.language === "ta";
   const { t } = useTranslation(["profile_new"]);
 
-  const galleryImages = (profile?.gallery || []).filter((url: string) => !!url);
+  const galleryImages = (profile?.gallery || []).filter((item: any) => item?.url);
 
   if (!isLoading && galleryImages.length === 0) return null;
 
@@ -864,7 +961,7 @@ const ProfileViewGallery: React.FC<{
       <SectionHeaderRedesigned
         title={t("profile_new:sections.lifestyle_glimpses")}
         icon={<Camera size={16} />}
-        gradient="bg-rosewood-gradient text-white"
+        gradient="bg-ivory-gold-gradient text-rosewood"
         isLoading={isLoading}
         isTamil={isTamil}
       />
@@ -880,14 +977,14 @@ const ProfileViewGallery: React.FC<{
         }
         return (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 mt-4">
-            {galleryImages.map((url: string, i: number) => (
+            {galleryImages.map((item: any, i: number) => (
               <motion.div
                 key={i}
                 whileHover={{ rotateY: -2, scale: 1.02 }}
                 className="perspective-1000 preserve-3d aspect-4/5 rounded-2xl overflow-hidden border border-gold/20 cursor-pointer shadow-sm hover:shadow-xl hover:shadow-gold/10 transition-shadow duration-300 group bg-white relative"
               >
                 <img
-                  src={getImageUrl(url) ?? ""}
+                  src={getImageUrl(item.url) ?? ""}
                   alt={`${t("profile_new:gallery")} ${i + 1}`}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   loading="lazy"
@@ -1108,7 +1205,18 @@ const ProfileView: React.FC = () => {
         </AnimatedSection>
         <SectionDivider />
 
-        {/* Section 6: Horoscope */}
+        {/* Section 6: Partner Preference */}
+        <AnimatedSection>
+          <div id="section-partner-preference" className="scroll-mt-20">
+            <ProfileViewPartnerPreference
+              profile={profile}
+              isLoading={isLoading}
+            />
+          </div>
+        </AnimatedSection>
+        <SectionDivider />
+
+        {/* Section 7: Horoscope */}
         <AnimatedSection>
           <div id="section-horoscope" className="scroll-mt-20">
             <ProfileViewHoroscope profile={profile} isLoading={isLoading} />
@@ -1118,7 +1226,7 @@ const ProfileView: React.FC = () => {
           <>
             <SectionDivider />
 
-            {/* Section 7: Gallery */}
+            {/* Section 8: Gallery */}
             <AnimatedSection>
               <div id="section-gallery" className="scroll-mt-20 mb-6">
                 <ProfileViewGallery

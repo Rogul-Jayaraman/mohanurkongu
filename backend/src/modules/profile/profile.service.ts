@@ -128,14 +128,37 @@ export class ProfileService {
     return {
       ageMin: pp.ageMin ?? null,
       ageMax: pp.ageMax ?? null,
-      heightMinId: pp.heightMinId ?? null,
-      heightMaxId: pp.heightMaxId ?? null,
+      heightMinId: pp.heightMin?.valueCm ?? null,
+      heightMaxId: pp.heightMax?.valueCm ?? null,
       monthlySalary: pp.monthlySalary ? Number(pp.monthlySalary) : null,
       expectationNoteEn: pp.expectationNote ?? null,
       expectationNoteTa: null,
       preferredLocationEn: pp.preferredLocation ?? null,
       preferredLocationTa: null,
     };
+  }
+
+  private async resolveUploadTokenField(value: string | undefined): Promise<string | undefined> {
+    if (!value) return undefined;
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) return value;
+    const upload = await prisma.upload.findUnique({ where: { uploadToken: value } });
+    if (!upload) throw new AppError(400, ErrorCodes.UPLOAD_NOT_FOUND, ErrorCodes.UPLOAD_NOT_FOUND);
+    return upload.id;
+  }
+
+  private async resolveUploadTokensInDto(dto: any): Promise<void> {
+    if (dto.photos) {
+      dto.photos.primaryUploadId = await this.resolveUploadTokenField(dto.photos.primaryUploadId);
+      if (dto.photos.galleryUploadIds) {
+        dto.photos.galleryUploadIds = await Promise.all(
+          dto.photos.galleryUploadIds.map((id: string) => this.resolveUploadTokenField(id)),
+        );
+      }
+    }
+    if (dto.horoscope) {
+      dto.horoscope.rasiChartUploadId = await this.resolveUploadTokenField(dto.horoscope.rasiChartUploadId);
+      dto.horoscope.navamsaChartUploadId = await this.resolveUploadTokenField(dto.horoscope.navamsaChartUploadId);
+    }
   }
 
   private collectUploadIds(dto: any): string[] {
@@ -153,7 +176,7 @@ export class ProfileService {
         where: { id: { in: uploadIds }, ownerAccountId: accountId },
       });
       if (owned !== uploadIds.length) {
-        throw new AppError(403, ErrorCodes.AUTH_FORBIDDEN, 'One or more uploads do not belong to you');
+        throw new AppError(403, ErrorCodes.AUTH_FORBIDDEN, ErrorCodes.AUTH_FORBIDDEN);
       }
     }
   }
@@ -184,7 +207,7 @@ export class ProfileService {
       const data = this.mapBasicData(sections.basic);
       if (data.heightId !== undefined) {
         const h = await tx.height.findUnique({ where: { valueCm: data.heightId } });
-        if (!h) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'Invalid height');
+        if (!h) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         data.heightId = h.id;
       }
       const locationFields = ['currentDistrict', 'currentTaluk', 'currentCityEn', 'currentCityTa',
@@ -252,7 +275,7 @@ export class ProfileService {
       if (Object.keys(data).length > 0) {
         if (sections.basic.profileFor && typeof sections.basic.profileFor === 'string') {
           const pf = await tx.profileFor.findUnique({ where: { code: sections.basic.profileFor } });
-          if (!pf) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'Invalid profileFor');
+          if (!pf) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
           data.profileForId = pf.id;
         }
         const required = ['profileForId', 'gender', 'dob', 'diet', 'heightId'];
@@ -280,14 +303,14 @@ export class ProfileService {
       const cleaned: any = {};
       if (d.community !== undefined && d.community !== null) {
         const com = await tx.community.findUnique({ where: { code: d.community } });
-        if (!com) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'Invalid community');
+        if (!com) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         cleaned.communityId = com.id;
       }
       if (d.communityId !== undefined) cleaned.communityId = d.communityId;
       if (d.caste !== undefined && d.caste !== null) {
         if (cleaned.communityId != null) {
           const ca = await tx.caste.findFirst({ where: { communityId: cleaned.communityId, code: d.caste } });
-          if (!ca) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'Invalid caste');
+          if (!ca) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
           cleaned.casteId = ca.id;
         } else {
           const ca = await tx.caste.findFirst({ where: { code: d.caste } });
@@ -297,7 +320,7 @@ export class ProfileService {
       if (d.casteId !== undefined) cleaned.casteId = d.casteId;
       if (d.kulam !== undefined && d.kulam !== null) {
         const kl = await tx.kulam.findUnique({ where: { code: d.kulam } });
-        if (!kl) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'Invalid kulam');
+        if (!kl) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         cleaned.kulamId = kl.id;
       }
       if (d.kulamId !== undefined) cleaned.kulamId = d.kulamId;
@@ -323,7 +346,7 @@ export class ProfileService {
       if (d.education !== undefined) data.education = d.education;
       if (d.jobSector !== undefined && d.jobSector !== null) {
         const js = await tx.jobSector.findUnique({ where: { code: d.jobSector } });
-        if (!js) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'Invalid jobSector');
+        if (!js) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         data.jobSectorId = js.id;
       }
       if (d.jobSectorId !== undefined) data.jobSectorId = d.jobSectorId;
@@ -375,19 +398,19 @@ export class ProfileService {
       }
       if (data.rasi !== undefined && data.rasi !== null) {
         const r = await tx.rasi.findUnique({ where: { code: data.rasi } });
-        if (!r) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'Invalid rasi');
+        if (!r) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         cleaned.rasiId = r.id;
       }
       if (data.rasiId !== undefined) cleaned.rasiId = data.rasiId;
       if (data.nakshatra !== undefined && data.nakshatra !== null) {
         const n = await tx.nakshatra.findUnique({ where: { code: data.nakshatra } });
-        if (!n) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'Invalid nakshatra');
+        if (!n) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         cleaned.nakshatraId = n.id;
       }
       if (data.nakshatraId !== undefined) cleaned.nakshatraId = data.nakshatraId;
       if (data.lagna !== undefined && data.lagna !== null) {
         const l = await tx.lagna.findUnique({ where: { code: data.lagna } });
-        if (!l) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'Invalid lagna');
+        if (!l) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         cleaned.lagnaId = l.id;
       }
       if (data.lagnaId !== undefined) cleaned.lagnaId = data.lagnaId;
@@ -469,7 +492,7 @@ export class ProfileService {
       for (const key of ['heightMinId', 'heightMaxId']) {
         if (data[key] != null) {
           const h = await tx.height.findUnique({ where: { valueCm: data[key] } });
-          if (!h) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, `Invalid ${key}`);
+          if (!h) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
           data[key] = h.id;
         }
       }
@@ -515,6 +538,7 @@ export class ProfileService {
   }
 
   async saveDraft(accountId: string, dto: any) {
+    await this.resolveUploadTokensInDto(dto);
     const { profileId: existingProfileId, translations, photos, ...sections } = dto;
 
     const uploadIds = this.collectUploadIds(dto);
@@ -551,6 +575,7 @@ export class ProfileService {
   }
 
   async createProfile(accountId: string, dto: any) {
+    await this.resolveUploadTokensInDto(dto);
     const { profileId: existingProfileId, translations, photos, ...sections } = dto;
 
     await this.validateCreateProfile(dto, accountId);
@@ -617,10 +642,15 @@ export class ProfileService {
         community: { include: { community: true, caste: true, kulam: true } },
         professional: { include: { jobSector: true } },
         family: true,
-        horoscope: { include: { rasi: true, nakshatra: true, lagna: true } },
-        photo: { include: { gallery: true } },
+        horoscope: { include: { rasi: true, nakshatra: true, lagna: true, rasiChart: true, navamsaChart: true } },
+        photo: { include: { primaryUpload: true, gallery: { include: { upload: true } } } },
         assets: true,
-        partnerPreference: true,
+        partnerPreference: {
+          include: {
+            heightMin: true,
+            heightMax: true,
+          },
+        },
         translations: true,
       },
     });
@@ -716,6 +746,8 @@ export class ProfileService {
         lagna: profile.horoscope.lagna?.code ?? null,
         rasiChartUploadId: profile.horoscope.rasiChartUploadId ?? null,
         navamsaChartUploadId: profile.horoscope.navamsaChartUploadId ?? null,
+        rasiChartUploadUrl: profile.horoscope.rasiChart?.objectKey ? `/media/${profile.horoscope.rasiChart.objectKey}` : null,
+        navamsaChartUploadUrl: profile.horoscope.navamsaChart?.objectKey ? `/media/${profile.horoscope.navamsaChart.objectKey}` : null,
         horoscopeJson: profile.horoscope.horoscopeJson ?? null,
       };
     }
@@ -723,7 +755,11 @@ export class ProfileService {
     if (profile.photo) {
       dto.photos = {
         primaryUploadId: profile.photo.primaryUploadId ?? null,
+        primaryUploadUrl: profile.photo.primaryUpload?.objectKey ? `/media/${profile.photo.primaryUpload.objectKey}` : null,
         galleryUploadIds: profile.photo.gallery.map((g: any) => g.uploadId),
+        galleryUploadUrls: profile.photo.gallery
+          .map((g: any) => g.upload?.objectKey ? `/media/${g.upload.objectKey}` : null)
+          .filter(Boolean),
       };
     }
 
@@ -763,7 +799,7 @@ export class ProfileService {
     });
 
     if (!profile) {
-      throw new AppError(400, ErrorCodes.PROFILE_WRONG_STATUS, 'Profile is not in PENDING status');
+      throw new AppError(400, ErrorCodes.PROFILE_WRONG_STATUS, ErrorCodes.PROFILE_WRONG_STATUS);
     }
 
     const regNo = profile.regNo || await this.accountService.generateRegNo();
@@ -799,7 +835,7 @@ export class ProfileService {
     });
 
     if (!profile) {
-      throw new AppError(400, ErrorCodes.PROFILE_WRONG_STATUS, 'Profile is not in PENDING status');
+      throw new AppError(400, ErrorCodes.PROFILE_WRONG_STATUS, ErrorCodes.PROFILE_WRONG_STATUS);
     }
 
     return await prisma.$transaction(async (tx) => {
@@ -827,6 +863,26 @@ export class ProfileService {
     });
   }
 
+  private async transitionProfileUploads(profileId: string, toStatus: string) {
+    const profile = await prisma.profile.findUnique({
+      where: { id: profileId },
+      include: {
+        photo: { include: { gallery: true } },
+        horoscope: true,
+      },
+    });
+    if (!profile) return;
+    const uploadIds: string[] = [];
+    if (profile.photo?.primaryUploadId) uploadIds.push(profile.photo.primaryUploadId);
+    if (profile.photo?.gallery) uploadIds.push(...profile.photo.gallery.map((g: any) => g.uploadId));
+    if (profile.horoscope?.rasiChartUploadId) uploadIds.push(profile.horoscope.rasiChartUploadId);
+    if (profile.horoscope?.navamsaChartUploadId) uploadIds.push(profile.horoscope.navamsaChartUploadId);
+    const uniqueIds = [...new Set(uploadIds)];
+    if (uniqueIds.length > 0) {
+      await this.storageService.bulkTransitionStatus(uniqueIds, ['DRAFT', 'ACTIVE'], toStatus);
+    }
+  }
+
   async deleteDraft(accountId: string, profileId: string) {
     const profile = await prisma.profile.findFirst({
       where: { id: profileId, accountId, currentStatus: 'DRAFT' },
@@ -848,11 +904,12 @@ export class ProfileService {
 
     const uniqueUploadIds = [...new Set(uploadIds)];
 
-    await prisma.$transaction(async (tx) => {
-      if (uniqueUploadIds.length > 0) {
-        await this.storageService.hardDeleteMany(uniqueUploadIds, accountId);
-      }
-      await tx.profile.delete({ where: { id: profile.id } });
+    if (uniqueUploadIds.length > 0) {
+      await this.storageService.bulkTransitionStatus(uniqueUploadIds, ['DRAFT', 'ACTIVE'], 'DELETE_PENDING');
+    }
+    await prisma.profile.update({
+      where: { id: profile.id },
+      data: { currentStatus: 'DELETED', archivedAt: new Date() },
     });
   }
 
@@ -942,7 +999,9 @@ export class ProfileService {
         education: p.professional?.education ?? null,
         jobDetail: p.professional?.jobDetail ?? null,
 
-        profilePhoto: p.photo?.primaryUploadId ?? null,
+        profilePhoto: p.photo?.primaryUpload?.objectKey
+          ? { url: `/media/${p.photo.primaryUpload.objectKey}`, width: p.photo.primaryUpload.width, height: p.photo.primaryUpload.height }
+          : null,
 
         ...this.mapLocationFields(p.basic?.currentLocation, 'current', en, ta),
       };
@@ -976,6 +1035,7 @@ export class ProfileService {
     const h = profile.horoscope;
     const ph = profile.photo;
     const a = profile.assets;
+    const pp = profile.partnerPreference;
 
     const enTrans = profile.translations?.find(t => t.language === 'EN');
     const taTrans = profile.translations?.find(t => t.language === 'TA');
@@ -1060,32 +1120,54 @@ export class ProfileService {
 
       // Assets
       residence: a?.residenceType ?? null,
-      propertyDetailsEn: a?.land ?? a?.otherAssets ?? null,
-      propertyDetailsTa: a?.land ?? a?.otherAssets ?? null,
-      expectationEn: null,
-      expectationTa: null,
+      landEn: a?.land ?? null,
+      landTa: null,
+      otherAssetsEn: a?.otherAssets ?? null,
+      otherAssetsTa: null,
+      vehicle: a?.vehicle ?? null,
+
+      // Partner Preference
+      ageMin: pp?.ageMin ?? null,
+      ageMax: pp?.ageMax ?? null,
+      heightMinId: pp?.heightMin?.valueCm ?? null,
+      heightMaxId: pp?.heightMax?.valueCm ?? null,
+      monthlySalary: pp?.monthlySalary ? Number(pp.monthlySalary) : null,
+      expectationNoteEn: pp?.expectationNote ?? null,
+      expectationNoteTa: null,
+      preferredLocationEn: pp?.preferredLocation ?? null,
+      preferredLocationTa: null,
 
       // Horoscope — lookup codes (top-level for display labels)
       star: h?.nakshatra?.code ?? null,
       rasi: h?.rasi?.code ?? null,
       lagnam: h?.lagna?.code ?? null,
 
-      // Horoscope — sub-object with resolved chart image URLs
+      // Horoscope — sub-object with chart image objects
       horoscope: h ? {
         mode: h.mode ?? null,
         birthTime: (h.horoscopeJson as any)?.input
           ? `${(h.horoscopeJson as any).input.dateOfBirth}T${(h.horoscopeJson as any).input.timeOfBirth}:00.000Z`
           : null,
         birthPlace: (h.horoscopeJson as any)?.input?.location?.displayName ?? null,
-        rasiChartUploadId: h.rasiChartUploadId ?? null,
-        navamsaChartUploadId: h.navamsaChartUploadId ?? null,
+        rasi: h.rasiChart?.objectKey
+          ? { url: `/media/${h.rasiChart.objectKey}`, width: h.rasiChart.width, height: h.rasiChart.height }
+          : null,
+        navamsa: h.navamsaChart?.objectKey
+          ? { url: `/media/${h.navamsaChart.objectKey}`, width: h.navamsaChart.width, height: h.navamsaChart.height }
+          : null,
         horoscopeJson: h.horoscopeJson ?? null,
       } : null,
 
-      // Photo — raw uploadIds (controller resolves to URLs)
-      profilePhoto: ph?.primaryUploadId ?? null,
+      // Photo — image objects
+      profilePhoto: ph?.primaryUpload?.objectKey
+        ? { url: `/media/${ph.primaryUpload.objectKey}`, width: ph.primaryUpload.width, height: ph.primaryUpload.height }
+        : null,
       photo: null,
-      gallery: ph?.gallery?.map(g => g.upload.id) ?? [],
+      gallery: ph?.gallery
+        ?.map(g => g.upload?.objectKey
+          ? { url: `/media/${g.upload.objectKey}`, width: g.upload.width, height: g.upload.height }
+          : null)
+        .filter(Boolean) ?? [],
     };
   }
 }

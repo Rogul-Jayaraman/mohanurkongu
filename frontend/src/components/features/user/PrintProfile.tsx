@@ -9,7 +9,7 @@ import { SouthIndianChart } from '@/components/shared/horoscope';
 import type { PlanetData, HoroscopeResult } from '@/types/horoscope';
 import { getBilingualValue } from '@/utils/bilingual';
 import logo from '@/assets/images/logo.png';
-const safeGetImageUrl = (url: string) => (url && /^https?:\/\//i.test(url)) ? url : '';
+const safeGetImageUrl = (url: any) => { const u = typeof url === 'object' && url?.url ? url.url : (typeof url === 'string' ? url : ''); if (!u) return ''; if (/^https?:\/\//i.test(u) || u.startsWith('data:')) return u; if (u.startsWith('/media/')) { const b = import.meta.env.VITE_API_URL || 'http://localhost:4000'; return `${b}${u}`; } return ''; };
 
 
 /* ---------- Shared helpers ---------- */
@@ -140,26 +140,15 @@ const BiodataJathagam: React.FC<{
                 <>
                     <div className="flex flex-col items-center">
                         <div className="w-full max-w-[280px] chart-container">
-                            {horoscope?.rasi ? (
-                                mode === 'GENERATED' ? (
+                            {horoscope?.rasi?.url ? (
                                     <div className="w-full h-full border border-gray-200 bg-white flex items-center justify-center p-2">
                                         <img
-                                            src={getImageUrl(horoscope.rasi as string)}
+                                            src={getImageUrl(horoscope.rasi.url)}
                                             alt="Rasi Chart"
                                             className="max-w-full max-h-full object-contain grayscale"
                                             crossOrigin="anonymous"
                                         />
                                     </div>
-                                ) : (
-                                    <div className="w-full h-full border border-gray-200 bg-white flex items-center justify-center p-2">
-                                        <img
-                                            src={getImageUrl(horoscope.rasi as string)}
-                                            alt="Rasi Chart"
-                                            className="max-w-full max-h-full object-contain grayscale"
-                                            crossOrigin="anonymous"
-                                        />
-                                    </div>
-                                )
                             ) : (
                                 <div className="w-full h-full border border-dashed border-gray-200 flex items-center justify-center text-[10px] text-gray-300 uppercase tracking-widest italic">No Data</div>
                             )}
@@ -167,26 +156,15 @@ const BiodataJathagam: React.FC<{
                     </div>
                     <div className="flex flex-col items-center">
                         <div className="w-full max-w-[280px] chart-container">
-                            {horoscope?.navamsa ? (
-                                mode === 'GENERATED' ? (
+                            {horoscope?.navamsa?.url ? (
                                     <div className="w-full h-full border border-gray-200 bg-white flex items-center justify-center p-2">
                                         <img
-                                            src={getImageUrl(horoscope.navamsa as string)}
+                                            src={getImageUrl(horoscope.navamsa.url)}
                                             alt="Navamsa Chart"
                                             className="max-w-full max-h-full object-contain grayscale"
                                             crossOrigin="anonymous"
                                         />
                                     </div>
-                                ) : (
-                                    <div className="w-full h-full border border-gray-200 bg-white flex items-center justify-center p-2">
-                                        <img
-                                            src={getImageUrl(horoscope.navamsa as string)}
-                                            alt="Navamsa Chart"
-                                            className="max-w-full max-h-full object-contain grayscale"
-                                            crossOrigin="anonymous"
-                                        />
-                                    </div>
-                                )
                             ) : (
                                 <div className="w-full h-full border border-dashed border-gray-200 flex items-center justify-center text-[10px] text-gray-300 uppercase tracking-widest italic">No Data</div>
                             )}
@@ -255,7 +233,7 @@ const PrintProfile: React.FC<{ profile: any }> = ({ profile }) => {
     const lang = i18n.language as 'en' | 'ta';
     const star = profile.star ? getBilingualValue(NAKSHATRA_OPTIONS, profile.star, lang) : '-';
     const rasiComputed = profile.rasi ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang) : '-';
-    const lagna = profile.laganam ? getBilingualValue(RASI_OPTIONS, profile.laganam, lang) : '-';
+    const lagna = profile.lagnam ? getBilingualValue(RASI_OPTIONS, profile.lagnam, lang) : '-';
     const dosham = profile.dosham ? getEnumLabel(profile.dosham, DOSHAM_OPTIONS) : '-';
 
     return (
@@ -332,12 +310,12 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
 
     const star = profile.star ? getEnumLabel(profile.star, NAKSHATRA_OPTIONS) : '-';
     const rasiComputed = profile.rasi ? getEnumLabel(profile.rasi, RASI_OPTIONS) : '-';
-    const lagna = profile.laganam ? getEnumLabel(profile.laganam, RASI_OPTIONS) : '-';
+    const lagna = profile.lagnam ? getEnumLabel(profile.lagnam, RASI_OPTIONS) : '-';
     const dosham = profile.dosham ? getEnumLabel(profile.dosham, DOSHAM_OPTIONS) : '-';
 
     const getImageUrl = (url: string) => {
         if (!url) return '';
-        if (url.startsWith('http') || url.startsWith('data:')) return url;
+        if (url.startsWith('/media/') || url.startsWith('http') || url.startsWith('data:')) return url;
         return '';
     };
 

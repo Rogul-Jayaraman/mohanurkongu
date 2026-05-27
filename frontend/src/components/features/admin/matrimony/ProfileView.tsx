@@ -11,7 +11,7 @@ import { getBilingualValue } from '@/utils/bilingual';
 import { toast } from 'sonner';
 import { ArrowLeft, Shield, ShieldBan, Check, X, Phone, Mail, Printer, FileText, Info, User, Users, Briefcase, Heart, Building2, Map, Camera, Eye, EyeOff } from 'lucide-react';
 import { Profile } from '@/types/profile';
-const getImageUrl = (url: string | null | undefined): string | null => { if (!url || typeof url !== 'string') return null; if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url; return null; };
+const getImageUrl = (url: string | null | undefined): string | null => { if (!url || typeof url !== 'string') return null; if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url; if (url.startsWith('/media/')) { const b = import.meta.env.VITE_API_URL || 'http://localhost:4000'; return `${b}${url}`; } return null; };
 import { useProfileUtils } from '@/hooks/useProfileUtils';
 import { useDateFormatter } from '@/hooks/useDateFormatter';
 import {
@@ -40,6 +40,7 @@ const NAV_KEYS: { id: string; key: string }[] = [
   { id: "assets", key: "assets" },
   { id: "horoscope", key: "horoscope" },
   { id: "gallery", key: "gallery" },
+  { id: "partner-preference", key: "partner_preference" },
   { id: "owner", key: "owner" },
   { id: "admin", key: "admin" },
 ];
@@ -117,12 +118,12 @@ const AdminProfileHeader: React.FC<{
   const { formatDate } = useDateFormatter();
   const { calculateAge } = useProfileUtils();
 
-  const photoUrl = (() => {
-    if (!profile?.profilePhoto) return "";
-    if (typeof profile.profilePhoto === 'string') {
-      return getImageUrl(profile.profilePhoto);
-    }
-    return URL.createObjectURL(profile.profilePhoto as unknown as File);
+  const profilePhoto = profile?.profilePhoto;
+  const photoUrl: string = (() => {
+    if (!profilePhoto) return "";
+    if (typeof profilePhoto === 'string') return getImageUrl(profilePhoto) || "";
+    if (typeof profilePhoto === 'object' && 'url' in profilePhoto) return (profilePhoto as any).url || "";
+    return "";
   })();
 
   if (isLoading) {
@@ -248,7 +249,7 @@ const AdminPersonalDetails: React.FC<{
     <SectionHeaderRedesigned
       title={isTamil ? 'தனிப்பட்ட விவரங்கள்' : 'Personal Details'}
       icon={<User size={16} />}
-      gradient="bg-rosewood-gradient text-white"
+      gradient="bg-ivory-gold-gradient text-rosewood"
       isLoading={isLoading}
       isTamil={isTamil}
     />
@@ -285,7 +286,7 @@ const AdminCommunityDetails: React.FC<{
       <SectionHeaderRedesigned
         title={isTamil ? 'சமூக விவரங்கள்' : 'Community Details'}
         icon={<Users size={16} />}
-        gradient="bg-ivory-gold-gradient text-rosewood"
+        gradient="bg-rosewood-gradient"
         isLoading={isLoading}
         isTamil={isTamil}
       />
@@ -413,25 +414,62 @@ const AdminAssetsAndExpectations: React.FC<{
   getEnumLabel: (value: string, options: any[]) => string;
   isLoading: boolean;
 }> = ({ profile, isTamil, getEnumLabel, isLoading }) => {
-  const property = profile ? (isTamil ? (profile.propertyDetailsTa || profile.propertyDetailsEn) : profile.propertyDetailsEn) || '' : '';
-  const expectations = profile ? (isTamil ? (profile.expectationTa || profile.expectationEn) : profile.expectationEn) || '' : '';
+  const land = profile ? (isTamil ? (profile.landTa || profile.landEn) : profile.landEn) || '' : '';
+  const otherAssets = profile ? (isTamil ? (profile.otherAssetsTa || profile.otherAssetsEn) : profile.otherAssetsEn) || '' : '';
   return (
     <SectionCard3D isLoading={isLoading}>
       <SectionHeaderRedesigned
-        title={isTamil ? 'சொத்து மற்றும் எதிர்பார்ப்புகள்' : 'Assets & Expectations'}
+        title={isTamil ? 'சொத்துக்கள்' : 'Assets'}
         icon={<Building2 size={16} />}
         gradient="bg-rosewood-gradient text-white"
         isLoading={isLoading}
         isTamil={isTamil}
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
-        <div>
-          <DetailRow label={isTamil ? 'வசிப்பிடம்' : 'Residence'} value={profile?.residence ? getEnumLabel(profile.residence, RESIDENCE_OPTIONS) : ''} isLoading={isLoading} />
-          <DetailRow label={isTamil ? 'சொத்து விவரங்கள்' : 'Property Details'} value={property || '-'} isLoading={isLoading} />
-        </div>
-        <div>
-          <DetailRow label={isTamil ? 'எதிர்பார்ப்புகள்' : 'Expectations'} value={expectations || '-'} isLoading={isLoading} />
-        </div>
+        <DetailRow label={isTamil ? 'வசிப்பிடம்' : 'Residence'} value={profile?.residence ? getEnumLabel(profile.residence, RESIDENCE_OPTIONS) : ''} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'வாகனம்' : 'Vehicle'} value={profile?.vehicle || '-'} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'பிற சொத்துகள்' : 'Other Assets'} value={otherAssets || '-'} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'நிலம்' : 'Land'} value={land || '-'} isLoading={isLoading} />
+      </div>
+    </SectionCard3D>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// AdminPartnerPreferences
+// ═══════════════════════════════════════════════════════════
+const AdminPartnerPreferences: React.FC<{
+  profile: Profile | undefined;
+  isTamil: boolean;
+  getEnumLabel: (value: string, options: any[]) => string;
+  formatSalary: (amount: number) => string;
+  isLoading: boolean;
+}> = ({ profile, isTamil, getEnumLabel, formatSalary, isLoading }) => {
+  const ageRange = profile?.ageMin && profile?.ageMax
+    ? `${profile.ageMin} - ${profile.ageMax} ${isTamil ? 'வயது' : 'yrs'}`
+    : profile?.ageMin
+      ? `${profile.ageMin}+ ${isTamil ? 'வயது' : 'yrs'}`
+      : profile?.ageMax
+        ? `Up to ${profile.ageMax} ${isTamil ? 'வயது' : 'yrs'}`
+        : '';
+  const expectationNote = profile ? (isTamil ? (profile.expectationNoteTa || profile.expectationNoteEn) : profile.expectationNoteEn) || '' : '';
+  const preferredLocation = profile ? (isTamil ? (profile.preferredLocationTa || profile.preferredLocationEn) : profile.preferredLocationEn) || '' : '';
+  return (
+    <SectionCard3D isLoading={isLoading}>
+      <SectionHeaderRedesigned
+        title={isTamil ? 'துணைக்கான விருப்பங்கள்' : 'Partner Preferences'}
+        icon={<Heart size={16} />}
+        gradient="bg-ivory-gold-gradient text-rosewood"
+        isLoading={isLoading}
+        isTamil={isTamil}
+      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
+        <DetailRow label={isTamil ? 'வயது வரம்பு' : 'Age Range'} value={ageRange || '-'} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'குறைந்தபட்ச உயரம்' : 'Min Height'} value={profile?.heightMinId ? getEnumLabel(profile.heightMinId.toString(), HEIGHT_OPTIONS) : ''} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'அதிகபட்ச உயரம்' : 'Max Height'} value={profile?.heightMaxId ? getEnumLabel(profile.heightMaxId.toString(), HEIGHT_OPTIONS) : ''} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'மாத சம்பளம்' : 'Monthly Salary'} value={profile?.monthlySalary ? formatSalary(profile.monthlySalary) : ''} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'விருப்பமான இடம்' : 'Preferred Location'} value={preferredLocation || '-'} isLoading={isLoading} />
+        <DetailRow label={isTamil ? 'எதிர்பார்ப்புகள்' : 'Expectations'} value={expectationNote || '-'} isLoading={isLoading} />
       </div>
     </SectionCard3D>
   );
@@ -449,7 +487,7 @@ const AdminHoroscopeDetails: React.FC<{
   const lang: 'en' | 'ta' = isTamil ? 'ta' : 'en';
   const natchathiram = profile?.star ? getBilingualValue(NAKSHATRA_OPTIONS, profile.star, lang) : '';
   const rasiLabel = profile?.rasi ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang) : '';
-  const lagnam = profile?.laganam ? getBilingualValue(RASI_OPTIONS, profile.laganam, lang) : '';
+  const lagnam = profile?.lagnam ? getBilingualValue(RASI_OPTIONS, profile.lagnam, lang) : '';
   const dosham = profile?.dosham ? getEnumLabel(profile.dosham, DOSHAM_OPTIONS) : '';
   const hasCharts = profile?.horoscope && (profile.horoscope.rasi || profile.horoscope.navamsa);
   return (
@@ -457,7 +495,7 @@ const AdminHoroscopeDetails: React.FC<{
       <SectionHeaderRedesigned
         title={isTamil ? 'ஜாதக விவரங்கள்' : 'Horoscope Details'}
         icon={<Map size={16} />}
-        gradient="bg-ivory-gold-gradient text-rosewood"
+        gradient="bg-rosewood-gradient"
         isLoading={isLoading}
         isTamil={isTamil}
       />
@@ -498,17 +536,17 @@ const AdminHoroscopeDetails: React.FC<{
             })()
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {profile?.horoscope?.rasi && (
+              {profile?.horoscope?.rasi?.url && (
                 <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
-                  <img src={typeof profile.horoscope.rasi === 'string' ? getImageUrl(profile.horoscope.rasi) || '' : ''} alt="Rasi" className="w-full h-full object-contain p-4" />
+                  <img src={getImageUrl(profile.horoscope.rasi.url) || ''} alt="Rasi" className="w-full h-full object-contain p-4" />
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{isTamil ? 'ராசி படம்' : 'Rasi Chart'}</span>
                   </div>
                 </motion.div>
               )}
-              {profile?.horoscope?.navamsa && (
+              {profile?.horoscope?.navamsa?.url && (
                 <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
-                  <img src={typeof profile.horoscope.navamsa === 'string' ? getImageUrl(profile.horoscope.navamsa) || '' : ''} alt="Navamsa" className="w-full h-full object-contain p-4" />
+                  <img src={getImageUrl(profile.horoscope.navamsa.url) || ''} alt="Navamsa" className="w-full h-full object-contain p-4" />
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{isTamil ? 'நவாம்ச படம்' : 'Navamsa Chart'}</span>
                   </div>
@@ -541,7 +579,7 @@ const AdminGallerySection: React.FC<{
       <SectionHeaderRedesigned
         title={isTamil ? 'புகைப்படங்கள்' : 'Photos'}
         icon={<Camera size={16} />}
-        gradient="bg-rosewood-gradient text-white"
+        gradient="bg-ivory-gold-gradient text-rosewood"
         isLoading={isLoading}
         isTamil={isTamil}
       />
@@ -557,13 +595,13 @@ const AdminGallerySection: React.FC<{
         }
         return (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 mt-4">
-            {galleryImages.map((url: string, i: number) => (
+            {galleryImages.map((item: any, i: number) => (
               <motion.div
                 key={i}
                 whileHover={{ rotateY: -2, scale: 1.02 }}
                 className="perspective-1000 preserve-3d aspect-4/5 rounded-2xl overflow-hidden border border-gold/20 cursor-pointer shadow-sm hover:shadow-xl hover:shadow-gold/10 transition-shadow duration-300 group bg-white relative"
               >
-                <img src={getImageUrl(url) ?? ''} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" />
+                <img src={getImageUrl(item.url) ?? ''} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" />
                 <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
                   <span className="text-white text-2xl font-bold">{i + 1}</span>
                 </div>
@@ -1044,7 +1082,15 @@ const AdminProfileView: React.FC = () => {
         </AnimatedSection>
         <SectionDivider />
 
-        {/* Section 6: Horoscope */}
+        {/* Section 6: Partner Preferences */}
+        <AnimatedSection>
+          <div id="section-partner-preference" className="scroll-mt-20">
+            <AdminPartnerPreferences profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} formatSalary={formatSalary} isLoading={false} />
+          </div>
+        </AnimatedSection>
+        <SectionDivider />
+
+        {/* Section 7: Horoscope */}
         <AnimatedSection>
           <div id="section-horoscope" className="scroll-mt-20">
             <AdminHoroscopeDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} />
@@ -1052,7 +1098,7 @@ const AdminProfileView: React.FC = () => {
         </AnimatedSection>
         <SectionDivider />
 
-        {/* Section 7: Gallery */}
+        {/* Section 8: Gallery */}
         {hasGallery && (
           <>
             <AnimatedSection>
@@ -1064,7 +1110,7 @@ const AdminProfileView: React.FC = () => {
           </>
         )}
 
-        {/* ADMIN: Section 8: Account Owner */}
+        {/* ADMIN: Section 9: Account Owner */}
         {hasOwner && (
           <>
             <AnimatedSection>
@@ -1076,7 +1122,7 @@ const AdminProfileView: React.FC = () => {
           </>
         )}
 
-        {/* ADMIN: Section 9: Administrative Controls */}
+        {/* ADMIN: Section 10: Administrative Controls */}
         <AnimatedSection>
           <div id="section-admin" className="scroll-mt-20 mb-6">
             <AdminControls

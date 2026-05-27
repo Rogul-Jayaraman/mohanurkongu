@@ -31,5 +31,21 @@
   "ACCOUNT_DELETED": "கணக்கு கிடைக்கவில்லை",
   "RATE_LIMIT_EXCEEDED": "அதிக வேண்டுகோள்கள். பின்னர் மீண்டும் முயற்சிக்கவும்",
   "INTERNAL_ERROR": "எதிர்பாராத பிழை ஏற்பட்டது",
-  "NOT_FOUND": "வளம் கிடைக்கவில்லை"
+  "NOT_FOUND": "வளம் கிடைக்கவில்லை",
+  "UPLOAD_NOT_FOUND": "பதிவேற்றம் கிடைக்கவில்லை",
+  "UPLOAD_INVALID_TYPE": "தவறான கோப்பு வகை",
+  "UPLOAD_TOO_LARGE": "கோப்பு மிகவும் பெரியது",
+  "UPLOAD_ACTIVE": "பதிவேற்றம் இன்னும் பயன்பாட்டில் உள்ளது",
+  "UPLOAD_DELETED": "பதிவேற்றம் ஏற்கனவே நீக்கப்பட்டது",
+  "UPLOAD_INVALID_STATUS": "பதிவேற்ற நிலை இந்த செயலை அனுமதிக்கவில்லை",
+  "PROFILE_NOT_FOUND": "சுயவிவரம் கிடைக்கவில்லை",
+  "PROFILE_ALREADY_ACTIVE": "சுயவிவரம் ஏற்கனவே செயலில் உள்ளது",
+  "PROFILE_MISSING_BASIC": "அடிப்படை விவரங்கள் தேவை",
+  "PROFILE_MISSING_COMMUNITY": "சமூக விவரங்கள் தேவை",
+  "PROFILE_MISSING_PHOTO": "குறைந்தது ஒரு புகைப்படம் தேவை",
+  "PROFILE_MISSING_DEFAULT_TRANSLATION": "இயல்பு மொழிபெயர்ப்பு தேவை",
+  "PROFILE_ALREADY_SUBMITTED": "சுயவிவரம் ஏற்கனவே மதிப்பாய்வுக்கு சமர்ப்பிக்கப்பட்டது",
+  "PROFILE_REJECTED": "சுயவிவரம் நிராகரிக்கப்பட்டது",
+  "PROFILE_WRONG_STATUS": "சுயவிவரம் எதிர்பார்க்கப்படும் நிலையில் இல்லை",
+  "PROFILE_NAME_INVALID": "தவறான சுயவிவர பெயர்"
 }

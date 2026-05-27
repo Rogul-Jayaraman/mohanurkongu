@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, forwardRef } from 'react';
-import { getTransliteration } from '@/utils/transliterationService';
+import { getLocalTransliteration } from '@/utils/transliterationService';
 
 export interface TransliteratingInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     targetLanguage?: 'ta' | 'en';
@@ -38,8 +38,8 @@ export const TransliteratingInput = forwardRef<HTMLInputElement, Transliterating
 
             if (debounceRef.current) clearTimeout(debounceRef.current);
 
-            debounceRef.current = setTimeout(async () => {
-                const transliterated = await getTransliteration(rawVal);
+            debounceRef.current = setTimeout(() => {
+                const transliterated = getLocalTransliteration(rawVal);
                 if (transliterated && transliterated !== rawVal) {
                     setLocalValue(transliterated);
                     if (onChange) {

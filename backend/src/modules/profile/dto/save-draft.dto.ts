@@ -7,7 +7,7 @@ const basicSchema = z.object({
   diet: z.string().nullable().optional(),
   bloodGroup: z.string().nullable().optional(),
   height: z.number().nullable().optional(),
-  weight: z.number().nullable().optional(),
+  weight: z.number().min(30).max(150).nullable().optional(),
   complexion: z.string().nullable().optional(),
   maritalStatus: z.string().nullable().optional(),
   currentDistrict: z.string().nullable().optional(),

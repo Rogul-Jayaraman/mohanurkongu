@@ -93,7 +93,8 @@ const ProfileManagement: React.FC = () => {
         {
             header: t('adminMatrimony.profiles.table.profile') || 'Matrimony Profile',
             render: (profile) => {
-                const imageUrl = profile.photo && /^https?:\/\//i.test(profile.photo) ? profile.photo : null;
+                const photoValue = profile.photo;
+                const imageUrl = photoValue && typeof photoValue === 'object' && 'url' in photoValue ? (photoValue as any).url : photoValue as string | null;
                 const displayName = isTamil ? ([profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' ') || [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ')) : ([profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' '));
                 return (
                     <div className="flex items-center gap-3">

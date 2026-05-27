@@ -1,26 +1,50 @@
-FROM node:22-alpine AS deps
+FROM node:22-slim AS base
 WORKDIR /app
+ENV HOME=/app
 COPY package.json ./
-RUN npm ci --only=production
+RUN apt-get update -y && apt-get install -y --no-install-recommends build-essential python3 openssl && rm -rf /var/lib/apt/lists/*
 
-FROM node:22-alpine AS build
-WORKDIR /app
+FROM base AS deps
+RUN npm install --ignore-scripts
+
+FROM base AS swisseph
 COPY --from=deps /app/node_modules ./node_modules
+RUN cd node_modules/@swisseph/node && node scripts/setup-libswe.js && npx node-gyp rebuild
+
+FROM node:22-slim AS build
+WORKDIR /app
+ENV HOME=/app
+COPY --from=swisseph /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate && npm run build
 
-FROM node:22-alpine AS production
+FROM node:22-slim AS prod-deps
 WORKDIR /app
-RUN addgroup --system app && adduser --system -G app app
+COPY package.json ./
+RUN npm install --omit=dev --ignore-scripts
+
+FROM node:22-slim AS production
+WORKDIR /app
+ENV HOME=/app
+RUN addgroup --system app && adduser --system --ingroup app app
 
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/node_modules/pino-pretty ./node_modules/pino-pretty
+COPY --from=build /app/node_modules/@swisseph/node ./node_modules/@swisseph/node
 COPY --from=build /app/package.json ./
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/src/modules/notification/templates ./dist/src/modules/notification/templates
+
+RUN chmod -R 777 /app/node_modules/@prisma /app/node_modules/.prisma && chown -R app:app /app
+
+RUN mkdir -p /storage/media && chown -R app:app /storage
 
 USER app
 EXPOSE 4000
 
 ENV NODE_ENV=production
 
-CMD npx prisma migrate deploy && node dist/server.js
+CMD npx prisma migrate deploy && node dist/src/server.js
