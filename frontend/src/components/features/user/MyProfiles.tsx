@@ -41,25 +41,28 @@ const EmptyStateView: React.FC<{
     onClearSearch: () => void;
     t: (key: string, opts?: any) => string;
 }> = ({ hasAnyProfiles, isSearching, onCreateNew, onClearSearch, t }) => (
-    <div className="text-center py-20 bg-ivory/30 rounded-[3rem] border-2 border-dashed border-gold/20 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <span className="material-symbols-outlined text-4xl text-gold/40">
+    <div className="text-center py-20 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl animate-in fade-in slide-in-from-bottom-4 duration-1000 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
+        <div className="w-20 h-20 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mx-auto mb-6">
+            <span className="material-symbols-outlined text-4xl">
                 {!hasAnyProfiles ? 'person_add' : 'search_off'}
             </span>
         </div>
         <h3 className="text-xl font-serif font-bold text-rosewood mb-2">
             {!hasAnyProfiles ? t('myprofiles:no_profiles_title') : t('common:no_results')}
         </h3>
-        <p className="text-gray-500 text-sm max-w-sm mx-auto mb-8 px-6">
+        <p className="text-rosewood/60 text-sm font-medium max-w-sm mx-auto mb-8 px-6">
             {!hasAnyProfiles ? t('myprofiles:no_profiles_desc') : t('common:profile_not_found_desc')}
         </p>
         {!hasAnyProfiles && (
-            <button onClick={onCreateNew} className="px-8 py-3 bg-rosewood text-white rounded-full font-bold shadow-lg shadow-rosewood/10 hover:scale-105 active:scale-95 transition-all text-sm">
+            <button onClick={onCreateNew} className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-sm hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 transition-all duration-300">
                 {t('myprofiles:create_first_profile')}
             </button>
         )}
         {hasAnyProfiles && isSearching && (
-            <button onClick={onClearSearch} className="px-6 py-2 border border-rosewood text-rosewood rounded-full font-bold hover:bg-rosewood hover:text-white transition-all text-sm">
+            <button onClick={onClearSearch} className="px-6 py-2 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-sm hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 transition-all duration-300">
                 {t('common:all')}
             </button>
         )}

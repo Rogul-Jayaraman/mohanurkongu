@@ -26,6 +26,18 @@ export function createAdminAuthRoutes(controller: AdminAuthController): Router {
     controller.login,
   );
 
+  router.post(
+    '/auth/refresh',
+    createRateLimiter(authConfig.rateLimit.refreshMax),
+    controller.refresh,
+  );
+
+  router.post(
+    '/auth/logout',
+    createRateLimiter(20),
+    controller.logout,
+  );
+
   router.get(
     '/account/me',
     requireSession,

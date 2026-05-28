@@ -15,7 +15,8 @@ import { EmptyState } from '@/components/ui/feedback/EmptyState';
 import { ContentCard } from '@/components/ui/cards/ContentCard';
 import { AdminProfileCard } from '@/components/features/admin/matrimony/ProfileCard';
 import { AdminProfileCardSkeleton } from '@/components/features/admin/matrimony/ProfileCardSkeleton';
-import { stubFetchVerificationQueue, stubFetchAdminStats } from '@/utils/stubs';
+import { fetchVerificationQueue } from '@/api/verification.api';
+import { fetchAdminStats } from '@/api/admin-dashboard.api';
 import type { AdminManagedProfile } from '@/types/admin-types';
 
 // ═══════════════════════════════════════════════════════════
@@ -164,7 +165,7 @@ const VerificationQueuePreview: React.FC = () => {
     const navigate = useNavigate();
     const [data, setData] = useState<{ profiles: any[] }>({ profiles: [] });
     const [isLoading, setIsLoading] = useState(true);
-    useEffect(() => { stubFetchVerificationQueue().then(setData).finally(() => setIsLoading(false)); }, []);
+    useEffect(() => { fetchVerificationQueue().then((res: any) => setData({ profiles: res.profiles || [] })).finally(() => setIsLoading(false)); }, []);
     const profiles = (data as any)?.profiles || [];
 
     const handleAccept = (id: string) => console.log('Accepted:', id);
@@ -225,7 +226,7 @@ const AdminDashboard: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [isError, setIsError] = useState(false);
     const [error, setError] = useState<any>(null);
-    const refetch = () => { setLoading(true); stubFetchAdminStats().then(setStatsData).catch((e) => { setError(e); setIsError(true); }).finally(() => setLoading(false)); };
+    const refetch = () => { setLoading(true); fetchAdminStats().then(setStatsData).catch((e) => { setError(e); setIsError(true); }).finally(() => setLoading(false)); };
     useEffect(() => { refetch(); }, []);
 
     if (isError && !statsData) {

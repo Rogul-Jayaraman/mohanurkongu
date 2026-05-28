@@ -17,6 +17,7 @@ export interface User {
 
 export interface Admin {
     id: string;
+    customId: string;
     firstNameEn: string;
     lastNameEn: string;
     firstNameTa?: string | null;

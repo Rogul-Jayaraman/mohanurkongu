@@ -7,6 +7,7 @@ import { AppError } from '../../common/errors/AppError.js';
 import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
 import type { AdminLoginDto } from './dto/admin-login.dto.js';
 import type { DeviceInfo } from '../../common/utils/device.js';
+import { enqueueAuditEvent } from '../../common/utils/audit.js';
 
 export class AdminAuthService {
   constructor(
@@ -26,10 +27,6 @@ export class AdminAuthService {
     }
 
     if (!credential) {
-      throw new AppError(401, ErrorCodes.AUTH_INVALID_CREDENTIALS, 'AUTH_INVALID_CREDENTIALS');
-    }
-
-    if (credential.account.currentState === 'DELETED') {
       throw new AppError(401, ErrorCodes.AUTH_INVALID_CREDENTIALS, 'AUTH_INVALID_CREDENTIALS');
     }
 
@@ -74,6 +71,14 @@ export class AdminAuthService {
       role: 'ADMIN' as const,
       sessionId: session.sessionId,
     };
+  }
+
+  async refresh(refreshToken: string, device?: DeviceInfo) {
+    return this.sessionService.rotateSession(refreshToken, device);
+  }
+
+  async logout(refreshToken: string) {
+    await this.sessionService.revokeSession(refreshToken, 'ADMIN_LOGOUT');
   }
 
   async getProfile(accountId: string) {

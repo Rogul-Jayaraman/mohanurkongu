@@ -9,7 +9,12 @@ export function validate(schema: ZodSchema, source: 'body' | 'query' | 'params' 
   return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       const data = schema.parse(req[source]);
-      req[source] = data;
+      // Express 5+ makes req.query a read-only getter
+      if (source === 'query' || source === 'params') {
+        Object.defineProperty(req, source, { value: data, writable: true, configurable: true });
+      } else {
+        req[source] = data;
+      }
       next();
     } catch (err) {
       if (err instanceof ZodError) {

@@ -107,10 +107,6 @@ export class SessionService {
       throw new AppError(401, ErrorCodes.ACCOUNT_NOT_FOUND, 'ACCOUNT_NOT_FOUND');
     }
 
-    if (account.currentState === 'DELETED') {
-      throw new AppError(401, ErrorCodes.ACCOUNT_DELETED, 'ACCOUNT_DELETED');
-    }
-
     if (account.currentState === 'SUSPENDED') {
       throw new AppError(403, ErrorCodes.ACCOUNT_SUSPENDED, 'ACCOUNT_SUSPENDED');
     }

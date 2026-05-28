@@ -45,7 +45,37 @@ export class ProfileController {
 
   viewMyProfiles = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await this.profileService.getMyProfiles(req.account.sub);
+      const q = req.query.q as string | undefined;
+      const result = await this.profileService.getMyProfiles(req.account.sub, q);
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  browse = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.profileService.browseProfiles(req.account.sub, req.query);
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  toggleShortlist = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const profileId = req.params.id as string;
+      const action = req.body.action as string;
+      const result = await this.profileService.toggleShortlist(req.account.sub, profileId, action as 'add' | 'remove');
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  viewShortlisted = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.profileService.fetchShortlisted(req.account.sub, req.query);
       sendSuccess(res, result);
     } catch (err) {
       next(err);
@@ -61,21 +91,4 @@ export class ProfileController {
     }
   };
 
-  approve = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await this.profileService.approveProfile(req.account.sub, req.params.id as string);
-      sendSuccess(res, result);
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  reject = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await this.profileService.rejectProfile(req.account.sub, req.params.id as string, req.body);
-      sendSuccess(res, result);
-    } catch (err) {
-      next(err);
-    }
-  };
 }

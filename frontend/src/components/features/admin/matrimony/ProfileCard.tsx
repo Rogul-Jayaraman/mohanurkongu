@@ -104,7 +104,7 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
     const profilePhotoUrl = typeof profilePhoto === 'string' ? resolveImageUrl(profilePhoto) : profilePhoto?.url || '';
 
     return (
-        <div className="p-3.5 rounded-3xl shadow-sm flex flex-col sm:flex-row gap-5 bg-white border border-gold/10 hover:border-gold/30 hover:shadow-xl transition-all duration-500 relative group overflow-hidden">
+        <div className="p-3.5 rounded-xl shadow-sm flex flex-col sm:flex-row gap-5 bg-white border border-gold/10 hover:border-gold/40 hover:shadow-xl transition-all duration-500 relative group overflow-hidden">
             <div className="absolute inset-0 bg-linear-to-br from-gold/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
             {/* Status Badge - Top Right */}
@@ -113,10 +113,10 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
             </div>
 
             {/* Profile Photo Area */}
-            <div className="w-40 md:w-44 aspect-3/4 rounded-2xl overflow-hidden shrink-0 border-2 border-gold/20 p-0.5 bg-ivory shadow-lg relative mx-auto sm:mx-0 z-10">
+            <div className="w-40 md:w-44 aspect-3/4 rounded-xl overflow-hidden shrink-0 border-2 border-gold/20 p-0.5 bg-ivory shadow-lg relative mx-auto sm:mx-0 z-10">
                 <LazyImage
                     alt={fullName}
-                    className="w-full h-full object-cover rounded-[20px] group-hover:scale-105 transition-transform duration-700 ease-out"
+                    className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-700 ease-out"
                     src={profilePhotoUrl}
                 />
                 <div className="absolute inset-0 kolam-watermark opacity-10 pointer-events-none"></div>
@@ -124,18 +124,18 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
 
             {/* Profile Context Area */}
             <div className="flex-1 flex flex-col min-w-0 py-1 pe-2 text-left z-10">
-                <div className="mb-3 pr-16"> {/* Added padding-right to avoid overlap with badge */}
+                <div className="mb-3 pr-16">
                     <h3
-                        className={`text-xl font-black text-rosewood truncate ${isTamil ? 'font-sans' : 'font-serif'}`}
+                        className={`text-xl font-bold text-rosewood truncate ${isTamil ? 'font-sans' : 'font-serif'}`}
                         title={fullName}
                     >
                         {fullName}
                     </h3>
                     <div className="flex items-center flex-wrap gap-2 mt-1">
-                        <span className="text-[11px] text-gold font-black tracking-wider uppercase">
+                        <span className="text-[11px] text-gold font-bold">
                             {regNo}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-bold px-2 py-0.5 bg-slate-50 rounded-full border border-slate-100">
+                        <span className="text-[10px] text-slate-400 font-semibold px-2 py-0.5 bg-slate-50 rounded-full border border-slate-100">
                             {age} {t('common:yrs')}
                         </span>
                     </div>
@@ -151,8 +151,8 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
                         { label: t('adminMatrimony:verification.submittedBy'), value: createdBy || t('common:profile.not_specified') }
                     ].map((item, idx) => (
                         <div key={idx} className="flex items-baseline text-xs">
-                            <span className="w-24 text-rosewood/60 font-bold text-[10px] uppercase tracking-tight shrink-0 truncate" title={item.label}>{item.label}</span>
-                            <span className={`text-slate-700 truncate flex-1 leading-tight ${isTamil ? 'font-bold' : 'font-black'}`}>
+                            <span className="w-28 text-rosewood/80 font-semibold text-[11px] shrink-0 truncate" title={item.label}>{item.label}</span>
+                            <span className={`text-slate-600 truncate flex-1 leading-tight ${isTamil ? 'font-semibold' : 'font-bold'}`}>
                                 {item.value}
                             </span>
                         </div>
@@ -161,7 +161,7 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
 
                 <div className="mt-4 flex flex-col gap-2">
                     {profile.submittedAt && (
-                        <div className="text-[10px] font-black text-slate-400 flex items-center gap-1.5 px-1">
+                        <div className="text-[10px] font-semibold text-slate-400 flex items-center gap-1.5 px-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-gold/40"></span>
                             {t('adminMatrimony:verification.submittedOn')}: {new Date(profile.submittedAt).toLocaleDateString()}
                         </div>
@@ -169,10 +169,12 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
                     
                     <button
                         onClick={(e) => { e.stopPropagation(); handleViewProfile(); }}
-                        className="w-full flex items-center justify-center gap-2 px-6 py-2.5 bg-rosewood text-white rounded-xl hover:bg-rosewood/90 hover:shadow-xs hover:shadow-rosewood/20 transition-all font-semibold text-xs "
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood shadow-[inset_0_1px_2px_rgba(255,255,255,1),0_2px_4px_rgba(0,0,0,0.05)] border border-gold/10 transition-all duration-500 cursor-pointer hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 hover:shadow-lg hover:shadow-rosewood/20 hover:-translate-y-0.5"
                     >
-                        <Eye size={16} strokeWidth={3} />
-                        {t('common:profile.action.view_details') || 'View Details'}
+                        <Eye size={16} strokeWidth={3} className="text-current group-hover/btn:scale-110 transition-transform duration-300" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">
+                            {t('common:profile.action.view_details') || 'View Details'}
+                        </span>
                     </button>
                 </div>
             </div>

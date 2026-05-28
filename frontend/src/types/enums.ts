@@ -19,7 +19,7 @@ export enum ProfileStatus {
   DRAFT = 'DRAFT',
   PENDING = 'PENDING',
   ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
   REJECTED = 'REJECTED',
+  ARCHIVED = 'ARCHIVED',
   DELETED = 'DELETED',
 }

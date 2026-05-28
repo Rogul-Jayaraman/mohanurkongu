@@ -7,7 +7,7 @@ import { TableActionDropdown } from '@/components/ui/table/TableActionDropdown';
 import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
 import { RejectionModal } from '@/modals/admin/RejectionModal';
 import { DataTable, Column } from '@/components/ui/table/DataTable';
-import { stubFetchAdminAccounts, stubSuspendAccount, stubRevokeAccount } from '@/utils/stubs';
+import { fetchAdminAccounts, suspendAccount, revokeAccount } from '@/api/admin-accounts.api';
 import { useDateFormatter } from '@/hooks/useDateFormatter';
 import type { AdminAccount } from '@/types/admin-types';
 import { toast } from 'sonner';
@@ -25,13 +25,13 @@ const UserManagement: React.FC = () => {
 
     const [data, setData] = React.useState<any>({ accounts: [], meta: { total: 0, totalPages: 1, page: 1, limit: itemsPerPage } });
     const [isLoading, setIsLoading] = React.useState(true);
-    React.useEffect(() => { setIsLoading(true); stubFetchAdminAccounts({ page: currentPage, search: searchQuery }).then(setData).finally(() => setIsLoading(false)); }, [currentPage, searchQuery]);
+    React.useEffect(() => { setIsLoading(true); fetchAdminAccounts({ page: currentPage, search: searchQuery }).then(setData).finally(() => setIsLoading(false)); }, [currentPage, searchQuery]);
 
     const [suspensionModal, setSuspensionModal] = React.useState<{ open: boolean; userId: string | null }>({ open: false, userId: null });
 
     const handleSuspend = (reasonEn: string, reasonTa: string) => {
         if (!suspensionModal.userId) return;
-        stubSuspendAccount({ id: suspensionModal.userId, data: { reasonEn, reasonTa } }).then(
+        suspendAccount(suspensionModal.userId, reasonEn, reasonTa).then(
             () => { toast.success(t('adminMatrimony.users.suspendSuccess')); setSuspensionModal({ open: false, userId: null }); }
         ).catch(
             (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.suspendError'))
@@ -39,7 +39,7 @@ const UserManagement: React.FC = () => {
     };
 
     const handleRevoke = (id: string) => {
-        stubRevokeAccount(id).then(
+        revokeAccount(id).then(
             () => toast.success(t('adminMatrimony.users.revokeSuccess'))
         ).catch(
             (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.revokeError'))

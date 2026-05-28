@@ -15,7 +15,6 @@ import {
 } from '@/components/forms/auth/SignupForm';
 import { OtpVerificationModal } from '@/components/modals/auth/OtpVerificationModal';
 import * as authApi from '@/api/auth.api';
-import { useAuth } from '@/hooks/useAuth';
 import { isAppError } from '@/lib/errors';
 import { toast } from 'sonner';
 
@@ -114,7 +113,6 @@ export const SignupHero: React.FC = () => {
 
 export const SignupFormWrapper: React.FC = () => {
     const navigate = useNavigate();
-    const auth = useAuth();
     const { t, language, translateError } = useLanguage();
 
     const [isSigningUp, setIsSigningUp] = useState(false);
@@ -291,9 +289,8 @@ export const SignupFormWrapper: React.FC = () => {
             setIsSigningUp(true);
             try {
                 const { confirmPassword: _cf, termsAccepted: _ta, ...cleanData } = formData;
-                const result = await authApi.register({ ...cleanData, verificationToken: verificationToken! });
-                await auth.login(result.accessToken);
-                navigate('/manamaalai/dashboard');
+                await authApi.register({ ...cleanData, verificationToken: verificationToken! });
+                navigate('/manamaalai/login');
             } catch (err) {
                 if (isAppError(err) && err.details && Array.isArray(err.details)) {
                     const fieldErrs: Partial<Record<keyof SignupData, string>> = {};

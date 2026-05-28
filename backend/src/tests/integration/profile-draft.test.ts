@@ -32,7 +32,7 @@ describe('Profile Draft Integration', () => {
 
   it('should create a draft profile', async () => {
     const profile = await prisma.profile.create({
-      data: { accountId, currentStatus: 'DRAFT', visibility: 'PRIVATE' },
+      data: { accountId, currentStatus: 'DRAFT' },
     });
 
     expect(profile).toBeDefined();
@@ -122,7 +122,7 @@ describe('Profile Draft Integration', () => {
       locationId = loc.id;
 
       const profile = await prisma.profile.create({
-        data: { accountId, currentStatus: 'DRAFT', visibility: 'PRIVATE' },
+        data: { accountId, currentStatus: 'DRAFT' },
       });
 
       await prisma.profileBasic.create({

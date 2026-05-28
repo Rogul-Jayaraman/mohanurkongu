@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { User, Admin } from '../types/user';
-import { storeSession, clearSession } from '../adapters/auth.adapter';
+import { storeSession, clearSession, decodeJwtPayload } from '../adapters/auth.adapter';
 import * as authApi from '../api/auth.api';
+import * as adminApi from '../api/admin.api';
 import { setAccessToken, getAccessToken, clearAccessToken } from '../lib/session';
 
 export type AuthStatus = 'anonymous' | 'otp_pending' | 'register_pending' | 'authenticated' | 'expired';
@@ -49,29 +50,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState((prev) => ({ ...prev, status }));
   }, []);
 
-  const login = useCallback(async (accessToken: string, _role?: string): Promise<User | Admin> => {
+  const login = useCallback(async (accessToken: string, role?: string): Promise<User | Admin> => {
     setAccessToken(accessToken);
-    const account = await authApi.getProfile();
+    const account = role === 'ADMIN' ? await adminApi.adminGetProfile() : await authApi.getProfile();
     const user = storeSession(accessToken, account);
     setState({ status: 'authenticated', user, token: accessToken });
     return user;
   }, []);
 
   const logout = useCallback(async () => {
+    const isAdmin = state.user?.role === 'ADMIN';
     try {
-      await authApi.logout();
+      if (isAdmin) {
+        await adminApi.adminLogout();
+      } else {
+        await authApi.logout();
+      }
     } catch {
       // Graceful — token may already be invalid
     }
     clearAccessToken();
     clearSession();
     setState({ status: 'anonymous', user: null, token: null });
-    window.location.href = '/manamaalai/login';
-  }, []);
+    window.location.href = isAdmin ? '/admin/login' : '/manamaalai/login';
+  }, [state.user]);
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
     try {
       const result = await authApi.refresh();
+      if (result?.accessToken) {
+        setAccessToken(result.accessToken);
+        setState((prev) => ({ ...prev, token: result.accessToken }));
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const adminRefreshSession = useCallback(async (): Promise<boolean> => {
+    try {
+      const result = await adminApi.adminRefresh();
       if (result?.accessToken) {
         setAccessToken(result.accessToken);
         setState((prev) => ({ ...prev, token: result.accessToken }));
@@ -88,28 +108,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     restoringRef.current = true;
     setLoading(true);
     try {
-      // Try silent refresh first (uses httpOnly cookie)
-      const existingToken = getAccessToken();
-      if (!existingToken) {
-        const refreshed = await refreshSession();
+      let token = getAccessToken();
+
+      if (!token) {
+        let refreshed = await refreshSession();
+        if (!refreshed) {
+          refreshed = await adminRefreshSession();
+        }
         if (!refreshed) {
           setState({ status: 'anonymous', user: null, token: null });
           return false;
         }
+        token = getAccessToken()!;
       }
 
-      const account = await authApi.getProfile();
-      const token = getAccessToken()!;
+      const payload = decodeJwtPayload(token);
+      const isAdmin = payload.roles?.includes('ADMIN');
+
+      const account = isAdmin ? await adminApi.adminGetProfile() : await authApi.getProfile();
       const user = storeSession(token, account);
       setState({ status: 'authenticated', user, token });
       return true;
     } catch {
-      // Token invalid — try silent refresh
-      const refreshed = await refreshSession();
+      let refreshed = await refreshSession();
+      if (!refreshed) {
+        refreshed = await adminRefreshSession();
+      }
       if (refreshed) {
         try {
           const newToken = getAccessToken()!;
-          const account = await authApi.getProfile();
+          const payload = decodeJwtPayload(newToken);
+          const isAdmin = payload.roles?.includes('ADMIN');
+          const account = isAdmin ? await adminApi.adminGetProfile() : await authApi.getProfile();
           const user = storeSession(newToken, account);
           setState({ status: 'authenticated', user, token: newToken });
           return true;
@@ -126,7 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       restoringRef.current = false;
       setLoading(false);
     }
-  }, [refreshSession]);
+  }, [refreshSession, adminRefreshSession]);
 
   useEffect(() => {
     const publicPaths = ['/manamaalai/login', '/manamaalai/signup', '/manamaalai/forgot-password', '/admin/login'];

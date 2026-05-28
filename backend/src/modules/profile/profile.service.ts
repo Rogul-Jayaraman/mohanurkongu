@@ -567,7 +567,7 @@ export class ProfileService {
       }
 
       if (uploadIds.length > 0) {
-        await this.storageService.bulkTransitionStatus(uploadIds, ['TEMP', 'DRAFT'], 'DRAFT', tx);
+        await this.storageService.bulkTransitionStatus(uploadIds, ['TEMP', 'ATTACHED'], 'ATTACHED', tx);
       }
 
       return { profileId: profile.id };
@@ -594,7 +594,6 @@ export class ProfileService {
           where: { id: profile.id },
           data: {
             currentStatus: 'PENDING' as ProfileStatus,
-            visibility: 'PRIVATE',
             regNo,
           },
         });
@@ -619,7 +618,7 @@ export class ProfileService {
       });
 
       if (uploadIds.length > 0) {
-        await this.storageService.bulkTransitionStatus(uploadIds, ['TEMP', 'DRAFT'], 'ACTIVE', tx);
+        await this.storageService.bulkTransitionStatus(uploadIds, ['TEMP', 'ATTACHED'], 'ACTIVE', tx);
       }
 
       return { profileId: profile.id, regNo, status: 'PENDING' };
@@ -793,76 +792,6 @@ export class ProfileService {
     return dto;
   }
 
-  async approveProfile(adminId: string, profileId: string) {
-    const profile = await prisma.profile.findFirst({
-      where: { id: profileId, currentStatus: 'PENDING' },
-    });
-
-    if (!profile) {
-      throw new AppError(400, ErrorCodes.PROFILE_WRONG_STATUS, ErrorCodes.PROFILE_WRONG_STATUS);
-    }
-
-    const regNo = profile.regNo || await this.accountService.generateRegNo();
-
-    return await prisma.$transaction(async (tx) => {
-      await tx.profile.update({
-        where: { id: profileId },
-        data: {
-          currentStatus: 'ACTIVE' as ProfileStatus,
-          regNo: regNo || undefined,
-          activatedAt: new Date(),
-          approvedAt: new Date(),
-          approvedBy: adminId,
-        },
-      });
-
-      await tx.profileStateHistory.create({
-        data: {
-          profileId,
-          changedByAccountId: adminId,
-          fromStatus: 'PENDING',
-          toStatus: 'ACTIVE',
-        },
-      });
-
-      return { profileId, regNo: regNo || null, status: 'ACTIVE' };
-    });
-  }
-
-  async rejectProfile(adminId: string, profileId: string, dto: { reasonEn: string; reasonTa?: string }) {
-    const profile = await prisma.profile.findFirst({
-      where: { id: profileId, currentStatus: 'PENDING' },
-    });
-
-    if (!profile) {
-      throw new AppError(400, ErrorCodes.PROFILE_WRONG_STATUS, ErrorCodes.PROFILE_WRONG_STATUS);
-    }
-
-    return await prisma.$transaction(async (tx) => {
-      await tx.profile.update({
-        where: { id: profileId },
-        data: {
-          currentStatus: 'REJECTED' as ProfileStatus,
-          rejectionReasonEn: dto.reasonEn,
-          rejectionReasonTa: dto.reasonTa || null,
-          rejectedAt: new Date(),
-          rejectedBy: adminId,
-        },
-      });
-
-      await tx.profileStateHistory.create({
-        data: {
-          profileId,
-          changedByAccountId: adminId,
-          fromStatus: 'PENDING',
-          toStatus: 'REJECTED',
-        },
-      });
-
-      return { profileId, status: 'REJECTED' };
-    });
-  }
-
   private async transitionProfileUploads(profileId: string, toStatus: string) {
     const profile = await prisma.profile.findUnique({
       where: { id: profileId },
@@ -879,7 +808,7 @@ export class ProfileService {
     if (profile.horoscope?.navamsaChartUploadId) uploadIds.push(profile.horoscope.navamsaChartUploadId);
     const uniqueIds = [...new Set(uploadIds)];
     if (uniqueIds.length > 0) {
-      await this.storageService.bulkTransitionStatus(uniqueIds, ['DRAFT', 'ACTIVE'], toStatus);
+      await this.storageService.bulkTransitionStatus(uniqueIds, ['ATTACHED', 'ACTIVE'], toStatus);
     }
   }
 
@@ -905,7 +834,7 @@ export class ProfileService {
     const uniqueUploadIds = [...new Set(uploadIds)];
 
     if (uniqueUploadIds.length > 0) {
-      await this.storageService.bulkTransitionStatus(uniqueUploadIds, ['DRAFT', 'ACTIVE'], 'DELETE_PENDING');
+      await this.storageService.bulkTransitionStatus(uniqueUploadIds, ['ATTACHED', 'ACTIVE'], 'DELETE_PENDING');
     }
     await prisma.profile.update({
       where: { id: profile.id },
@@ -966,9 +895,22 @@ export class ProfileService {
   // ─────────────────────────────────────────────────────────
   // My Profiles — card list
   // ─────────────────────────────────────────────────────────
-  async getMyProfiles(accountId: string) {
+  async getMyProfiles(accountId: string, q?: string) {
     const profiles = await this.repo.findAllByAccountId(accountId);
-    return profiles.map(p => {
+    // Client-side filter for search query
+    const filteredProfiles = q && q.trim()
+      ? profiles.filter(p => {
+          const en = p.translations?.find((t: any) => t.language === 'EN');
+          const ta = p.translations?.find((t: any) => t.language === 'TA');
+          const nameEn = [en?.firstName, en?.lastName].filter(Boolean).join(' ').toLowerCase();
+          const nameTa = [ta?.firstName, ta?.lastName].filter(Boolean).join(' ').toLowerCase();
+          const regNo = (p.regNo ?? '').toLowerCase();
+          const term = q.trim().toLowerCase();
+          return nameEn.includes(term) || nameTa.includes(term) || regNo.includes(term);
+        })
+      : profiles;
+
+    return filteredProfiles.map(p => {
       const en = p.translations?.find(t => t.language === 'EN');
       const ta = p.translations?.find(t => t.language === 'TA');
 
@@ -1009,22 +951,432 @@ export class ProfileService {
   }
 
   // ─────────────────────────────────────────────────────────
+  // Browse profiles — for discovery/matching
+  // ─────────────────────────────────────────────────────────
+  async browseProfiles(accountId: string, params: any) {
+    const {
+      limit = 20,
+      cursor,
+      sort = 'createdAt_desc',
+      gender,
+      q,
+      currentDistrict,
+      currentTaluk,
+      nativeDistrict,
+      ageMin,
+      ageMax,
+      heightMin,
+      heightMax,
+      minWeight,
+      maxWeight,
+      maritalStatus,
+      complexion,
+      diet,
+      caste,
+      kulam,
+      kulamAvoid,
+      kuladeivam,
+      rasi,
+      nakshatra,
+      laganam,
+      dosham,
+      education,
+      jobSector,
+      jobTitle,
+      jobLocation,
+      salaryMin,
+      salaryMax,
+      residence,
+    } = params;
+
+    const limitNum = Number(limit);
+    const safeLimit = Number.isNaN(limitNum) ? 20 : limitNum;
+
+    // ─── Build WHERE clause ───────────────────────────────
+    const where: any = { currentStatus: 'ACTIVE', account: { currentState: 'ACTIVE' } };
+
+    // Gender filter
+    if (gender) {
+      where.basic = { gender };
+    }
+
+    // Age filter — convert to dob range
+    if (ageMin || ageMax) {
+      const now = new Date();
+      const dobFilter: any = {};
+      if (ageMin) {
+        dobFilter.lte = new Date(now.getFullYear() - ageMin, now.getMonth(), now.getDate());
+      }
+      if (ageMax) {
+        dobFilter.gte = new Date(now.getFullYear() - ageMax, now.getMonth(), now.getDate());
+      }
+      where.basic = { ...where.basic, dob: dobFilter };
+    }
+
+    // Height filter — value in cm via height relation
+    if (heightMin || heightMax) {
+      const hFilter: any = {};
+      if (heightMin) hFilter.gte = heightMin;
+      if (heightMax) hFilter.lte = heightMax;
+      where.basic = { ...where.basic, height: { valueCm: hFilter } };
+    }
+
+    // Weight filter
+    if (minWeight || maxWeight) {
+      const wFilter: any = {};
+      if (minWeight) wFilter.gte = minWeight;
+      if (maxWeight) wFilter.lte = maxWeight;
+      where.basic = { ...where.basic, weight: wFilter };
+    }
+
+    // Direct basic fields
+    if (maritalStatus) where.basic = { ...where.basic, maritalStatus };
+    if (complexion) where.basic = { ...where.basic, complexion };
+    if (diet) where.basic = { ...where.basic, diet };
+
+    // Location filters — current
+    if (currentDistrict) {
+      const locFilter: any = currentDistrict === 'OTHER'
+        ? { isOther: true }
+        : { district: { code: currentDistrict } };
+      if (currentTaluk) {
+        locFilter.taluk = { code: currentTaluk };
+      }
+      where.basic = { ...where.basic, currentLocation: locFilter };
+    }
+
+    // Location filters — native
+    if (nativeDistrict) {
+      where.basic = {
+        ...where.basic,
+        nativeLocation: nativeDistrict === 'OTHER'
+          ? { isOther: true }
+          : { district: { code: nativeDistrict } },
+      };
+    }
+
+    // Community filters
+    const communityFilter: any = {};
+    if (caste) communityFilter.caste = { code: caste };
+    if (kulam) communityFilter.kulam = { code: kulam };
+    if (kulamAvoid && kulamAvoid.length > 0) {
+      const kulamCodeFilter: any = { notIn: kulamAvoid };
+      if (communityFilter.kulam) {
+        communityFilter.kulam.code = { ...kulamCodeFilter };
+      } else {
+        communityFilter.kulam = { code: kulamCodeFilter };
+      }
+    }
+    if (Object.keys(communityFilter).length > 0) {
+      where.community = communityFilter;
+    }
+
+    // Horoscope filters
+    const horoscopeFilter: any = {};
+    if (rasi) horoscopeFilter.rasi = { code: rasi };
+    if (nakshatra) horoscopeFilter.nakshatra = { code: nakshatra };
+    if (laganam) horoscopeFilter.lagna = { code: laganam };
+    if (Object.keys(horoscopeFilter).length > 0) {
+      where.horoscope = horoscopeFilter;
+    }
+
+    // Professional filters
+    const profFilter: any = {};
+    if (education) profFilter.education = { contains: education, mode: 'insensitive' };
+    if (jobSector) profFilter.jobSector = { code: jobSector };
+    if (jobTitle) profFilter.jobDetail = { contains: jobTitle, mode: 'insensitive' };
+    if (jobLocation) profFilter.jobLocation = { contains: jobLocation, mode: 'insensitive' };
+    if (salaryMin || salaryMax) {
+      const salFilter: any = {};
+      // salaryMin/Max are annual in lakhs; DB stores monthlySalary
+      if (salaryMin) salFilter.gte = salaryMin * 100000 / 12;
+      if (salaryMax) salFilter.lte = salaryMax * 100000 / 12;
+      profFilter.monthlySalary = salFilter;
+    }
+    if (Object.keys(profFilter).length > 0) {
+      where.professional = profFilter;
+    }
+
+    // Assets filters
+    if (residence) {
+      where.assets = { residenceType: residence };
+    }
+
+    // Text search on translations
+    if (q && q.trim()) {
+      const qTerm = q.trim();
+      const searchConditions: any[] = [
+        { firstName: { contains: qTerm, mode: 'insensitive' } },
+        { lastName: { contains: qTerm, mode: 'insensitive' } },
+      ];
+      if (kuladeivam) {
+        searchConditions.push({ kuladeivam: { contains: kuladeivam, mode: 'insensitive' } });
+      }
+      where.translations = { some: { OR: searchConditions } };
+    } else if (kuladeivam) {
+      where.translations = {
+        some: { kuladeivam: { contains: kuladeivam, mode: 'insensitive' } },
+      };
+    }
+
+    // ─── Sort ─────────────────────────────────────────────
+    const sortMap: Record<string, string> = {
+      'newest': 'createdAt_desc',
+      'oldest': 'createdAt_asc',
+      'age_asc': 'age_low_high',
+      'age_desc': 'age_high_low',
+    };
+    const normalizedSort = sortMap[sort] || sort;
+
+    let orderBy: any = { createdAt: 'desc' };
+    if (normalizedSort === 'createdAt_asc') {
+      orderBy = { createdAt: 'asc' };
+    } else if (normalizedSort === 'age_low_high') {
+      orderBy = { basic: { dob: 'desc' } };
+    } else if (normalizedSort === 'age_high_low') {
+      orderBy = { basic: { dob: 'asc' } };
+    }
+
+    // ─── Execute query ────────────────────────────────────
+    const profiles = await prisma.profile.findMany({
+      where,
+      orderBy,
+      take: safeLimit + 1,
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+      include: {
+        basic: {
+          include: {
+            currentLocation: { include: { district: true, taluk: true } },
+          },
+        },
+        professional: true,
+        community: { include: { community: true } },
+        photo: {
+          include: {
+            primaryUpload: { select: { uploadToken: true, objectKey: true, width: true, height: true } },
+          },
+        },
+        translations: true,
+      },
+    });
+
+    const hasMore = profiles.length > safeLimit;
+    if (hasMore) {
+      profiles.pop();
+    }
+
+      const profileIds = profiles.map(p => p.id);
+      const shortlistedRows = await prisma.shortlist.findMany({
+        where: { accountId, profileId: { in: profileIds } },
+        select: { profileId: true },
+      });
+      const shortlistedIds = new Set(shortlistedRows.map(r => r.profileId));
+
+      const profileSummaries = profiles.map(p => {
+      const en = p.translations?.find(t => t.language === 'EN');
+      const ta = p.translations?.find(t => t.language === 'TA');
+
+      const firstNameEn = en?.firstName ?? null;
+      const lastNameEn = en?.lastName ?? null;
+      const firstNameTa = ta?.firstName ?? null;
+      const lastNameTa = ta?.lastName ?? null;
+
+      const { currentIsOther: _, ...locationFields } = this.mapLocationFields(p.basic?.currentLocation, 'current', en, ta);
+
+      return {
+        id: p.id,
+        regNo: p.regNo,
+        firstNameEn,
+        lastNameEn,
+        firstNameTa,
+        lastNameTa,
+        age: this.calculateAge(p.basic?.dob?.toISOString() ?? ''),
+        education: p.professional?.education ?? '',
+        community: p.community?.community?.code ?? '',
+        jobDetail: p.professional?.jobDetail ?? '',
+        ...locationFields,
+        profilePhoto: p.photo?.primaryUpload?.objectKey
+          ? { url: `/media/${p.photo.primaryUpload.objectKey}`, width: p.photo.primaryUpload.width, height: p.photo.primaryUpload.height }
+          : null,
+        isShortlisted: shortlistedIds.has(p.id),
+      };
+    });
+
+    const lastProfile = profiles[profiles.length - 1];
+    return {
+      profiles: profileSummaries,
+      pagination: {
+        cursor: hasMore && lastProfile ? lastProfile.id : null,
+        hasMore,
+        limit,
+      },
+    };
+  }
+
+  private calculateAge(dobString: string): number {
+    if (!dobString) return 0;
+    const birthDate = new Date(dobString);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Shortlist toggle — add/remove a shortlist entry
+  // ─────────────────────────────────────────────────────────
+  async toggleShortlist(accountId: string, profileId: string, action: 'add' | 'remove') {
+    const profile = await prisma.profile.findUnique({
+      where: { id: profileId },
+      include: { account: { select: { currentState: true } } },
+    });
+
+    if (!profile) {
+      throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
+    }
+    if (profile.accountId === accountId) {
+      throw new AppError(400, ErrorCodes.SHORTLIST_OWN_PROFILE, 'SHORTLIST_OWN_PROFILE');
+    }
+    if (profile.currentStatus !== 'ACTIVE') {
+      throw new AppError(400, ErrorCodes.PROFILE_WRONG_STATUS, 'PROFILE_WRONG_STATUS');
+    }
+    if (profile.account.currentState === 'SUSPENDED') {
+      throw new AppError(400, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
+    }
+
+    if (action === 'add') {
+      await prisma.shortlist.upsert({
+        where: { profileId_accountId: { profileId, accountId } },
+        create: { profileId, accountId },
+        update: {},
+      });
+      const entry = await prisma.shortlist.findUnique({
+        where: { profileId_accountId: { profileId, accountId } },
+      });
+      return { isShortlisted: true, shortlistedAt: entry?.createdAt.toISOString() };
+    } else {
+      await prisma.shortlist.deleteMany({ where: { profileId, accountId } });
+      return { isShortlisted: false };
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Fetch shortlisted profiles for current user
+  // ─────────────────────────────────────────────────────────
+  async fetchShortlisted(accountId: string, params: any) {
+    const { limit = 20, cursor, q } = params;
+    const limitNum = Number(limit);
+    const safeLimit = Number.isNaN(limitNum) ? 20 : limitNum;
+
+    // Text search on shortlisted profiles
+    const profileWhere: any = { currentStatus: 'ACTIVE' };
+    if (q && q.trim()) {
+      const qTerm = q.trim();
+      profileWhere.translations = {
+        some: {
+          OR: [
+            { firstName: { contains: qTerm, mode: 'insensitive' } },
+            { lastName: { contains: qTerm, mode: 'insensitive' } },
+          ],
+        },
+      };
+    }
+
+    const rows = await prisma.shortlist.findMany({
+      where: {
+        accountId,
+        profile: {
+          ...profileWhere,
+          account: { currentState: 'ACTIVE' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: safeLimit + 1,
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+      include: {
+        profile: {
+          include: {
+            basic: { include: { currentLocation: { include: { district: true, taluk: true } } } },
+            professional: true,
+            community: { include: { community: true } },
+            photo: { include: { primaryUpload: { select: { uploadToken: true, objectKey: true, width: true, height: true } } } },
+            translations: true,
+          },
+        },
+      },
+    });
+
+    const hasMore = rows.length > safeLimit;
+    if (hasMore) rows.pop();
+
+    const profileSummaries = rows.map(r => {
+      const p = r.profile;
+      const en = p.translations?.find(t => t.language === 'EN');
+      const ta = p.translations?.find(t => t.language === 'TA');
+
+      const firstNameEn = en?.firstName ?? null;
+      const lastNameEn = en?.lastName ?? null;
+      const firstNameTa = ta?.firstName ?? null;
+      const lastNameTa = ta?.lastName ?? null;
+
+      const { currentIsOther: _, ...locationFields } = this.mapLocationFields(p.basic?.currentLocation, 'current', en, ta);
+
+      return {
+        id: p.id,
+        regNo: p.regNo,
+        firstNameEn,
+        lastNameEn,
+        firstNameTa,
+        lastNameTa,
+        age: this.calculateAge(p.basic?.dob?.toISOString() ?? ''),
+        education: p.professional?.education ?? '',
+        community: p.community?.community?.code ?? '',
+        jobDetail: p.professional?.jobDetail ?? '',
+        ...locationFields,
+        profilePhoto: p.photo?.primaryUpload?.objectKey
+          ? { url: `/media/${p.photo.primaryUpload.objectKey}`, width: p.photo.primaryUpload.width, height: p.photo.primaryUpload.height }
+          : null,
+        isShortlisted: true,
+      };
+    });
+
+    const lastRow = rows[rows.length - 1];
+    return {
+      profiles: profileSummaries,
+      pagination: {
+        cursor: hasMore && lastRow ? lastRow.id : null,
+        hasMore,
+        limit,
+      },
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────
   // Profile detail — full view
   // ─────────────────────────────────────────────────────────
   async getProfile(accountId: string, profileId: string) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profileId)) {
+      throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
+    }
     const profile = await this.repo.findFullWithDetails(profileId);
     if (!profile) {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
 
     const owner = profile.accountId === accountId;
-    if (profile.currentStatus === 'DELETED' || profile.currentStatus === 'INACTIVE') {
+    if (profile.currentStatus === 'DELETED' || profile.currentStatus === 'ARCHIVED') {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
     if (profile.currentStatus === 'REJECTED' && !owner) {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
     if ((profile.currentStatus === 'DRAFT' || profile.currentStatus === 'PENDING') && !owner) {
+      throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
+    }
+    if (profile.account.currentState === 'SUSPENDED' && !owner) {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
 
@@ -1046,7 +1398,6 @@ export class ProfileService {
       regNo: profile.regNo ?? '-',
       status: profile.currentStatus,
       isOwner: owner,
-      adminVerified: null,
       rejectionReasonEn: profile.rejectionReasonEn ?? null,
       rejectionReasonTa: profile.rejectionReasonTa ?? null,
       statusReasonEn: null,

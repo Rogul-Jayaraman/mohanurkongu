@@ -1,5 +1,5 @@
 import { prisma } from '../../database/prisma.js';
-import type { AccountState } from '@prisma/client';
+import type { AccountStatus } from '@prisma/client';
 import { appConfig } from '../../config/app.config.js';
 
 export interface CreateAccountData {
@@ -175,7 +175,7 @@ export class AccountRepository {
     });
   }
 
-  async updateState(accountId: string, state: AccountState, reason?: string, changedBy?: string) {
+  async updateState(accountId: string, state: AccountStatus, reason?: string, changedBy?: string) {
     return prisma.$transaction(async (tx) => {
       await tx.account.update({
         where: { id: accountId },
@@ -205,6 +205,7 @@ export class AccountRepository {
       where.OR = [
         { accountNo: { contains: search, mode: 'insensitive' } },
         { credential: { email: { contains: search, mode: 'insensitive' } } },
+        { credential: { phone: { contains: search } } },
         { translations: { firstName: { contains: search, mode: 'insensitive' } } },
         { translations: { lastName: { contains: search, mode: 'insensitive' } } },
       ];
@@ -219,12 +220,53 @@ export class AccountRepository {
         include: {
           credential: { select: { email: true, phone: true, emailVerified: true } },
           roles: { include: { role: true } },
-          translations: { where: { language: 'EN' }, take: 1 },
+          translations: true,
         },
       }),
       prisma.account.count({ where }),
     ]);
 
-    return { data, total };
+    const accounts = await Promise.all(data.map(async (account) => {
+      const en = account.translations?.find((t: any) => t.language === 'EN');
+      const ta = account.translations?.find((t: any) => t.language === 'TA');
+      const role = account.roles?.[0]?.role?.code ?? 'USER';
+
+      const profileCount = await prisma.profile.count({
+        where: { accountId: account.id, currentStatus: { not: 'DELETED' } },
+      });
+
+      const latestProfile = await prisma.profile.findFirst({
+        where: { accountId: account.id, currentStatus: { not: 'DELETED' } },
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          photo: {
+            include: {
+              primaryUpload: { select: { objectKey: true, width: true, height: true } },
+            },
+          },
+        },
+      });
+
+      return {
+        id: account.id,
+        accountNo: account.accountNo,
+        firstNameEn: en?.firstName ?? null,
+        lastNameEn: en?.lastName ?? null,
+        firstNameTa: ta?.firstName ?? null,
+        lastNameTa: ta?.lastName ?? null,
+        email: account.credential?.email ?? null,
+        phone: account.credential?.phone ?? null,
+        role,
+        currentState: account.currentState,
+        emailVerified: account.credential?.emailVerified ?? false,
+        createdAt: account.createdAt.toISOString(),
+        profileCount,
+        profilePhoto: latestProfile?.photo?.primaryUpload?.objectKey
+          ? { url: `/media/${latestProfile.photo.primaryUpload.objectKey}`, width: latestProfile.photo.primaryUpload.width, height: latestProfile.photo.primaryUpload.height }
+          : null,
+      };
+    }));
+
+    return { accounts, total };
   }
 }

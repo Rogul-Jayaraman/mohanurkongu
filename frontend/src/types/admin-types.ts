@@ -32,7 +32,6 @@ export interface AdminManagedProfile {
   lastNameEn: string;
   gender: string;
   dob: string;
-  adminVerified: string;
   status: string;
   profilePhoto: string | ImageObject | null;
   photo?: string | ImageObject | null;

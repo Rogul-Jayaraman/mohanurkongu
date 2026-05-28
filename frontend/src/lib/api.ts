@@ -84,8 +84,11 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
+      const isAdmin = originalRequest.url?.startsWith('/admin');
+
       const tryRefresh = async (): Promise<void> => {
-        const resp = await axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true });
+        const refreshUrl = isAdmin ? `${API_BASE}/admin/auth/refresh` : `${API_BASE}/auth/refresh`;
+        const resp = await axios.post(refreshUrl, {}, { withCredentials: true });
         const body = resp.data;
         if (body?.success === true && body.data?.accessToken) {
           const newToken = body.data.accessToken;
@@ -99,7 +102,7 @@ api.interceptors.response.use(
       setRefreshPromise(tryRefresh().catch((refreshErr) => {
         processQueue(refreshErr);
         clearAccessToken();
-        window.location.href = '/manamaalai/login';
+        window.location.href = isAdmin ? '/admin/login' : '/manamaalai/login';
         throw refreshErr;
       }));
 

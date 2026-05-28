@@ -100,6 +100,7 @@ export class ProfileRepository {
         },
         translations: true,
         history: { orderBy: { createdAt: 'desc' }, take: 5 },
+        account: { select: { currentState: true } },
       },
     });
   }
@@ -112,7 +113,7 @@ export class ProfileRepository {
 
   async createProfile(tx: any, accountId: string, status: ProfileStatus) {
     return tx.profile.create({
-      data: { accountId, currentStatus: status, visibility: 'PRIVATE' },
+      data: { accountId, currentStatus: status },
     });
   }
 

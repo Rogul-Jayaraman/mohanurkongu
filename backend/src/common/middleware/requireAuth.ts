@@ -63,10 +63,6 @@ export async function requireSession(req: Request, res: Response, next: NextFunc
       throw new AppError(401, ErrorCodes.ACCOUNT_NOT_FOUND, translate(ErrorCodes.ACCOUNT_NOT_FOUND, res.locals.lang));
     }
 
-    if (account.currentState === 'DELETED') {
-      throw new AppError(401, ErrorCodes.AUTH_INVALID_CREDENTIALS, translate(ErrorCodes.AUTH_INVALID_CREDENTIALS, res.locals.lang));
-    }
-
     if (account.currentState === 'SUSPENDED') {
       throw new AppError(403, ErrorCodes.AUTH_ACCOUNT_SUSPENDED, translate(ErrorCodes.AUTH_ACCOUNT_SUSPENDED, res.locals.lang));
     }

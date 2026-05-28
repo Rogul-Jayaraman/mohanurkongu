@@ -1,0 +1,25 @@
+import api from '../lib/api';
+import type { LoginDto, BackendAccount } from './auth.api';
+
+export interface AdminLoginResponse {
+  accessToken: string;
+  accountId: string;
+  role: string;
+  sessionId: string;
+}
+
+export function adminLogin(dto: LoginDto): Promise<AdminLoginResponse> {
+  return api.post('/admin/auth/login', dto);
+}
+
+export function adminRefresh(): Promise<{ accessToken: string }> {
+  return api.post('/admin/auth/refresh');
+}
+
+export function adminLogout(): Promise<null> {
+  return api.post('/admin/auth/logout');
+}
+
+export function adminGetProfile(): Promise<BackendAccount> {
+  return api.get('/admin/account/me');
+}

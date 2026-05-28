@@ -7,6 +7,7 @@ import { SearchBar } from '@/components/ui/SearchBar';
 import { QuickFilters } from '@/components/ui/table/QuickFilters';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { useAuth } from '@/hooks/useAuth';
+import { useBrowseProfiles } from '@/hooks/useProfileBrowse';
 import { BrowseProfileFilters, ActiveFilterChips } from '@/components/forms/user/BrowseProfileFilters';
 
 // ═══════════════════════════════════════════════════════════
@@ -160,7 +161,7 @@ const BrowseProfilesHeader: React.FC<BrowseProfilesHeaderProps> = ({
                 <div className="w-full px-2 md:px-0">
                     <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} onFilterClick={() => onFilterClick('advanced')} placeholder={t('common:search')} />
                 </div>
-                <div className="overflow-x-auto no-scrollbar -mx-4 md:mx-0 px-4 md:px-0 text-center">
+                <div className="overflow-x-clip no-scrollbar -mx-4 md:mx-0 px-4 md:px-0 text-center">
                     <QuickFilters filters={filters} onFilterChange={onFilterChange} onFilterClick={onFilterClick} />
                 </div>
             </div>
@@ -181,19 +182,20 @@ const NoResultsView: React.FC<NoResultsViewProps> = ({ isSearching, selectedGend
     const lang = i18n.language === 'ta';
 
     return (
-        <div className="py-24 md:py-32 bg-white rounded-[32px] border border-gold/10 shadow-sm flex flex-col items-center justify-center text-center px-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gold/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-gold/10 transition-colors" />
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-sage/5 rounded-full -ml-16 -mb-16 blur-3xl group-hover:bg-sage/10 transition-colors" />
-            <div className="w-24 h-24 rounded-3xl bg-ivory flex items-center justify-center mb-8 rotate-3 group-hover:rotate-6 transition-transform duration-500 shadow-inner border border-gold/5">
-                <span className="material-symbols-outlined text-5xl text-rosewood/20">{isSearching ? 'search_off' : 'person_off'}</span>
+        <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
+            <div className="w-24 h-24 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mb-8">
+                <span className="material-symbols-outlined text-5xl">{isSearching ? 'search_off' : 'person_off'}</span>
             </div>
-            <h3 className="text-2xl font-serif text-dark-brown font-black mb-3 text-balance max-w-md">
+            <h3 className="text-2xl font-serif font-bold text-rosewood mb-3 text-balance max-w-md">
                 {isSearching ? t('dashboard:no_search_results') : t('dashboard:no_profiles_found', { gender: selectedGender === 'FEMALE' ? t('dashboard:bride').toLowerCase() : t('dashboard:groom').toLowerCase() })}
             </h3>
-            <p className="text-rosewood/60 text-sm italic font-medium max-w-sm leading-relaxed mb-8 opacity-70">
+            <p className="text-rosewood/60 text-sm font-medium max-w-sm leading-relaxed mb-8">
                 {isSearching ? t('dashboard:no_search_results_desc') : t('dashboard:no_suggestions')}
             </p>
-            <button onClick={() => window.location.reload()} className="px-8 py-3 rounded-xl bg-ivory border border-gold/20 text-gold font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-white transition-all duration-300">
+            <button onClick={() => window.location.reload()} className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-xs uppercase tracking-widest hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 transition-all duration-300">
                 {lang ? 'புதிய தேடல்' : 'Refresh Search'}
             </button>
         </div>
@@ -207,23 +209,27 @@ const ErrorStateView: React.FC<{
     message?: string;
     onRetry: () => void;
 }> = ({ message, onRetry }) => {
-    const { t } = useTranslation(['dashboard', 'browse']);
+    const { t, i18n } = useTranslation(['browse', 'dashboard']);
+    const lang = i18n.language === 'ta';
 
     return (
-        <div className="py-24 md:py-32 bg-white rounded-[32px] border border-rosewood/10 shadow-sm flex flex-col items-center justify-center text-center px-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-red/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-red/10 transition-colors" />
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-gold/5 rounded-full -ml-16 -mb-16 blur-3xl group-hover:bg-gold/10 transition-colors" />
-            <div className="w-24 h-24 rounded-3xl bg-ivory flex items-center justify-center mb-8 rotate-3 group-hover:rotate-6 transition-transform duration-500 shadow-inner border border-red/5">
-                <span className="material-symbols-outlined text-5xl text-rosewood/20">error_outline</span>
+        <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
+            <div className="w-20 h-20 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mx-auto mb-6">
+                <span className="material-symbols-outlined text-4xl">error_outline</span>
             </div>
-            <h3 className="text-2xl font-serif text-dark-brown font-black mb-3">
-                {t('browse:error_loading')}
+            <h3 className="text-xl font-serif font-bold text-rosewood mb-2">
+                {lang ? 'ஏதோ தவறு ஏற்பட்டுள்ளது' : t('browse:error_loading')}
             </h3>
-            <p className="text-rosewood/60 text-sm italic font-medium max-w-sm leading-relaxed mb-8">
-                {message || t('dashboard:error_desc')}
+            <p className="text-rosewood/60 text-sm font-medium max-w-sm mx-auto leading-relaxed mb-8">
+                {message || (lang
+                    ? 'வரன்களை ஏற்றும் போது பிழை ஏற்பட்டது. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.'
+                    : t('dashboard:error_desc'))}
             </p>
-            <button onClick={onRetry} className="px-8 py-3 rounded-xl bg-gold text-white text-xs uppercase tracking-widest font-bold hover:bg-rosewood transition-all duration-300 shadow-md transform hover:-translate-y-1">
-                {t('browse:try_again')}
+            <button onClick={onRetry} className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-xs uppercase tracking-widest hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 transition-all duration-300">
+                {lang ? 'மீண்டும் முயலவும்' : t('browse:try_again')}
             </button>
         </div>
     );
@@ -242,17 +248,20 @@ const NoDataView: React.FC<{
         : t('dashboard:groom').toLowerCase();
 
     return (
-        <div className="py-24 md:py-32 bg-ivory/30 rounded-[32px] border-2 border-dashed border-gold/20 flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
-            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <span className="material-symbols-outlined text-4xl text-gold/40">person_off</span>
+        <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
+            <div className="w-20 h-20 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mx-auto mb-6">
+                <span className="material-symbols-outlined text-4xl">person_off</span>
             </div>
             <h3 className="text-xl font-serif font-bold text-rosewood mb-2">
                 {t('browse:no_profiles_found')}
             </h3>
-            <p className="text-rosewood/60 text-sm italic font-medium max-w-sm mx-auto leading-relaxed mb-8">
+            <p className="text-rosewood/60 text-sm font-medium max-w-sm mx-auto leading-relaxed mb-8">
                 {t('dashboard:no_suggestions', { gender: genderLabel })}
             </p>
-            <button onClick={() => window.location.reload()} className="px-8 py-3 rounded-xl bg-ivory border border-gold/20 text-gold font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-white transition-all duration-300">
+            <button onClick={() => window.location.reload()} className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-xs uppercase tracking-widest hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 transition-all duration-300">
                 {lang ? 'மீண்டும் முயலவும்' : 'Refresh Search'}
             </button>
         </div>
@@ -269,14 +278,18 @@ const BrowseProfiles: React.FC = () => {
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState<Record<string, any>>({});
     const [selectedGender, setSelectedGender] = React.useState<'MALE' | 'FEMALE'>('FEMALE');
-    const loading = false;
-    const data: any[] = [];
-    const error = null;
-    const refetch = () => {};
-    const fetchNextPage = () => {};
-    const hasNextPage = false;
-    const isFetchingNextPage = false;
     const handleGenderChange = (gender: 'MALE' | 'FEMALE') => { setSelectedGender(gender); };
+
+    const {
+        profiles,
+        isLoading,
+        isFetchingNextPage,
+        error,
+        hasNextPage,
+        fetchNextPage,
+        refetch,
+    } = useBrowseProfiles({ gender: selectedGender, searchQuery, filters });
+
     const hasActiveFilters = searchQuery.trim().length > 0 || Object.keys(filters).length > 0;
 
     const handleFilterChange = (key: string, value: any) => {
@@ -301,8 +314,8 @@ const BrowseProfiles: React.FC = () => {
                         onFilterClick={() => setShowFilters(true)}
                         filters={filters}
                         onFilterChange={handleFilterChange}
-                        resultCount={data.length}
-                        loading={loading}
+                        resultCount={profiles.length}
+                        loading={isLoading}
                     >
                         {!hasActiveFilters && (
                             <GenderToggle selectedGender={selectedGender} onGenderChange={handleGenderChange} />
@@ -314,15 +327,15 @@ const BrowseProfiles: React.FC = () => {
                     </div>
 
                     <AnimatedSection>
-                    {loading && data.length === 0 ? (
+                    {isLoading && profiles.length === 0 ? (
                         <BrowseProfilesSkeleton />
                     ) : error ? (
                         <ErrorStateView onRetry={() => refetch()} />
-                    ) : data && data.length > 0 ? (
+                    ) : profiles && profiles.length > 0 ? (
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 gap-6">
-                                {data.map((profile: any) => (
-                                    <UserProfileCard key={profile.id} profile={profile} variant="browse" />
+                                {profiles.map((profile) => (
+                                    <UserProfileCard key={profile.id} profile={profile} variant="browse" onToggleShortlist={() => refetch()} />
                                 ))}
                             </div>
                             <InfiniteScrollTrigger onIntersect={() => fetchNextPage()} hasMore={!!hasNextPage} isLoading={isFetchingNextPage} />

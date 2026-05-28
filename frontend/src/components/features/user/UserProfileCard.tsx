@@ -18,8 +18,9 @@ import { useProfileUtils } from "@/hooks/useProfileUtils";
 import { KULAM_OPTIONS } from "@/constants/options";
 import { StatusBadge } from "@/components/ui/feedback/StatusBadge";
 import { useInitials } from "@/hooks/useInitials";
-import { stubToggleShortlist } from '@/utils/stubs';
+import { toggleShortlist as toggleShortlistApi } from '@/api/profile.api';
 import { formatFullName } from "@/utils/formatName";
+import { getAccessToken } from "@/lib/session";
 
 interface UserProfileCardProps {
   profile: any;
@@ -106,7 +107,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
       e.stopPropagation();
       if (isToggling) return;
 
-      const token = localStorage.getItem("token");
+      const token = getAccessToken();
       if (!token) {
         toast.error(t("common:login_required"));
         return;
@@ -118,8 +119,9 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
 
       try {
         setShortlistPending(true);
-        await stubToggleShortlist({ profileId: profile.id }).finally(() => setShortlistPending(false));
-        const newState = !previousState;
+        const data = await toggleShortlistApi(profile.id, previousState ? 'remove' : 'add');
+        setShortlistPending(false);
+        const newState = data.isShortlisted;
         setIsShortlisted(newState);
 
         if (newState) {

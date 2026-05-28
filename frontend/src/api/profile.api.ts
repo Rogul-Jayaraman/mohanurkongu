@@ -1,4 +1,5 @@
 import api from '../lib/api';
+import type { BrowseProfilesParams, BrowseProfileData, ShortlistToggleData, CursorParams } from '@/types/profile';
 
 export async function uploadFile(formData: FormData): Promise<{ uploadId: string; url: string }> {
   const res = await api.post('/uploads', formData, {
@@ -37,20 +38,23 @@ export async function deleteDraft(profileId: string): Promise<void> {
   await api.delete(`/profiles/draft/${profileId}`);
 }
 
-export async function fetchMyProfiles(): Promise<any[]> {
-  return api.get('/profiles/my-profiles') as any;
+export async function fetchMyProfiles(q?: string): Promise<any[]> {
+  const params = q?.trim() ? { q } : undefined;
+  return api.get('/profiles/my-profiles', { params }) as any;
 }
 
 export async function fetchProfile(id: string): Promise<any> {
   return api.get(`/profiles/${id}`) as any;
 }
 
-export async function approveProfile(profileId: string): Promise<{ profileId: string; regNo: string; status: string }> {
-  const res = await api.post(`/admin/profiles/${profileId}/approve`) as any;
-  return res.data;
+export async function browseProfiles(params: BrowseProfilesParams): Promise<BrowseProfileData> {
+  return api.get('/profiles/browse', { params }) as any;
 }
 
-export async function rejectProfile(profileId: string, reasonEn: string, reasonTa?: string): Promise<{ profileId: string; status: string }> {
-  const res = await api.post(`/admin/profiles/${profileId}/reject`, { reasonEn, reasonTa }) as any;
-  return res.data;
+export async function toggleShortlist(profileId: string, action: 'add' | 'remove'): Promise<ShortlistToggleData> {
+  return api.post(`/profiles/${profileId}/shortlist`, { action }) as any;
+}
+
+export async function fetchShortlisted(params: CursorParams): Promise<BrowseProfileData> {
+  return api.get('/profiles/shortlisted', { params }) as any;
 }

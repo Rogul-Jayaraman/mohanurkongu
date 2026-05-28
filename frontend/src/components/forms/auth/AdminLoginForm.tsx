@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { stubAdminLogin } from '@/utils/stubs';
 import { useAuth } from '@/hooks/useAuth';
+import { adminLogin } from '@/api/admin.api';
 import { Input } from '@/components/ui/forms/Input';
 import { PasswordField } from '@/components/ui/forms/PasswordField';
 import { Spinner as LoadingSpinner } from '@/components/ui/feedback/Spinner';
 import { validateLogin, type LoginData } from '@/utils/validation';
 import { toast } from 'sonner';
 import { useTranslations } from '@/hooks/useTranslations';
+import { isAppError, getErrorMessage } from '@/lib/errors';
 
 const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -29,7 +30,7 @@ const itemVariants = {
  */
 export const AdminLoginForm: React.FC = () => {
     const navigate = useNavigate();
-    const { setUser, setToken } = useAuth();
+    const auth = useAuth();
     const { t, translateError } = useTranslations(['adminLogin', 'errors']);
     const [isPending, setIsPending] = useState(false);
     const [formData, setFormData] = useState<LoginData>({
@@ -60,24 +61,23 @@ export const AdminLoginForm: React.FC = () => {
         }
 
         setIsPending(true);
-        stubAdminLogin(formData).then((response: any) => {
-            if (response.success && response.data) {
-                setToken(response.data.token);
-                setUser(response.data.user);
-                toast.success(t('auth:login.success') || 'Login successful');
-                navigate('/admin/dashboard');
-            } else {
-                const message = (response as any).message || 'login_failed';
-                const translated = translateError(message);
-                toast.error(translated);
-                setGeneralError(translated);
-            }
-        }).catch((error: any) => {
-            const message = error.details || error.message || 'login_failed';
-            const translated = translateError(message);
-            toast.error(translated);
-            setGeneralError(translated);
-        }).finally(() => setIsPending(false));
+        try {
+            const result = await adminLogin({
+                identifier: formData.identifier,
+                password: formData.password,
+            });
+
+            await auth.login(result.accessToken, 'ADMIN');
+
+            toast.success(t('auth:login.success') || 'Login successful');
+            navigate('/admin/dashboard');
+        } catch (err) {
+            const message = isAppError(err) ? translateError(err, err.code) : getErrorMessage(err, 'login_failed');
+            toast.error(message);
+            setGeneralError(message);
+        } finally {
+            setIsPending(false);
+        }
     };
 
     return (

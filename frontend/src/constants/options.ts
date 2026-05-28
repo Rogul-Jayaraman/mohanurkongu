@@ -186,7 +186,7 @@ export const PROFILE_ACTION_REASONS = {
   ],
   QUALITY: [
     { value: 'LOW_QUALITY_PROFILE', label: 'Low Quality Profile', labelTa: 'தரம் குறைந்த பதிவு' },
-    { value: 'INACTIVE_PROFILE', label: 'Inactive Profile', labelTa: 'செயலற்ற பதிவு' },
+    { value: 'ARCHIVED_PROFILE', label: 'Archived Profile', labelTa: 'காப்பகப்படுத்தப்பட்ட பதிவு' },
     { value: 'INVALID_CONTACT', label: 'Invalid Contact Information', labelTa: 'தவறான தொடர்பு விவரங்கள்' },
   ],
   SUCCESS: [

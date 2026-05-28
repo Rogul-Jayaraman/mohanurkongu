@@ -158,12 +158,70 @@ export interface ProfileSummary {
   age: number;
   education: string;
   community: string;
-  profession: string;
   jobDetail: string;
+  currentDistrict: string | null;
   currentDistrictEn: string | null;
   currentDistrictTa: string | null;
+  currentTaluk: string | null;
+  currentTalukTa: string | null;
   currentCityEn: string | null;
   currentCityTa: string | null;
+  currentStateEn: string | null;
+  currentStateTa: string | null;
+  currentCountryEn: string | null;
+  currentCountryTa: string | null;
   profilePhoto: string | ImageObject | null;
   isShortlisted: boolean;
+}
+
+export interface BrowseProfilesParams {
+  gender?: 'MALE' | 'FEMALE';
+  q?: string;
+  sort?: string;
+  currentDistrict?: string;
+  maritalStatus?: string;
+  ageMin?: number;
+  ageMax?: number;
+  heightMin?: number;
+  heightMax?: number;
+  caste?: string;
+  kulam?: string;
+  rasi?: string;
+  nakshatra?: string;
+  dosham?: string;
+  diet?: string;
+  complexion?: string;
+  education?: string;
+  jobSector?: string;
+  nativeDistrict?: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  cursor?: string;
+  limit?: number;
+}
+
+export interface CursorPagination {
+  cursor: string | null;
+  hasMore: boolean;
+  limit: number;
+}
+
+export interface BrowseProfileData {
+  profiles: ProfileSummary[];
+  pagination: CursorPagination;
+}
+
+export interface ToggleShortlistParams {
+  action: 'add' | 'remove';
+}
+
+export interface ShortlistToggleData {
+  isShortlisted: boolean;
+  shortlistedAt?: string;
+}
+
+export interface CursorParams {
+  cursor?: string;
+  limit?: number;
+  q?: string;
 }

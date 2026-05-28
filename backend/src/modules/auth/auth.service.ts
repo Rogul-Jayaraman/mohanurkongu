@@ -207,11 +207,6 @@ export class AuthService {
       throw new AppError(401, ErrorCodes.AUTH_INVALID_CREDENTIALS, 'AUTH_INVALID_CREDENTIALS');
     }
 
-    if (credential.account.currentState === 'DELETED') {
-      await enqueueAuditEvent('LOGIN_FAILED', credential.accountId, { reason: 'deleted' });
-      throw new AppError(401, ErrorCodes.AUTH_INVALID_CREDENTIALS, 'AUTH_INVALID_CREDENTIALS');
-    }
-
     if (credential.account.currentState === 'SUSPENDED') {
       await enqueueAuditEvent('LOGIN_FAILED', credential.accountId, { reason: 'suspended' });
       throw new AppError(403, ErrorCodes.AUTH_ACCOUNT_SUSPENDED, 'AUTH_ACCOUNT_SUSPENDED');
@@ -309,10 +304,6 @@ export class AuthService {
 
     if (credential.account.currentState === 'SUSPENDED') {
       throw new AppError(403, ErrorCodes.AUTH_ACCOUNT_SUSPENDED, 'AUTH_ACCOUNT_SUSPENDED');
-    }
-
-    if (credential.account.currentState === 'DELETED') {
-      throw new AppError(400, ErrorCodes.AUTH_RESET_SESSION_INVALID, 'AUTH_RESET_SESSION_INVALID');
     }
 
     accountId = credential.accountId;

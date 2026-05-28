@@ -40,6 +40,15 @@ import type { IStorageProvider } from './modules/storage/providers/storage-provi
 import { UploadService } from './modules/upload/upload.service.js';
 import { ProfileService } from './modules/profile/profile.service.js';
 import { ImagePipelineService } from './modules/image/image-pipeline.service.js';
+import { AdminVerificationRepository } from './modules/admin-verification/admin-verification.repository.js';
+import { AdminVerificationService } from './modules/admin-verification/admin-verification.service.js';
+import { AdminVerificationController } from './modules/admin-verification/admin-verification.controller.js';
+import { AdminProfilesRepository } from './modules/admin-profiles/admin-profiles.repository.js';
+import { AdminProfilesService } from './modules/admin-profiles/admin-profiles.service.js';
+import { AdminProfilesController } from './modules/admin-profiles/admin-profiles.controller.js';
+import { AdminDashboardRepository } from './modules/admin-dashboard/admin-dashboard.repository.js';
+import { AdminDashboardService } from './modules/admin-dashboard/admin-dashboard.service.js';
+import { AdminDashboardController } from './modules/admin-dashboard/admin-dashboard.controller.js';
 
 // Controllers
 import { AuthController } from './modules/auth/auth.controller.js';
@@ -58,6 +67,9 @@ import { createAdminAuthRoutes } from './modules/admin-auth/admin-auth.routes.js
 import { createAdminAccountRoutes } from './modules/admin-auth/admin-account.routes.js';
 import { createUploadRoutes } from './modules/upload/upload.routes.js';
 import { createProfileRoutes } from './modules/profile/profile.routes.js';
+import { createAdminVerificationRoutes } from './modules/admin-verification/admin-verification.routes.js';
+import { createAdminProfilesRoutes } from './modules/admin-profiles/admin-profiles.routes.js';
+import { createAdminDashboardRoutes } from './modules/admin-dashboard/admin-dashboard.routes.js';
 import horoscopeRouter from './modules/horoscope/index.js';
 
 export function createApp() {
@@ -216,6 +228,21 @@ export function createApp() {
   const profileService = new ProfileService(profileRepo, storageService, accountService);
   const profileController = new ProfileController(profileService);
 
+  // AdminVerificationModule
+  const adminVerificationRepo = new AdminVerificationRepository();
+  const adminVerificationService = new AdminVerificationService(adminVerificationRepo);
+  const adminVerificationController = new AdminVerificationController(adminVerificationService);
+
+  // AdminProfilesModule
+  const adminProfilesRepo = new AdminProfilesRepository();
+  const adminProfilesService = new AdminProfilesService(adminProfilesRepo, storageService);
+  const adminProfilesController = new AdminProfilesController(adminProfilesService);
+
+  // AdminDashboardModule
+  const adminDashboardRepo = new AdminDashboardRepository();
+  const adminDashboardService = new AdminDashboardService(adminDashboardRepo);
+  const adminDashboardController = new AdminDashboardController(adminDashboardService);
+
   // --- Bull Board ---
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath('/admin/queues');
@@ -237,6 +264,9 @@ export function createApp() {
   app.use('/horoscope', horoscopeRouter);
   app.use('/', createUploadRoutes(uploadController));
   app.use('/', createProfileRoutes(profileController));
+  app.use('/admin', createAdminVerificationRoutes(adminVerificationController));
+  app.use('/admin', createAdminProfilesRoutes(adminProfilesController));
+  app.use('/admin', createAdminDashboardRoutes(adminDashboardController));
 
   // 404
   app.use((_req, res) => {

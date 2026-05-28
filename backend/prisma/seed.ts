@@ -108,6 +108,14 @@ async function main() {
   await seedTaluks(districtMap);
   await seedCommunity();
   await setDevCascade();
+
+  if (process.env.SEED_DATA === 'true') {
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('  SEED_DATA=true — generating test data');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    const { generateTestData } = await import('./seed-data/index.js');
+    await generateTestData();
+  }
 }
 
 async function seedRoles() {

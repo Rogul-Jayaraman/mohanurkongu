@@ -12,10 +12,9 @@ enum LanguageCode {
   TA
 }
 
-enum AccountState {
+enum AccountStatus {
   ACTIVE
   SUSPENDED
-  DELETED
 }
 
 enum RoleCode {
@@ -51,28 +50,28 @@ enum ProfileStatus {
   DRAFT
   PENDING
   ACTIVE
-  INACTIVE
   REJECTED
+  ARCHIVED
   DELETED
 }
 
 enum UploadStatus {
   TEMP
-  DRAFT
+  ATTACHED
   ACTIVE
   DELETE_PENDING
   DELETED
-}
-
-enum Visibility {
-  PUBLIC
-  PRIVATE
 }
 
 enum Gender {
   MALE
   FEMALE
   OTHER
+}
+
+enum ReviewAction {
+  APPROVED
+  REJECTED
 }
 
 enum Diet {
@@ -123,7 +122,7 @@ enum HoroscopeMode {
 model Account {
   id           String       @id @default(uuid()) @db.Uuid
   accountNo    String       @unique @db.VarChar(20)
-  currentState AccountState @default(ACTIVE)
+  currentState AccountStatus @default(ACTIVE)
   tokenVersion Int          @default(0)
 
   createdAt DateTime @default(now())
@@ -137,6 +136,10 @@ model Account {
   sessions      AccountSession[]
   profiles      Profile[]
   uploads       Upload[]
+  assignedVerifications VerificationQueue[] @relation("assignedAdmin")
+  reviewedReviews       ProfileReview[]
+  auditEvents           AdminAuditEvent[]
+  shortlists            Shortlist[]
 
   @@index([accountNo])
   @@index([currentState])
@@ -238,7 +241,7 @@ model AccountMembership {
 model AccountStatusHistory {
   id        String       @id @default(uuid())
   accountId String       @db.Uuid
-  state     AccountState
+  state     AccountStatus
   reason    String?
   changedBy String?      @db.VarChar(50)
   changedAt DateTime     @default(now())
@@ -517,18 +520,19 @@ model Profile {
   id            String        @id @default(uuid()) @db.Uuid
   accountId     String        @db.Uuid
   regNo         String?       @unique
-  currentStatus ProfileStatus
-  visibility    Visibility
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  activatedAt     DateTime?
-  archivedAt      DateTime?
-  approvedAt      DateTime?
-  approvedBy      String?        @db.Uuid
-  rejectedAt      DateTime?
-  rejectedBy      String?        @db.Uuid
+  currentStatus     ProfileStatus
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  activatedAt       DateTime?
+  archivedAt        DateTime?
+  approvedAt        DateTime?
+  approvedBy        String?        @db.Uuid
+  rejectedAt        DateTime?
+  rejectedBy        String?        @db.Uuid
   rejectionReasonEn String?
   rejectionReasonTa String?
+  archiveReasonEn   String?
+  archiveReasonTa   String?
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
 
@@ -542,6 +546,9 @@ model Profile {
   partnerPreference PartnerPreference?
   translations      ProfileTranslation[]
   history           ProfileStateHistory[]
+  verificationQueue VerificationQueue?
+  reviews           ProfileReview[]
+  shortlists        Shortlist[]
 
   @@index([accountId])
   @@index([currentStatus])
@@ -771,4 +778,73 @@ model ProfileStateHistory {
 
   @@index([profileId, createdAt])
   @@map("profile_state_history")
+}
+
+model VerificationQueue {
+  id         String    @id @default(uuid()) @db.Uuid
+  profileId  String    @unique @db.Uuid
+  assignedTo String?   @db.Uuid
+  claimedAt  DateTime?
+  completedAt DateTime?
+  lockedAt   DateTime?
+  lockedBy   String?   @db.Uuid
+  priority   Int       @default(0)
+  notes      String?   @db.Text
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  profile  Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  assignee Account? @relation("assignedAdmin", fields: [assignedTo], references: [id])
+
+  @@index([assignedTo])
+  @@index([completedAt])
+  @@map("verification_queue")
+}
+
+model ProfileReview {
+  id         String       @id @default(uuid()) @db.Uuid
+  profileId  String       @db.Uuid
+  reviewerId String       @db.Uuid
+  action     ReviewAction
+  reasonEn   String?      @db.VarChar(500)
+  reasonTa   String?      @db.VarChar(500)
+  reviewData Json?
+  createdAt  DateTime     @default(now())
+
+  profile  Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  reviewer Account @relation(fields: [reviewerId], references: [id])
+
+  @@index([profileId, createdAt])
+  @@map("profile_reviews")
+}
+
+model Shortlist {
+  id        String   @id @default(uuid()) @db.Uuid
+  profileId String   @db.Uuid
+  accountId String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, accountId])
+  @@index([accountId])
+  @@index([profileId])
+  @@map("shortlists")
+}
+
+model AdminAuditEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  actorId   String   @db.Uuid
+  profileId String?  @db.Uuid
+  action    String   @db.VarChar(30)
+  metadata  Json?
+  ipAddress String?  @db.VarChar(45)
+  createdAt DateTime @default(now())
+
+  actor Account @relation(fields: [actorId], references: [id])
+
+  @@index([actorId, createdAt])
+  @@index([profileId, createdAt])
+  @@map("admin_audit_events")
 }

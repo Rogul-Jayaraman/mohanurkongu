@@ -1,7 +1,7 @@
 import type { BackendAccount } from '../api/auth.api';
 import type { User, Admin } from '../types/user';
 
-function decodeJwtPayload(token: string) {
+export function decodeJwtPayload(token: string) {
   return JSON.parse(atob(token.split('.')[1]));
 }
 
@@ -28,6 +28,7 @@ export function mapAccountToAdmin(account: BackendAccount, accessToken: string):
   const { sub } = decodeJwtPayload(accessToken);
   return {
     id: sub,
+    customId: account.accountNo,
     firstNameEn: account.firstNameEn,
     lastNameEn: account.lastNameEn,
     firstNameTa: account.firstNameTa || null,

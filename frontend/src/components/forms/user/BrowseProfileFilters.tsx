@@ -239,12 +239,13 @@ export const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = ({ filters, o
     const toTitleCase = (str: string) => str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
     const getChipLabel = (key: string, value: any) => {
-        if (!value) return null;
+        if (value === undefined || value === null || value === '') return null;
         switch (key) {
             case 'currentDistrict':
             case 'nativeDistrict':
-                return { en: toTitleCase(String(value)), ta: DISTRICT_TAMIL[value] || value, category: key === 'currentDistrict' ? 'Current' : 'Native' };
-            case 'nativeTaluk':
+                return { en: toTitleCase(String(value)), ta: DISTRICT_TAMIL[value] || value, category: key === 'currentDistrict' ? 'Current District' : 'Native District' };
+            case 'currentCity':
+            case 'currentTaluk':
                 return { en: toTitleCase(String(value)), ta: TALUK_TAMIL[value] || value, category: 'Taluk' };
             case 'kulam': {
                 const k = KULAM_OPTIONS.find((o: any) => o.value === value);
@@ -258,6 +259,10 @@ export const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = ({ filters, o
                 const n = NAKSHATRA_OPTIONS.find((o: any) => o.value === value);
                 return { en: n?.label || value, ta: n?.labelTa || value, category: 'Star' };
             }
+            case 'laganam': {
+                const l = RASI_OPTIONS.find((o: any) => o.value === value);
+                return { en: l?.label || value, ta: l?.labelTa || value, category: 'Lagnam' };
+            }
             case 'dosham': {
                 const d = DOSHAM_OPTIONS.find((o: any) => o.value === value);
                 return { en: d?.label || value, ta: d?.labelTa || value, category: 'Dosham' };
@@ -266,6 +271,43 @@ export const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = ({ filters, o
                 const m = MARITAL_STATUS_OPTIONS.find((o: any) => o.value === value);
                 return { en: m?.label || value, ta: m?.labelTa || value, category: 'Status' };
             }
+            case 'diet': {
+                const d = DIET_OPTIONS.find((o: any) => o.value === value);
+                return { en: d?.label || value, ta: d?.labelTa || value, category: 'Diet' };
+            }
+            case 'complexion': {
+                const c = COMPLEXION_OPTIONS.find((o: any) => o.value === value);
+                return { en: c?.label || value, ta: c?.labelTa || value, category: 'Complexion' };
+            }
+            case 'residence': {
+                const r = RESIDENCE_OPTIONS.find((o: any) => o.value === value);
+                return { en: r?.label || value, ta: r?.labelTa || value, category: 'Residence' };
+            }
+            case 'currentSector':
+            case 'jobSector': {
+                const j = JOB_SECTOR_OPTIONS.find((o: any) => o.value === value);
+                return { en: j?.label || value, ta: j?.labelTa || value, category: 'Job Sector' };
+            }
+            case 'education':
+                return { en: toTitleCase(String(value)), ta: value, category: 'Education' };
+            case 'jobTitle':
+                return { en: toTitleCase(String(value)), ta: value, category: 'Job Title' };
+            case 'jobLocation':
+                return { en: toTitleCase(String(value)), ta: value, category: 'Job Location' };
+            case 'kuladeivam':
+                return { en: toTitleCase(String(value)), ta: value, category: 'Kuladeivam' };
+            case 'minAge':
+            case 'maxAge':
+                return { en: `${value} yrs`, ta: `${value} ஆண்டுகள்`, category: key === 'minAge' ? 'Min Age' : 'Max Age' };
+            case 'minHeight':
+            case 'maxHeight':
+                return { en: `${value} cm`, ta: `${value} செ.மீ`, category: key === 'minHeight' ? 'Min Height' : 'Max Height' };
+            case 'minWeight':
+            case 'maxWeight':
+                return { en: `${value} kg`, ta: `${value} கி.கி`, category: key === 'minWeight' ? 'Min Weight' : 'Max Weight' };
+            case 'minSalary':
+            case 'maxSalary':
+                return { en: `₹${value} L`, ta: `₹${value} இலட்சம்`, category: key === 'minSalary' ? 'Min Salary' : 'Max Salary' };
             default:
                 return null;
         }
@@ -273,9 +315,9 @@ export const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = ({ filters, o
 
     const activeKeys = Object.keys(filters).filter(key => {
         const val = filters[key];
-        if (!val) return false;
+        if (val === undefined || val === null || val === '') return false;
         if (Array.isArray(val) && val.length === 0) return false;
-        if (key === 'minAge' || key === 'maxAge' || key === 'page' || key === 'limit' || key === 'sort') return false;
+        if (key === 'sort') return false;
         return true;
     });
 

@@ -2,13 +2,13 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
-import { Shield, Search, UserX, Eye, Check, X, ShieldBan, User as UserIcon, Filter } from 'lucide-react';
+import { Shield, Search, Eye, Check, X, ShieldBan, User as UserIcon, Filter } from 'lucide-react';
 import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
 import { RejectionModal } from '@/modals/admin/RejectionModal';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { TableActionDropdown } from '@/components/ui/table/TableActionDropdown';
 import { DataTable, Column } from '@/components/ui/table/DataTable';
-import { stubFetchAdminProfiles, stubVerifyProfile, stubBlockProfile, stubSuspendProfile } from '@/utils/stubs';
+import { fetchVerificationQueue, approveProfile, rejectProfile, fetchAdminProfiles, archiveProfile, restoreProfile } from '@/api/verification.api';
 import { useDateFormatter } from '@/hooks/useDateFormatter';
 import type { AdminManagedProfile } from '@/types/admin-types';
 import { toast } from 'sonner';
@@ -30,16 +30,16 @@ const ProfileManagement: React.FC = () => {
 
     const [data, setData] = React.useState<any>({ profiles: [], meta: { total: 0, totalPages: 1, page: 1, limit: itemsPerPage } });
     const [isLoading, setIsLoading] = React.useState(true);
-    React.useEffect(() => { setIsLoading(true); stubFetchAdminProfiles({ page: currentPage, search: searchQuery, status: statusFilter, limit: itemsPerPage }).then(setData).finally(() => setIsLoading(false)); }, [currentPage, searchQuery, statusFilter, itemsPerPage]);
+    React.useEffect(() => { setIsLoading(true); fetchAdminProfiles({ page: currentPage, search: searchQuery, status: statusFilter, limit: itemsPerPage }).then((res: any) => setData(res)).finally(() => setIsLoading(false)); }, [currentPage, searchQuery, statusFilter, itemsPerPage]);
 
-    const [rejectionModal, setRejectionModal] = React.useState<{ open: boolean; profileId: string | null; mode: 'REJECT' | 'BLOCK' | 'SUSPEND' }>({
+    const [rejectionModal, setRejectionModal] = React.useState<{ open: boolean; profileId: string | null; mode: 'REJECT' | 'ARCHIVE' }>({
         open: false,
         profileId: null,
         mode: 'REJECT'
     });
 
     const handleVerify = (id: string) => {
-        stubVerifyProfile({ id, data: { status: 'ACCEPTED' } }).then(
+        approveProfile(id).then(
             () => toast.success(t('adminMatrimony.users.verifySuccess'))
         ).catch(
             (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.verifyError'))
@@ -53,40 +53,30 @@ const ProfileManagement: React.FC = () => {
             setRejectionModal({ open: false, profileId: null, mode: 'REJECT' });
         };
         if (rejectionModal.mode === 'REJECT') {
-            stubVerifyProfile({ id: rejectionModal.profileId, data: { status: 'REJECTED', reasonEn, reasonTa } }).then(
+            rejectProfile(rejectionModal.profileId, reasonEn, reasonTa).then(
                 () => handleSuccess(t('adminMatrimony.users.rejectSuccess'))
             ).catch(
                 (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.rejectFailed'))
             );
-        } else if (rejectionModal.mode === 'BLOCK') {
-            stubBlockProfile({ id: rejectionModal.profileId, data: { reasonEn, reasonTa } }).then(
-                () => handleSuccess(t('adminMatrimony.users.blockSuccess'))
+        } else if (rejectionModal.mode === 'ARCHIVE') {
+            archiveProfile(rejectionModal.profileId, reasonEn, reasonTa).then(
+                () => handleSuccess(t('adminMatrimony.users.blockSuccess') || 'Profile archived')
             ).catch(
                 (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
             );
-        } else if (rejectionModal.mode === 'SUSPEND') {
-            stubSuspendProfile({ id: rejectionModal.profileId, data: { reasonEn, reasonTa } }).then(
-                () => handleSuccess(t('adminMatrimony.users.suspendSuccess'))
-            ).catch(
-                (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.suspendError'))
-            );
         }
     };
 
-    const handleBlock = (id: string, currentStatus: string) => {
-        if (currentStatus === 'INACTIVE') {
-            stubBlockProfile({ id, data: { reasonEn: '', reasonTa: '' } }).then(
-                () => toast.success(t('adminMatrimony.users.statusUpdateSuccess'))
+    const handleArchive = (id: string, currentStatus: string) => {
+        if (currentStatus === 'ARCHIVED') {
+            restoreProfile(id).then(
+                () => toast.success(t('adminMatrimony.users.statusUpdateSuccess') || 'Profile restored')
             ).catch(
                 (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.statusUpdateError'))
             );
-        } else {
-            setRejectionModal({ open: true, profileId: id, mode: 'BLOCK' });
+        } else if (currentStatus === 'ACTIVE') {
+            setRejectionModal({ open: true, profileId: id, mode: 'ARCHIVE' });
         }
-    };
-
-    const handleSuspend = (id: string) => {
-        setRejectionModal({ open: true, profileId: id, mode: 'SUSPEND' });
     };
 
     const columns: Column<AdminManagedProfile>[] = [
@@ -127,14 +117,14 @@ const ProfileManagement: React.FC = () => {
         },
         {
             header: t('adminMatrimony.profiles.table.status') || 'Verification',
-            render: (profile) => <StatusBadge status={profile.adminVerified.toLowerCase()} minimal />
+            render: (profile) => <StatusBadge status={(profile.status || '').toLowerCase()} minimal />
         },
         {
             header: t('adminMatrimony.common.actions') || 'Actions',
-            headerClassName: 'w-20 text-center',
+            headerClassName: 'w-36 text-center',
             className: 'text-center',
             render: (profile) => (
-                <div className="flex justify-center">
+                <div className="flex justify-center gap-1.5">
                     <Tooltip content={t('adminMatrimony.verification.viewProfile') || 'View Profile'}>
                         <button 
                             onClick={() => navigate(`/admin/matrimony/profiles/${profile.id}`)}
@@ -143,6 +133,26 @@ const ProfileManagement: React.FC = () => {
                             <Eye size={18} strokeWidth={2.5} />
                         </button>
                     </Tooltip>
+                    {profile.status === 'ACTIVE' && (
+                        <Tooltip content={t('adminMatrimony.common.blockingReason') || 'Archive'}>
+                            <button 
+                                onClick={() => handleArchive(profile.id, profile.status)}
+                                className="p-2.5 rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-100 hover:text-amber-800 transition-all duration-300 shadow-sm border border-amber-200"
+                            >
+                                <ShieldBan size={18} strokeWidth={2.5} />
+                            </button>
+                        </Tooltip>
+                    )}
+                    {profile.status === 'ARCHIVED' && (
+                        <Tooltip content="Restore">
+                            <button 
+                                onClick={() => handleArchive(profile.id, profile.status)}
+                                className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-800 transition-all duration-300 shadow-sm border border-emerald-200"
+                            >
+                                <Eye size={18} strokeWidth={2.5} />
+                            </button>
+                        </Tooltip>
+                    )}
                 </div>
             )
         }
@@ -157,12 +167,12 @@ const ProfileManagement: React.FC = () => {
                 <TableActionDropdown variant="filter" triggerLabel={statusFilter === 'All' ? t('adminMatrimony.common.all') : t(`adminMatrimony.common.${statusFilter.toLowerCase()}`)} triggerIcon={Filter} items={[
                     { label: t('adminMatrimony.common.all') || 'All Statuses', icon: Filter, onClick: () => { setStatusFilter('All'); setCurrentPage(1); } },
                     { label: t('adminMatrimony.common.pending') || 'Pending Review', icon: Search, onClick: () => { setStatusFilter('PENDING'); setCurrentPage(1); } },
-                    { label: t('adminMatrimony.common.approved') || 'Approved', icon: Check, onClick: () => { setStatusFilter('ACCEPTED'); setCurrentPage(1); } },
+                    { label: t('adminMatrimony.common.approved') || 'Active', icon: Check, onClick: () => { setStatusFilter('ACTIVE'); setCurrentPage(1); } },
                     { label: t('adminMatrimony.common.rejected') || 'Rejected', icon: X, onClick: () => { setStatusFilter('REJECTED'); setCurrentPage(1); } }
                 ]} />
             </div>
             <DataTable columns={columns} data={data?.profiles || []} loading={isLoading} pagination={{ currentPage, totalPages: data?.meta?.totalPages || 1, totalItems: data?.meta?.total || 0, itemsPerPage, onPageChange: setCurrentPage }} emptyState={{ icon: Eye, title: t('adminMatrimony.users.noProfilesFound') }} />
-            <RejectionModal isOpen={rejectionModal.open} onClose={() => setRejectionModal({ open: false, profileId: null, mode: 'REJECT' })} onConfirm={confirmReject} title={rejectionModal.mode === 'REJECT' ? t('adminMatrimony.common.rejectionReason') : rejectionModal.mode === 'BLOCK' ? t('adminMatrimony.common.blockingReason') : t('adminMatrimony.common.suspensionReason')} placeholder={t('adminMatrimony.common.enterReason') || "Enter the reason..."} confirmLabel={rejectionModal.mode === 'REJECT' ? t('adminMatrimony.common.reject') : t('adminMatrimony.common.confirm')} cancelLabel={t('adminMatrimony.common.cancel')} />
+            <RejectionModal isOpen={rejectionModal.open} onClose={() => setRejectionModal({ open: false, profileId: null, mode: 'REJECT' })} onConfirm={confirmReject} title={rejectionModal.mode === 'REJECT' ? t('adminMatrimony.common.rejectionReason') : t('adminMatrimony.common.blockingReason') || 'Archive Reason'} placeholder={t('adminMatrimony.common.enterReason') || "Enter the reason..."} confirmLabel={rejectionModal.mode === 'REJECT' ? t('adminMatrimony.common.reject') : t('adminMatrimony.common.confirm')} cancelLabel={t('adminMatrimony.common.cancel')} />
         </motion.div>
     );
 };

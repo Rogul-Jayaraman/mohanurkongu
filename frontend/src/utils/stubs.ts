@@ -32,39 +32,7 @@ export async function stubResetPassword(data: { email: string; otp: string; pass
   return { success: true };
 }
 
-// ─── User Profiles ─────────────────────────────────────
-
-export async function stubFetchMyProfiles(): Promise<any[]> {
-  return [];
-}
-
-export async function stubFetchProfile(id: string): Promise<any> {
-  return null;
-}
-
-export async function stubSaveDraft(payload: any) {
-  return { data: { draftId: 'mock-draft-id' } };
-}
-
-export async function stubFetchDraft(id: string): Promise<any> {
-  return null;
-}
-
-export async function stubPublishProfile(id: string) {}
-
-export async function stubCancelDraft(id: string) {}
-
-export async function stubUploadImage(args: { id: string; type: string; file: File; index?: number }) {
-  return { data: { url: URL.createObjectURL(args.file) } };
-}
-
-export async function stubDeleteImage(args: { id: string; type: string; index?: number }) {}
-
-export async function stubGenerateHoroscope(args: any) {
-  return { summary: { locationName: args.location?.displayName || '' }, input: { location: { latitude: args.location?.latitude || 0, longitude: args.location?.longitude || 0 } }, meta: { timezone: 'UTC', ayanamsa: 0 } };
-}
-
-export async function stubToggleShortlist(args: { profileId: string }) {}
+// ─── User – Plan & Purchase (not yet wired to real API) ──
 
 export async function stubFetchPremiumPrice() {
   return 0;
@@ -72,34 +40,6 @@ export async function stubFetchPremiumPrice() {
 
 export async function stubFetchPurchaseHistory(): Promise<any[]> {
   return [];
-}
-
-// ─── Admin – Matrimony ─────────────────────────────────
-
-export async function stubFetchAdminAccounts(params: { page: number; search?: string }) {
-  return { accounts: [], meta: { total: 0, totalPages: 1, page: 1, limit: 10 } };
-}
-
-export async function stubSuspendAccount(args: { id: string; data: { reasonEn: string; reasonTa: string } }) {}
-
-export async function stubRevokeAccount(id: string) {}
-
-export async function stubFetchAdminProfiles(params: { page: number; search?: string; status?: string; limit?: number }) {
-  return { profiles: [], meta: { total: 0, totalPages: 1, page: 1, limit: params.limit || 10 } };
-}
-
-export async function stubVerifyProfile(args: { id: string; data: { status: string; reasonEn?: string; reasonTa?: string } }) {}
-
-export async function stubBlockProfile(args: { id: string; data: { reasonEn: string; reasonTa: string } }) {}
-
-export async function stubSuspendProfile(args: { id: string; data: { reasonEn: string; reasonTa: string } }) {}
-
-export async function stubFetchAdminProfileDetail(id: string): Promise<any> {
-  return null;
-}
-
-export async function stubFetchVerificationQueue() {
-  return { profiles: [] };
 }
 
 // ─── Admin – Analytics ─────────────────────────────────
@@ -110,10 +50,6 @@ export async function stubFetchAnalyticsData() {
 
 export async function stubFetchBasicStats() {
   return { totalUsers: 0, totalProfiles: 0, totalBookings: 0, totalRevenue: 0, recentUsers: 0, pendingVerifications: 0, matrimony: { total: 0, verified: 0, premium: 0 }, mandapam: { total: 0, completed: 0 }, revenue: { matrimony: 0, mandapam: 0 } };
-}
-
-export async function stubFetchAdminStats() {
-  return { stats: { totalUsers: 0, totalProfiles: 0, totalBookings: 0, totalRevenue: 0, newUsers: 0, pendingVerifications: 0 }, recentBookings: [] };
 }
 
 // ─── Admin – Mandapam ──────────────────────────────────

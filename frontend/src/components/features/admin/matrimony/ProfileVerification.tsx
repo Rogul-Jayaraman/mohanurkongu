@@ -5,7 +5,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { SearchAndSort } from '@/components/ui/table/SearchAndSort';
 import { AdminProfileCard } from '@/components/features/admin/matrimony/ProfileCard';
 import { RejectionModal } from '@/modals/admin/RejectionModal';
-import { stubFetchVerificationQueue, stubVerifyProfile } from '@/utils/stubs';
+import { fetchVerificationQueue, approveProfile, rejectProfile } from '@/api/verification.api';
 import { toast } from 'sonner';
 import type { AdminManagedProfile } from '@/types/admin-types';
 import { Loader2, UserX, Shield } from 'lucide-react';
@@ -57,11 +57,20 @@ const ProfileVerification: React.FC = () => {
 
     const [qData, setQData] = React.useState<{ profiles: any[] }>({ profiles: [] });
     const [isLoading, setIsLoading] = React.useState(true);
-    React.useEffect(() => { setIsLoading(true); stubFetchVerificationQueue().then(setQData).finally(() => setIsLoading(false)); }, [searchQuery]);
+    React.useEffect(() => {
+      setIsLoading(true);
+      fetchVerificationQueue({ page: 1, limit: 50, search: searchQuery || undefined })
+        .then((res: any) => setQData({ profiles: res.profiles || [] }))
+        .catch(() => { toast.error(translateError('VERIFICATION_QUEUE_FAILED') || 'Failed to load queue'); setQData({ profiles: [] }); })
+        .finally(() => setIsLoading(false));
+    }, [searchQuery]);
 
     const handleAccept = (id: string) => {
-        stubVerifyProfile({ id, data: { status: 'ACCEPTED' } }).then(
-            () => toast.success(t('adminMatrimony.users.verifySuccess'))
+        approveProfile(id).then(
+            () => {
+                toast.success(t('adminMatrimony.users.verifySuccess'));
+                setQData((prev) => ({ profiles: prev.profiles.filter((p: any) => p.id !== id) }));
+            }
         ).catch(
             (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.verifyError'))
         );
@@ -71,8 +80,13 @@ const ProfileVerification: React.FC = () => {
 
     const handleConfirmReject = (reasonEn: string, reasonTa: string) => {
         if (!rejectionModal.profileId) return;
-        stubVerifyProfile({ id: rejectionModal.profileId, data: { status: 'REJECTED', reasonEn, reasonTa } }).then(
-            () => { toast.success(t('adminMatrimony.users.rejectSuccess')); setRejectionModal({ open: false, profileId: null }); }
+        const profileId = rejectionModal.profileId;
+        rejectProfile(profileId, reasonEn, reasonTa).then(
+            () => {
+                toast.success(t('adminMatrimony.users.rejectSuccess'));
+                setRejectionModal({ open: false, profileId: null });
+                setQData((prev) => ({ profiles: prev.profiles.filter((p: any) => p.id !== profileId) }));
+            }
         ).catch(
             (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.rejectFailed'))
         );

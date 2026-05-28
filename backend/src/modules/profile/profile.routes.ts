@@ -2,11 +2,11 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import type { ProfileController } from './profile.controller.js';
 import { requireSession } from '../../common/middleware/requireAuth.js';
-import { requireRole } from '../../common/guards/role.guard.js';
 import { validate } from '../../common/middleware/validate.js';
 import { saveDraftSchema } from './dto/save-draft.dto.js';
 import { createProfileSchema } from './dto/create-profile.dto.js';
-import { rejectProfileSchema } from './dto/reject-profile.dto.js';
+import { browseSchema } from './dto/browse.dto.js';
+import { toggleShortlistSchema, profileIdParamSchema } from './dto/toggle-shortlist.dto.js';
 import { authConfig } from '../../config/auth.config.js';
 
 export function createProfileRoutes(controller: ProfileController): Router {
@@ -20,15 +20,31 @@ export function createProfileRoutes(controller: ProfileController): Router {
     message: { success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many create requests' } },
   });
 
+  const browseLimiter = rateLimit({
+    windowMs: authConfig.rateLimit.windowMs,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many browse requests' } },
+  });
+
+  const shortlistLimiter = rateLimit({
+    windowMs: authConfig.rateLimit.windowMs,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many shortlist requests' } },
+  });
+
   router.post('/profiles/draft', requireSession, validate(saveDraftSchema), controller.saveDraft);
   router.post('/profiles/create', requireSession, validate(createProfileSchema), createLimiter, controller.create);
   router.get('/profiles/my-profiles', requireSession, controller.viewMyProfiles);
   router.get('/profiles/draft/:id', requireSession, controller.resumeDraft);
   router.delete('/profiles/draft/:id', requireSession, controller.deleteDraft);
+  router.get('/profiles/browse', requireSession, browseLimiter, validate(browseSchema, 'query'), controller.browse);
+  router.get('/profiles/shortlisted', requireSession, controller.viewShortlisted);
+  router.post('/profiles/:id/shortlist', requireSession, shortlistLimiter, validate(profileIdParamSchema, 'params'), validate(toggleShortlistSchema), controller.toggleShortlist);
   router.get('/profiles/:id', requireSession, controller.viewProfile);
-
-  router.post('/admin/profiles/:id/approve', requireSession, requireRole('ADMIN'), controller.approve);
-  router.post('/admin/profiles/:id/reject', requireSession, requireRole('ADMIN'), validate(rejectProfileSchema), controller.reject);
 
   return router;
 }

@@ -27,15 +27,11 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
     const lang = i18n.language as 'en' | 'ta';
 
     const sortOptions = [
-        { value: '', label: { en: 'Default Sort', ta: 'இயல்பான வரிசை' }, icon: 'sort' },
-        { value: 'newest', label: { en: 'Newest Profile', ta: 'புதிய வரன்கள்' }, icon: 'new_releases' },
-        { value: 'oldest', label: { en: 'Oldest Profile', ta: 'பழைய வரன்கள்' }, icon: 'history' },
-    ];
-
-    const ageOptions = [
-        { value: '', label: { en: 'Default Age', ta: 'இயல்பான வயது' }, icon: 'cake' },
-        { value: 'age_asc', label: { en: 'Age: Low to High', ta: 'வயது (குறைவு → அதிகம்)' }, icon: 'arrow_upward' },
-        { value: 'age_desc', label: { en: 'Age: High to Low', ta: 'வயது (அதிகம் → குறைவு)' }, icon: 'arrow_downward' },
+        { value: '', label: { en: 'Default', ta: 'இயல்பானது' }, icon: 'sort' },
+        { value: 'createdAt_desc', label: { en: 'Newest First', ta: 'புதிய வரன்கள்' }, icon: 'new_releases' },
+        { value: 'createdAt_asc', label: { en: 'Oldest First', ta: 'பழைய வரன்கள்' }, icon: 'history' },
+        { value: 'age_low_high', label: { en: 'Age: Low to High', ta: 'வயது (குறைவு → அதிகம்)' }, icon: 'arrow_upward' },
+        { value: 'age_high_low', label: { en: 'Age: High to Low', ta: 'வயது (அதிகம் → குறைவு)' }, icon: 'arrow_downward' },
     ];
 
     const toTitleCase = (str: string) => {
@@ -98,9 +94,6 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
         );
     }
 
-    const isSortValue = filters.sort === 'newest' || filters.sort === 'oldest';
-    const isAgeValue = filters.sort === 'age_asc' || filters.sort === 'age_desc';
-
     const getOptionLabel = (optionsArr: any[], value: string, fallbackEn: string, fallbackTa: string) => {
         if (!value) return lang === 'ta' ? fallbackTa : fallbackEn;
         const opt = optionsArr.find(o => o.value === value);
@@ -113,27 +106,13 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
             <div className="flex flex-wrap items-center gap-2 pb-2 pt-1 px-1">
                 <Dropdown
                     options={sortOptions}
-                    value={isSortValue ? filters.sort : ''}
+                    value={filters.sort || ''}
                     onChange={(val: string) => handleSelect('sort', val)}
                     placeholder={lang === 'ta' ? 'வரிசை' : 'Sort'}
                     trigger={
-                        <div className={`cursor-pointer flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white border ${isSortValue && filters.sort ? 'border-rosewood/40 text-rosewood' : 'border-gold/20 text-slate-600'} text-[10px] font-bold hover:bg-gold/5 active:bg-gold/10 whitespace-nowrap transition-all shadow-[0_2px_10px_-4px_rgba(184,134,11,0.1)] hover:shadow-md group shrink-0`}>
+                        <div className={`cursor-pointer flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white border ${filters.sort ? 'border-rosewood/40 text-rosewood' : 'border-gold/20 text-slate-600'} text-[10px] font-bold hover:bg-gold/5 active:bg-gold/10 whitespace-nowrap transition-all shadow-[0_2px_10px_-4px_rgba(184,134,11,0.1)] hover:shadow-md group shrink-0`}>
                             <span className="material-symbols-outlined text-sm group-hover:text-gold transition-colors">sort</span>
-                            <span className="pointer-events-none select-none">{getOptionLabel(sortOptions, isSortValue ? filters.sort : '', 'Sort', 'வரிசை')}</span>
-                            <span className="material-symbols-outlined text-[12px] opacity-50 ml-0.5 pointer-events-none">expand_more</span>
-                        </div>
-                    }
-                />
-
-                <Dropdown
-                    options={ageOptions}
-                    value={isAgeValue ? filters.sort : ''}
-                    onChange={(val: string) => handleSelect('sort', val)}
-                    placeholder={lang === 'ta' ? 'வயது' : 'Age'}
-                    trigger={
-                        <div className={`cursor-pointer flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white border ${isAgeValue && filters.sort ? 'border-rosewood/40 text-rosewood' : 'border-gold/20 text-slate-600'} text-[10px] font-bold hover:bg-gold/5 active:bg-gold/10 whitespace-nowrap transition-all shadow-[0_2px_10px_-4px_rgba(184,134,11,0.1)] hover:shadow-md group shrink-0`}>
-                            <span className="material-symbols-outlined text-sm group-hover:text-gold transition-colors">person</span>
-                            <span className="pointer-events-none select-none">{getOptionLabel(ageOptions, isAgeValue ? filters.sort : '', 'Age', 'வயது')}</span>
+                            <span className="pointer-events-none select-none">{getOptionLabel(sortOptions, filters.sort, 'Sort', 'வரிசை')}</span>
                             <span className="material-symbols-outlined text-[12px] opacity-50 ml-0.5 pointer-events-none">expand_more</span>
                         </div>
                     }

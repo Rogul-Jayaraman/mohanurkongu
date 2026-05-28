@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useDateFormatter } from "../../../hooks/useDateFormatter";
 import { useTranslations } from "../../../hooks/useTranslations";
 import { useInitials } from "../../../hooks/useInitials";
 import { useAuth } from "../../../hooks/useAuth";
+import { useBrowseProfiles } from "../../../hooks/useProfileBrowse";
 import { UserProfileCard, UserProfileCardSkeleton } from "./UserProfileCard";
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { SectionHeader } from '@/components/ui/layout/SectionHeader';
@@ -164,6 +165,68 @@ export const WelcomeHeaderSection: React.FC<{ user: any; isLoading?: boolean }> 
 };
 
 /**
+ * EmptySection – glass-morphism card with rosewood accent for zero-profile state.
+ */
+const EmptySection: React.FC<{ gender: "MALE" | "FEMALE" }> = ({ gender }) => {
+  const { t, i18n } = useTranslations(["dashboard", "common"]);
+  const lang = i18n.language === 'ta';
+  const genderLabel = gender === 'FEMALE'
+    ? (lang ? 'பெண்' : 'bride')
+    : (lang ? 'ஆண்' : 'groom');
+  return (
+    <div className="relative bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl p-12 flex flex-col items-center justify-center text-center overflow-hidden group">
+      <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
+      <div className="w-20 h-20 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mb-6">
+        <span className="material-symbols-outlined text-4xl">person_off</span>
+      </div>
+      <h3 className="text-xl font-serif font-bold text-rosewood mb-1">
+        {t("dashboard:no_profiles_found", { gender: genderLabel })}
+      </h3>
+      <p className="text-rosewood/50 text-sm font-medium max-w-xs leading-relaxed mb-8">
+        {t("dashboard:no_suggestions")}
+      </p>
+      <Link
+        to={`/manamaalai/browse-profiles?gender=${gender === "FEMALE" ? "bride" : "groom"}`}
+        className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-xs uppercase tracking-widest hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 transition-all duration-300"
+      >
+        {lang ? 'அனைத்து பதிவுகளையும் காண' : 'Browse All Profiles'}
+      </Link>
+    </div>
+  );
+};
+
+/**
+ * SectionErrorState – glass-morphism card for individual section failure.
+ */
+const SectionErrorState: React.FC<{
+  onRetry: () => void;
+}> = ({ onRetry }) => {
+  const { t, i18n } = useTranslations(["dashboard", "common"]);
+  const lang = i18n.language === 'ta';
+  return (
+    <div className="relative bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl p-12 flex flex-col items-center justify-center text-center overflow-hidden">
+      <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
+      <div className="w-16 h-16 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mb-5">
+        <span className="material-symbols-outlined text-3xl">error_outline</span>
+      </div>
+      <p className="text-rosewood/60 text-sm font-medium leading-relaxed mb-6 max-w-xs">
+        {lang ? 'வரன்களை ஏற்ற முடியவில்லை' : t("dashboard:error_desc")}
+      </p>
+      <button
+        onClick={onRetry}
+        className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-xs uppercase tracking-widest hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 transition-all duration-300"
+      >
+        {lang ? 'மீண்டும் முயலவும்' : t("dashboard:try_again")}
+      </button>
+    </div>
+  );
+};
+
+/**
  * FeaturedMatchesSection – profile grid by gender with header and view-all link.
  */
 export const FeaturedMatchesSection: React.FC<{
@@ -172,8 +235,12 @@ export const FeaturedMatchesSection: React.FC<{
   description: string;
   profiles: any[];
   isLoading: boolean;
-}> = ({ gender, title, description, profiles, isLoading }) => {
+  error: string | null;
+  onRefetch: () => void;
+}> = ({ gender, title, description, profiles, isLoading, error, onRefetch }) => {
   const { t } = useTranslations(["common", "dashboard"]);
+  const profilesList = profiles || [];
+  const isEmpty = !isLoading && !error && profilesList.length === 0;
   return (
     <section className="space-y-8">
       <SectionHeader
@@ -189,21 +256,27 @@ export const FeaturedMatchesSection: React.FC<{
           </Link>
         }
       />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {isLoading
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <UserProfileCardSkeleton key={i} />
-            ))
-          : (profiles || [])
-              .slice(0, 4)
-              .map((profile, index) => (
-                <UserProfileCard
-                  key={profile.profileId || index}
-                  profile={profile}
-                  variant="browse"
-                />
-              ))}
-      </div>
+      {error ? (
+        <SectionErrorState onRetry={onRefetch} />
+      ) : isEmpty ? (
+        <EmptySection gender={gender} />
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <UserProfileCardSkeleton key={i} />
+              ))
+            : profilesList
+                .slice(0, 4)
+                .map((profile, index) => (
+                  <UserProfileCard
+                    key={profile.id || profile.profileId || index}
+                    profile={profile}
+                    variant="browse"
+                  />
+                ))}
+        </div>
+      )}
     </section>
   );
 };
@@ -253,24 +326,40 @@ export const ErrorState: React.FC<{
 export const Dashboard: React.FC = () => {
   const { t } = useTranslations(['dashboard']);
   const { user, loading: authLoading } = useAuth();
-  const dashboardLoading = false;
-  const data = null;
-  const brides: any[] = [];
-  const grooms: any[] = [];
-  const error = null;
-  const refetch = () => {};
 
-  const loading = dashboardLoading && !data;
-  const isHeaderLoading = authLoading || (loading && !user);
+  // Stable filter references to prevent infinite re-fetch loop
+  const brideFilters = useMemo(() => ({ limit: 4, sort: 'createdAt_desc' }), []);
+  const groomFilters = useMemo(() => ({ limit: 4, sort: 'createdAt_desc' }), []);
 
-  if (error) {
-    return <ErrorState message="" onRetry={() => refetch()} t={t} />;
-  }
+  // Fetch latest bride profiles (female)
+  const { 
+    profiles: bridesProfiles, 
+    isLoading: bridesLoading, 
+    error: bridesError 
+  } = useBrowseProfiles({ 
+    gender: 'FEMALE',
+    searchQuery: '',
+    filters: brideFilters
+  });
+
+  // Fetch latest groom profiles (male)
+  const { 
+    profiles: groomsProfiles, 
+    isLoading: groomsLoading, 
+    error: groomsError 
+  } = useBrowseProfiles({ 
+    gender: 'MALE',
+    searchQuery: '',
+    filters: groomFilters
+  });
+
+  const brides = bridesProfiles || [];
+  const grooms = groomsProfiles || [];
 
   return (
     <div className="animate-in fade-in duration-700 max-w-7xl mx-auto w-full space-y-12 pb-16">
       <AnimatedSection>
-        <WelcomeHeaderSection user={user} isLoading={isHeaderLoading} />
+        <WelcomeHeaderSection user={user} isLoading={authLoading} />
       </AnimatedSection>
 
       <AnimatedSection>
@@ -279,7 +368,9 @@ export const Dashboard: React.FC = () => {
           title={t("dashboard:search_bride_title")}
           description={t("dashboard:search_bride_desc")}
           profiles={brides}
-          isLoading={loading && !data}
+          isLoading={bridesLoading}
+          error={bridesError}
+          onRefetch={() => { /* refetch brides */ }}
         />
       </AnimatedSection>
 
@@ -289,7 +380,9 @@ export const Dashboard: React.FC = () => {
           title={t("dashboard:search_groom_title")}
           description={t("dashboard:search_groom_desc")}
           profiles={grooms}
-          isLoading={loading && !data}
+          isLoading={groomsLoading}
+          error={groomsError}
+          onRefetch={() => { /* refetch grooms */ }}
         />
       </AnimatedSection>
 

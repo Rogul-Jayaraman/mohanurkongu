@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
-import { stubFetchAdminProfileDetail, stubVerifyProfile, stubBlockProfile, stubSuspendProfile } from '@/utils/stubs';
+import { approveProfile, rejectProfile, fetchAdminProfileDetail, archiveProfile, restoreProfile } from '@/api/verification.api';
 import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
 import { RejectionModal } from '@/modals/admin/RejectionModal';
 import { D1Chart, D9Chart } from '@/components/shared/horoscope';
@@ -633,16 +633,16 @@ const AdminOwnerCard: React.FC<{ profile: Profile | undefined; isTamil: boolean 
         <DetailRow label={isTamil ? 'பதிவு எண்' : 'Reg No'} value={profile.regNo} />
         <DetailRow label={isTamil ? 'தொலைபேசி' : 'Phone'} value={profile.owner.phone} />
         <DetailRow label={isTamil ? 'மின்னஞ்சல்' : 'Email'} value={(profile as any).owner?.email || ''} />
-        {profile.adminVerified === 'REJECTED' && (profile.rejectionReasonEn || (profile as any).rejectionReasonTa) && (
+        {profile.status === 'REJECTED' && (profile.rejectionReasonEn || (profile as any).rejectionReasonTa) && (
           <DetailRow
             label={isTamil ? 'நிராகரிப்பு காரணம்' : 'Rejection Reason'}
             value={isTamil && (profile as any).rejectionReasonTa ? (profile as any).rejectionReasonTa : profile.rejectionReasonEn}
           />
         )}
-        {(profile.adminVerified !== 'REJECTED' && (profile as any).statusReasonEn) && (
+        {(profile.status !== 'REJECTED' && (profile as any).archiveReasonEn) && (
           <DetailRow
-            label={isTamil ? 'தடை காரணம்' : 'Block Reason'}
-            value={isTamil && (profile as any).statusReasonTa ? (profile as any).statusReasonTa : (profile as any).statusReasonEn}
+            label={isTamil ? 'காப்பக காரணம்' : 'Archive Reason'}
+            value={isTamil && (profile as any).archiveReasonTa ? (profile as any).archiveReasonTa : (profile as any).archiveReasonEn}
           />
         )}
       </div>
@@ -659,7 +659,7 @@ const AdminControls: React.FC<{
   id: string;
   onVerify: () => void;
   onToggleStatus: () => void;
-  onActionClick: (mode: 'REJECT' | 'BLOCK' | 'SUSPEND') => void;
+  onActionClick: (mode: 'REJECT' | 'ARCHIVE') => void;
   isStatusPending: boolean;
 }> = ({ profile, isTamil, onVerify, onToggleStatus, onActionClick, isStatusPending }) => {
   const { t } = useLanguage();
@@ -672,11 +672,11 @@ const AdminControls: React.FC<{
         gradient="bg-rosewood-gradient text-white"
         isTamil={isTamil}
       >
-        <StatusBadge status={(profile.adminVerified || 'PENDING').toLowerCase() as any} minimal />
+        <StatusBadge status={(profile.status || 'PENDING').toLowerCase() as any} minimal />
       </SectionHeaderRedesigned>
 
       {/* Rejection reason banner */}
-      {profile.adminVerified === 'REJECTED' && (profile.rejectionReasonEn || (profile as any).rejectionReasonTa) && (
+      {profile.status === 'REJECTED' && (profile.rejectionReasonEn || (profile as any).rejectionReasonTa) && (
         <div className="bg-red-50 rounded-xl p-4 border border-red-100">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-500 shrink-0 mt-0.5">
@@ -694,8 +694,8 @@ const AdminControls: React.FC<{
         </div>
       )}
 
-      {/* Block reason banner */}
-      {profile.adminVerified !== 'REJECTED' && (profile as any).statusReasonEn && (
+      {/* Archive reason banner */}
+      {profile.status !== 'REJECTED' && (profile as any).archiveReasonEn && (
         <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 shrink-0 mt-0.5">
@@ -703,10 +703,10 @@ const AdminControls: React.FC<{
             </div>
             <div>
               <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mb-1">
-                {isTamil ? 'தடை காரணம்' : 'Block Reason'}
+                {isTamil ? 'காப்பக காரணம்' : 'Archive Reason'}
               </p>
               <p className="text-sm font-bold text-amber-800">
-                {isTamil && (profile as any).statusReasonTa ? (profile as any).statusReasonTa : (profile as any).statusReasonEn}
+                {isTamil && (profile as any).archiveReasonTa ? (profile as any).archiveReasonTa : (profile as any).archiveReasonEn}
               </p>
             </div>
           </div>
@@ -714,7 +714,7 @@ const AdminControls: React.FC<{
       )}
 
       <div className="flex flex-col gap-3 mt-4">
-        {profile.adminVerified === 'PENDING' ? (
+        {profile.status === 'PENDING' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <motion.button
               whileHover={{ y: -2 }}
@@ -745,12 +745,12 @@ const AdminControls: React.FC<{
               {isTamil ? 'நிராகரி' : 'Reject Profile'}
             </motion.button>
           </div>
-        ) : profile.adminVerified === 'ACCEPTED' && (
+        ) : profile.status === 'ACTIVE' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <motion.button
               whileHover={{ y: -2 }}
               whileTap={{ y: 0 }}
-              onClick={() => onActionClick('BLOCK')}
+              onClick={() => onActionClick('ARCHIVE')}
               className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5
                          bg-white text-rosewood/70 rounded-xl
                          border border-amber-200 shadow-sm
@@ -759,24 +759,25 @@ const AdminControls: React.FC<{
                          transition-all duration-200 text-sm font-bold tracking-wide"
             >
               <ShieldBan size={18} strokeWidth={2.5} />
-              {isTamil ? 'தடு' : 'Block Profile'}
+              {isTamil ? 'காப்பகம்' : 'Archive Profile'}
             </motion.button>
+          </div>
+        ) : profile.status === 'ARCHIVED' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <motion.button
               whileHover={{ y: -2 }}
               whileTap={{ y: 0 }}
               onClick={onToggleStatus}
               disabled={isStatusPending}
-              className={`w-full flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl
-                         transition-all duration-200 text-sm font-bold tracking-wide
+              className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5
+                         bg-linear-to-b from-emerald-500 to-emerald-700 text-white
+                         rounded-xl shadow-sm shadow-emerald-200/50
+                         hover:shadow-md hover:from-emerald-600 hover:to-emerald-800
                          active:shadow-inner
-                         disabled:opacity-50 disabled:cursor-not-allowed ${
-                profile.status === 'ACTIVE'
-                  ? 'bg-linear-to-b from-emerald-500 to-emerald-700 text-white shadow-sm shadow-emerald-200/50 hover:shadow-md hover:from-emerald-600 hover:to-emerald-800'
-                  : 'bg-white text-rosewood/70 border border-slate-200 shadow-sm hover:bg-slate-50 hover:border-slate-300 hover:shadow-md'
-              }`}
+                         transition-all duration-200 text-sm font-bold tracking-wide"
             >
-              {profile.status === 'ACTIVE' ? <Eye size={18} strokeWidth={2.5} /> : <EyeOff size={18} strokeWidth={2.5} />}
-              {profile.status === 'ACTIVE' ? (isTamil ? 'செயலில் நிறுத்து' : 'Deactivate') : (isTamil ? 'செயல்படுத்து' : 'Activate')}
+              <Eye size={18} strokeWidth={2.5} />
+              {isTamil ? 'மீட்டெடு' : 'Restore Profile'}
             </motion.button>
           </div>
         )}
@@ -860,10 +861,11 @@ const AdminProfileView: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
-  useEffect(() => { if (id) { setIsLoading(true); stubFetchAdminProfileDetail(id).then(setProfile).catch(() => setIsError(true)).finally(() => setIsLoading(false)); } }, [id]);
-  const refetch = () => {};
+  const fetchProfile = (profileId: string) => { setIsLoading(true); fetchAdminProfileDetail(profileId).then((res: any) => setProfile(res)).catch(() => setIsError(true)).finally(() => setIsLoading(false)); };
+  useEffect(() => { if (id) fetchProfile(id); }, [id]);
+  const refetch = () => { if (id) fetchProfile(id); };
 
-  const [rejectionModal, setRejectionModal] = React.useState<{ open: boolean; mode: 'REJECT' | 'BLOCK' | 'SUSPEND' }>({ open: false, mode: 'REJECT' });
+  const [rejectionModal, setRejectionModal] = React.useState<{ open: boolean; mode: 'REJECT' | 'ARCHIVE' }>({ open: false, mode: 'REJECT' });
   const [isPrintingJathagam, setIsPrintingJathagam] = React.useState(false);
   const [isPrintingBiodata, setIsPrintingBiodata] = React.useState(false);
 
@@ -921,7 +923,7 @@ const AdminProfileView: React.FC = () => {
 
   const handleVerify = () => {
     if (!id) return;
-    stubVerifyProfile({ id, data: { status: 'ACCEPTED' } }).then(
+    approveProfile(id).then(
       () => toast.success(t('adminMatrimony.users.verifySuccess'))
     ).catch(
       (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.verifyError'))
@@ -930,43 +932,39 @@ const AdminProfileView: React.FC = () => {
 
   const handleToggleStatus = () => {
     if (!id) return;
-    const newStatus = profile?.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    stubSuspendProfile({ id, data: { reasonEn: '', reasonTa: '' } }).then(
-      () => { toast.success(t('adminMatrimony.users.statusUpdated')); refetch(); }
-    ).catch(
-      (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
-    );
+    if (profile?.status === 'ACTIVE') {
+      setRejectionModal({ open: true, mode: 'ARCHIVE' });
+    } else if (profile?.status === 'ARCHIVED') {
+      restoreProfile(id).then(
+        () => { toast.success(t('adminMatrimony.users.statusUpdateSuccess') || 'Profile restored'); refetch(); }
+      ).catch(
+        (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
+      );
+    }
   };
 
-  const handleActionClick = (mode: 'REJECT' | 'BLOCK' | 'SUSPEND') => setRejectionModal({ open: true, mode });
+  const handleActionClick = (mode: 'REJECT' | 'ARCHIVE') => setRejectionModal({ open: true, mode });
 
   const handleConfirmAction = (reasonEn: string, reasonTa: string) => {
     if (!id) return;
     if (rejectionModal.mode === 'REJECT') {
-      stubVerifyProfile({ id, data: { status: 'REJECTED', reasonEn, reasonTa } }).then(
+      rejectProfile(id, reasonEn, reasonTa).then(
         () => { toast.success(t('adminMatrimony.users.rejectSuccess')); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); }
       ).catch(
         (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.rejectFailed'))
       );
-    } else if (rejectionModal.mode === 'BLOCK') {
-      stubBlockProfile({ id, data: { reasonEn, reasonTa } }).then(
-        () => { toast.success(t('adminMatrimony.users.blockSuccess')); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); }
+    } else if (rejectionModal.mode === 'ARCHIVE') {
+      archiveProfile(id, reasonEn, reasonTa).then(
+        () => { toast.success(t('adminMatrimony.users.blockSuccess') || 'Profile archived'); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); }
       ).catch(
         (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
-      );
-    } else if (rejectionModal.mode === 'SUSPEND') {
-      stubSuspendProfile({ id, data: { reasonEn, reasonTa } }).then(
-        () => { toast.success(t('adminMatrimony.users.suspendSuccess')); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); }
-      ).catch(
-        (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.suspendError'))
       );
     }
   };
 
   const getModalTitle = () => {
     if (rejectionModal.mode === 'REJECT') return t('adminMatrimony.common.rejectionReason');
-    if (rejectionModal.mode === 'BLOCK') return t('adminMatrimony.common.blockingReason');
-    return t('adminMatrimony.common.suspensionReason');
+    return t('adminMatrimony.common.blockingReason') || 'Archive Reason';
   };
 
   if (isPrintingJathagam && profile) {
