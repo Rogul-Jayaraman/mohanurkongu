@@ -45,7 +45,7 @@ export interface BackendAccount {
   phone: string;
   membership: {
     planCode: string;
-    expiresAt: string;
+    expiresAt: string | null;
   } | null;
   createdAt: string;
 }

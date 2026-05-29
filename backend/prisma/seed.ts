@@ -93,9 +93,19 @@ const TALUKS_BY_DISTRICT: Record<string, string[]> = {
   MAYILADUTHURAI: ['KUTHALAM', 'MAYILADUTHURAI', 'SIRKAZHI', 'THARANGAMBADI'],
 };
 
+async function seedSystemSettings() {
+  await prisma.systemSetting.upsert({
+    where: { key: 'membership_enabled' },
+    update: {},
+    create: { key: 'membership_enabled', value: 'true' },
+  });
+  console.log('Seeded system_settings: membership_enabled = true');
+}
+
 async function main() {
   await seedRoles();
   await seedPlans();
+  await seedSystemSettings();
   await seedCounter();
   await seedProfileFors();
   await seedHeights();
@@ -129,14 +139,80 @@ async function seedRoles() {
 async function seedPlans() {
   const plans = await Promise.all([
     prisma.membershipPlan.upsert({
-      where: { code: 'BASIC' },
+      where: { code: 'BRONZE' },
       update: {},
-      create: { code: 'BASIC', displayName: 'Basic', price: 0, currency: 'INR', active: true },
+      create: {
+        code: 'BRONZE',
+        displayName: 'Bronze',
+        displayPrice: 0,
+        durationDays: 0,
+        openLimit: 10,
+        shortlistLimit: 0,
+        profileSlotLimit: 1,
+        contactAccess: false,
+        fullHoroscopeAccess: false,
+        printProfile: false,
+        printHoroscope: false,
+        searchLevel: 'BASIC',
+        status: 'ACTIVE',
+      },
     }),
     prisma.membershipPlan.upsert({
-      where: { code: 'PREMIUM' },
+      where: { code: 'SILVER' },
       update: {},
-      create: { code: 'PREMIUM', displayName: 'Premium', price: 500, currency: 'INR', active: true },
+      create: {
+        code: 'SILVER',
+        displayName: 'Silver',
+        displayPrice: 999,
+        durationDays: 90,
+        openLimit: 20,
+        shortlistLimit: 3,
+        profileSlotLimit: 3,
+        contactAccess: false,
+        fullHoroscopeAccess: false,
+        printProfile: true,
+        printHoroscope: false,
+        searchLevel: 'EXTENDED',
+        status: 'ACTIVE',
+      },
+    }),
+    prisma.membershipPlan.upsert({
+      where: { code: 'GOLD' },
+      update: {},
+      create: {
+        code: 'GOLD',
+        displayName: 'Gold',
+        displayPrice: 1999,
+        durationDays: 180,
+        openLimit: 30,
+        shortlistLimit: 10,
+        profileSlotLimit: 5,
+        contactAccess: false,
+        fullHoroscopeAccess: true,
+        printProfile: true,
+        printHoroscope: true,
+        searchLevel: 'ADVANCED',
+        status: 'ACTIVE',
+      },
+    }),
+    prisma.membershipPlan.upsert({
+      where: { code: 'PLATINUM' },
+      update: {},
+      create: {
+        code: 'PLATINUM',
+        displayName: 'Platinum',
+        displayPrice: 3999,
+        durationDays: 365,
+        openLimit: -1,
+        shortlistLimit: -1,
+        profileSlotLimit: 10,
+        contactAccess: true,
+        fullHoroscopeAccess: true,
+        printProfile: true,
+        printHoroscope: true,
+        searchLevel: 'FULL',
+        status: 'ACTIVE',
+      },
     }),
   ]);
   console.log(`Seeded ${plans.length} membership plans`);
@@ -305,7 +381,7 @@ async function setDevCascade() {
   const constraints: { table: string; column: string; name: string }[] = [
     { table: 'account_credentials', column: 'accountId', name: 'account_credentials_accountId_fkey' },
     { table: 'account_roles', column: 'accountId', name: 'account_roles_accountId_fkey' },
-    { table: 'account_memberships', column: 'accountId', name: 'account_memberships_accountId_fkey' },
+    { table: 'subscriptions', column: 'accountId', name: 'subscriptions_accountId_fkey' },
     { table: 'account_sessions', column: 'accountId', name: 'account_sessions_accountId_fkey' },
     { table: 'account_status_history', column: 'accountId', name: 'account_status_history_accountId_fkey' },
     { table: 'profiles', column: 'accountId', name: 'profiles_accountId_fkey' },

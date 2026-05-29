@@ -1,5 +1,10 @@
 import api from '../lib/api';
-import type { BrowseProfilesParams, BrowseProfileData, ShortlistToggleData, CursorParams } from '@/types/profile';
+import { publicApi } from '../lib/publicApi';
+import type { BrowseProfilesParams, BrowseProfileData, ShortlistToggleData, CursorParams, ShowcaseProfilesResponse } from '@/types/profile';
+
+export async function fetchShowcaseProfiles(): Promise<ShowcaseProfilesResponse> {
+  return publicApi.get('/profiles/showcase') as any;
+}
 
 export async function uploadFile(formData: FormData): Promise<{ uploadId: string; url: string }> {
   const res = await api.post('/uploads', formData, {

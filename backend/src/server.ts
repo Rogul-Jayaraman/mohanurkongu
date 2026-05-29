@@ -5,6 +5,7 @@ import { queueConfig } from './config/queue.config.js';
 import { createEmailWorker } from './workers/email.worker.js';
 import { createOtpWorker } from './workers/otp.worker.js';
 import { createAuditWorker } from './workers/audit.worker.js';
+import { expireMemberships } from './jobs/expire-membership.job.js';
 import { expireVerifications } from './jobs/expire-verification.job.js';
 import { archiveVerifications } from './jobs/archive-verification.job.js';
 import { purgeVerifications } from './jobs/purge-verification.job.js';
@@ -55,6 +56,11 @@ async function bootstrap() {
     60_000,
   );
 
+  const membershipExpireInterval = setInterval(
+    () => expireMemberships().catch((e) => logger.error({ err: e }, 'Membership expiry failed')),
+    60_000,
+  );
+
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Shutdown signal received');
 
@@ -64,6 +70,7 @@ async function bootstrap() {
       clearInterval(purgeInterval);
       clearInterval(sessionInterval);
       clearInterval(regExpireInterval);
+      clearInterval(membershipExpireInterval);
 
       logger.info('Shutting down workers...');
       await Promise.allSettled([

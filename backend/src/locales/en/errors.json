@@ -47,5 +47,11 @@
   "PROFILE_ALREADY_SUBMITTED": "Profile has already been submitted for review",
   "PROFILE_REJECTED": "Profile has been rejected",
   "PROFILE_WRONG_STATUS": "Profile is not in the expected status",
-  "PROFILE_NAME_INVALID": "Invalid profile name"
+  "PROFILE_NAME_INVALID": "Invalid profile name",
+  "MEMBERSHIP_PLAN_NOT_FOUND": "Membership plan not found",
+  "MEMBERSHIP_PLAN_INACTIVE": "This membership plan is currently inactive",
+  "MEMBERSHIP_QUOTA_EXCEEDED": "You have reached your daily limit for this feature",
+  "MEMBERSHIP_SLOT_LIMIT_REACHED": "You have reached the maximum number of profiles allowed",
+  "MEMBERSHIP_SHORTLIST_LIMIT_REACHED": "You have reached the maximum number of shortlisted profiles",
+  "MEMBERSHIP_PREMIUM_REQUIRED": "This feature requires a premium membership plan"
 }

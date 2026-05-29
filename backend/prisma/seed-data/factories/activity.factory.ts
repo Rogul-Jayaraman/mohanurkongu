@@ -20,32 +20,38 @@ export async function seedAccountVerifications(
 
   for (let b = 0; b < targetCount; b += batchSize) {
     const batch = Math.min(batchSize, targetCount - b);
+    const accountIds = Object.values(accountIndex).map((ai: any) => ai.account.id);
 
     for (let i = 0; i < batch; i++) {
-      const accIndex = randomInt(0, Object.keys(accountIndex).length - 1);
-      const accountEntry = Object.values(accountIndex)[accIndex] as any;
+      const accIdx = randomInt(0, accountIds.length - 1);
+      const accountEntry = Object.values(accountIndex)[accIdx] as any;
       if (!accountEntry) continue;
 
       const purpose = weightedPickRaw(purposes, purposeWeights) as string;
       const state = weightedPickRaw(stateOpts, stateWeights) as string;
-      const target = accountEntry.account.credential?.email || `user${randomInt(1000, 9999)}@example.com`;
+      const email = accountEntry.account.translations?.[0]?.firstName
+        ? `${(accountEntry.account.translations[0].firstName as string).toLowerCase()}.${randomInt(1000, 9999)}@example.com`
+        : `user${randomInt(1000, 9999)}@example.com`;
+      const target = purpose === 'REGISTER' ? email : email;
       const otpHash = `sim_otp_${Math.random().toString(36).slice(2, 10)}`;
-      const createdAt = randomDateBefore(new Date(), 90);
+      const createdAt = randomDateBefore(new Date(), randomInt(1, 90));
       const expiresAt = new Date(createdAt.getTime() + 10 * 60000);
 
       await prisma.accountVerification.create({
         data: {
           accountId: accountEntry.account.id,
-          type: target.includes('@') ? 'EMAIL' : 'PHONE',
+          type: 'EMAIL',
           purpose: purpose as any,
           target,
           otpHash,
           state: state as any,
-          attempts: randomInt(1, 3),
+          attempts: state === 'EXPIRED' ? randomInt(3, 5) : randomInt(1, 3),
           maxAttempts: 5,
-          expiresAt: state === 'EXPIRED' ? new Date(Date.now() - randomInt(1, 5) * 86400000) : expiresAt,
+          expiresAt: state === 'EXPIRED'
+            ? new Date(Date.now() - randomInt(1, 5) * 86400000)
+            : expiresAt,
           consumedAt: state === 'VERIFIED' ? randomDate(createdAt, expiresAt) : null,
-          archivedAt: state === 'ARCHIVED' ? randomDateAfter(expiresAt, 7) : null,
+          archivedAt: state === 'ARCHIVED' ? randomDateAfter(expiresAt, randomInt(1, 30)) : null,
           createdAt,
         },
       });

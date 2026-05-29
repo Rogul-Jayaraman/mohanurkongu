@@ -43,7 +43,7 @@ export function createAuthRoutes(controller: AuthController): Router {
   );
 
   router.post('/auth/logout', createRateLimiter(20), controller.logout);
-  router.post('/auth/logout-all', requireSession, controller.logoutAll);
+  router.post('/auth/logout-all', requireSession, createRateLimiter(10), controller.logoutAll);
 
   router.post(
     '/auth/password/reset',

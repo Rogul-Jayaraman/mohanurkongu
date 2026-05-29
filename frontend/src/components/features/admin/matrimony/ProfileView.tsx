@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
-import { approveProfile, rejectProfile, fetchAdminProfileDetail, archiveProfile, restoreProfile } from '@/api/verification.api';
+import { approveProfile, rejectProfile, fetchAdminProfileDetail, archiveProfile, restoreProfile, deleteProfile } from '@/api/verification.api';
 import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
 import { RejectionModal } from '@/modals/admin/RejectionModal';
+import { ConfirmationModal } from '@/modals/admin/ConfirmationModal';
 import { D1Chart, D9Chart } from '@/components/shared/horoscope';
 import type { PlanetData, HoroscopeResult } from '@/types/horoscope';
 import { getBilingualValue } from '@/utils/bilingual';
 import { toast } from 'sonner';
-import { ArrowLeft, Shield, ShieldBan, Check, X, Phone, Mail, Printer, FileText, Info, User, Users, Briefcase, Heart, Building2, Map, Camera, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Shield, ShieldBan, Check, X, Phone, Mail, Printer, FileText, Info, User, Users, Briefcase, Heart, Building2, Map, Camera, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { Profile } from '@/types/profile';
 const getImageUrl = (url: string | null | undefined): string | null => { if (!url || typeof url !== 'string') return null; if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url; if (url.startsWith('/media/')) { const b = import.meta.env.VITE_API_URL || 'http://localhost:4000'; return `${b}${url}`; } return null; };
 import { useProfileUtils } from '@/hooks/useProfileUtils';
@@ -489,7 +490,7 @@ const AdminHoroscopeDetails: React.FC<{
   const rasiLabel = profile?.rasi ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang) : '';
   const lagnam = profile?.lagnam ? getBilingualValue(RASI_OPTIONS, profile.lagnam, lang) : '';
   const dosham = profile?.dosham ? getEnumLabel(profile.dosham, DOSHAM_OPTIONS) : '';
-  const hasCharts = profile?.horoscope && (profile.horoscope.rasi || profile.horoscope.navamsa);
+  const hasCharts = profile?.horoscope && (profile.horoscope.rasi || profile.horoscope.navamsa || (profile.horoscope.mode === 'GENERATED' && profile.horoscope.horoscopeJson));
   return (
     <SectionCard3D isLoading={isLoading}>
       <SectionHeaderRedesigned
@@ -660,8 +661,9 @@ const AdminControls: React.FC<{
   onVerify: () => void;
   onToggleStatus: () => void;
   onActionClick: (mode: 'REJECT' | 'ARCHIVE') => void;
+  onDelete: () => void;
   isStatusPending: boolean;
-}> = ({ profile, isTamil, onVerify, onToggleStatus, onActionClick, isStatusPending }) => {
+}> = ({ profile, isTamil, onVerify, onToggleStatus, onActionClick, onDelete, isStatusPending }) => {
   const { t } = useLanguage();
   if (!profile) return null;
   return (
@@ -781,6 +783,25 @@ const AdminControls: React.FC<{
             </motion.button>
           </div>
         )}
+
+        {profile.status !== 'DELETED' && (
+          <div className="border-t border-red-100 pt-4 mt-2">
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ y: 0 }}
+              onClick={onDelete}
+              className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5
+                         bg-white text-red-500 rounded-xl
+                         border border-red-200 shadow-sm
+                         hover:bg-red-50 hover:border-red-300 hover:text-red-700 hover:shadow-md
+                         active:shadow-inner
+                         transition-all duration-200 text-sm font-bold tracking-wide"
+            >
+              <Trash2 size={18} strokeWidth={2.5} />
+              {isTamil ? 'நீக்கு' : 'Delete Profile'}
+            </motion.button>
+          </div>
+        )}
       </div>
     </SectionCard3D>
   );
@@ -866,6 +887,8 @@ const AdminProfileView: React.FC = () => {
   const refetch = () => { if (id) fetchProfile(id); };
 
   const [rejectionModal, setRejectionModal] = React.useState<{ open: boolean; mode: 'REJECT' | 'ARCHIVE' }>({ open: false, mode: 'REJECT' });
+  const [deleteModal, setDeleteModal] = React.useState<{ open: boolean }>({ open: false });
+  const [restoreModal, setRestoreModal] = React.useState<{ open: boolean }>({ open: false });
   const [isPrintingJathagam, setIsPrintingJathagam] = React.useState(false);
   const [isPrintingBiodata, setIsPrintingBiodata] = React.useState(false);
 
@@ -935,15 +958,37 @@ const AdminProfileView: React.FC = () => {
     if (profile?.status === 'ACTIVE') {
       setRejectionModal({ open: true, mode: 'ARCHIVE' });
     } else if (profile?.status === 'ARCHIVED') {
-      restoreProfile(id).then(
-        () => { toast.success(t('adminMatrimony.users.statusUpdateSuccess') || 'Profile restored'); refetch(); }
-      ).catch(
-        (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
-      );
+      setRestoreModal({ open: true });
     }
   };
 
   const handleActionClick = (mode: 'REJECT' | 'ARCHIVE') => setRejectionModal({ open: true, mode });
+
+  const handleConfirmDelete = () => {
+    if (!id) return;
+    deleteProfile(id).then(
+      () => {
+        toast.success(t('adminMatrimony.users.deleteSuccess') || 'Profile deleted');
+        setDeleteModal({ open: false });
+        navigate('/admin/matrimony/profiles');
+      }
+    ).catch(
+      (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
+    );
+  };
+
+  const handleConfirmRestore = () => {
+    if (!id) return;
+    restoreProfile(id).then(
+      () => {
+        toast.success(t('adminMatrimony.users.statusUpdateSuccess') || 'Profile restored');
+        setRestoreModal({ open: false });
+        refetch();
+      }
+    ).catch(
+      (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.statusUpdateError'))
+    );
+  };
 
   const handleConfirmAction = (reasonEn: string, reasonTa: string) => {
     if (!id) return;
@@ -1130,6 +1175,7 @@ const AdminProfileView: React.FC = () => {
               onVerify={handleVerify}
               onToggleStatus={handleToggleStatus}
               onActionClick={handleActionClick}
+              onDelete={() => setDeleteModal({ open: true })}
               isStatusPending={false}
             />
           </div>
@@ -1144,6 +1190,24 @@ const AdminProfileView: React.FC = () => {
         placeholder={t('adminMatrimony.common.enterReason')}
         confirmLabel={rejectionModal.mode === 'REJECT' ? t('adminMatrimony.common.reject') : t('adminMatrimony.common.confirm')}
         cancelLabel={t('adminMatrimony.common.cancel')}
+      />
+      <ConfirmationModal
+        isOpen={deleteModal.open}
+        onClose={() => setDeleteModal({ open: false })}
+        onConfirm={handleConfirmDelete}
+        title={t('adminMatrimony.common.deleteProfile') || 'Delete Profile'}
+        message={t('adminMatrimony.users.deleteWarning') || 'Are you sure you want to delete this profile? This action cannot be undone. All associated data will be permanently removed.'}
+        confirmText={t('adminMatrimony.common.delete') || 'Delete'}
+        variant="danger"
+      />
+      <ConfirmationModal
+        isOpen={restoreModal.open}
+        onClose={() => setRestoreModal({ open: false })}
+        onConfirm={handleConfirmRestore}
+        title={t('adminMatrimony.common.restoreProfile') || 'Restore Profile'}
+        message={t('adminMatrimony.users.restoreWarning') || 'Are you sure you want to restore this profile? It will become visible and matchable again.'}
+        confirmText={t('adminMatrimony.common.restore') || 'Restore'}
+        variant="warning"
       />
     </div>
   );

@@ -36,15 +36,33 @@ export function createProfileRoutes(controller: ProfileController): Router {
     message: { success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many shortlist requests' } },
   });
 
-  router.post('/profiles/draft', requireSession, validate(saveDraftSchema), controller.saveDraft);
+  const defaultLimiter = rateLimit({
+    windowMs: authConfig.rateLimit.windowMs,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests' } },
+  });
+
+  const showcaseLimiter = rateLimit({
+    windowMs: authConfig.rateLimit.windowMs,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests' } },
+  });
+
+  router.get('/profiles/showcase', showcaseLimiter, controller.showcase);
+
+  router.post('/profiles/draft', requireSession, defaultLimiter, validate(saveDraftSchema), controller.saveDraft);
   router.post('/profiles/create', requireSession, validate(createProfileSchema), createLimiter, controller.create);
-  router.get('/profiles/my-profiles', requireSession, controller.viewMyProfiles);
-  router.get('/profiles/draft/:id', requireSession, controller.resumeDraft);
-  router.delete('/profiles/draft/:id', requireSession, controller.deleteDraft);
+  router.get('/profiles/my-profiles', requireSession, defaultLimiter, controller.viewMyProfiles);
+  router.get('/profiles/draft/:id', requireSession, defaultLimiter, controller.resumeDraft);
+  router.delete('/profiles/draft/:id', requireSession, defaultLimiter, controller.deleteDraft);
   router.get('/profiles/browse', requireSession, browseLimiter, validate(browseSchema, 'query'), controller.browse);
-  router.get('/profiles/shortlisted', requireSession, controller.viewShortlisted);
+  router.get('/profiles/shortlisted', requireSession, defaultLimiter, controller.viewShortlisted);
   router.post('/profiles/:id/shortlist', requireSession, shortlistLimiter, validate(profileIdParamSchema, 'params'), validate(toggleShortlistSchema), controller.toggleShortlist);
-  router.get('/profiles/:id', requireSession, controller.viewProfile);
+  router.get('/profiles/:id', requireSession, defaultLimiter, controller.viewProfile);
 
   return router;
 }

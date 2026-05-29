@@ -73,18 +73,26 @@ export class AccountRepository {
         });
       }
 
-      const basicPlan = await tx.membershipPlan.findUnique({ where: { code: 'BASIC' } });
-      if (basicPlan) {
-        await tx.accountMembership.create({
+      const freePlan = await tx.membershipPlan.findUnique({ where: { code: 'BRONZE' } });
+      if (freePlan) {
+        await tx.subscription.create({
           data: {
             accountId: account.id,
-            planId: basicPlan.id,
-            planCode: basicPlan.code,
-            planName: basicPlan.displayName,
-            planPrice: basicPlan.price,
-            currency: basicPlan.currency,
-            startsAt: new Date(),
+            planId: freePlan.id,
+            startedAt: new Date(),
             status: 'ACTIVE',
+            snapshotPlanCode: freePlan.code,
+            snapshotPlanName: freePlan.displayName,
+            snapshotDisplayPrice: freePlan.displayPrice,
+            snapshotDurationDays: freePlan.durationDays,
+            snapshotOpenLimit: freePlan.openLimit,
+            snapshotShortlistLimit: freePlan.shortlistLimit,
+            snapshotProfileSlotLimit: freePlan.profileSlotLimit,
+            snapshotContactAccess: freePlan.contactAccess,
+            snapshotFullHoroscopeAccess: freePlan.fullHoroscopeAccess,
+            snapshotPrintProfile: freePlan.printProfile,
+            snapshotPrintHoroscope: freePlan.printHoroscope,
+            snapshotSearchLevel: freePlan.searchLevel,
           },
         });
       }
@@ -110,10 +118,10 @@ export class AccountRepository {
         roles: {
           include: { role: true },
         },
-        memberships: {
+        subscriptions: {
           where: { status: 'ACTIVE' },
           take: 1,
-          orderBy: { startsAt: 'desc' },
+          orderBy: { startedAt: 'desc' },
         },
       },
     });
@@ -226,26 +234,34 @@ export class AccountRepository {
       prisma.account.count({ where }),
     ]);
 
-    const accounts = await Promise.all(data.map(async (account) => {
+    const accountIds = data.map((a) => a.id);
+
+    const allProfiles = await prisma.profile.findMany({
+      where: { accountId: { in: accountIds }, currentStatus: { not: 'DELETED' } },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        photo: {
+          include: {
+            primaryUpload: { select: { objectKey: true, width: true, height: true } },
+          },
+        },
+      },
+    });
+
+    const countMap = new Map<string, number>();
+    const latestMap = new Map<string, (typeof allProfiles)[number]>();
+    for (const p of allProfiles) {
+      countMap.set(p.accountId, (countMap.get(p.accountId) || 0) + 1);
+      if (!latestMap.has(p.accountId)) {
+        latestMap.set(p.accountId, p);
+      }
+    }
+
+    const accounts = data.map((account) => {
       const en = account.translations?.find((t: any) => t.language === 'EN');
       const ta = account.translations?.find((t: any) => t.language === 'TA');
       const role = account.roles?.[0]?.role?.code ?? 'USER';
-
-      const profileCount = await prisma.profile.count({
-        where: { accountId: account.id, currentStatus: { not: 'DELETED' } },
-      });
-
-      const latestProfile = await prisma.profile.findFirst({
-        where: { accountId: account.id, currentStatus: { not: 'DELETED' } },
-        orderBy: { updatedAt: 'desc' },
-        include: {
-          photo: {
-            include: {
-              primaryUpload: { select: { objectKey: true, width: true, height: true } },
-            },
-          },
-        },
-      });
+      const latestProfile = latestMap.get(account.id);
 
       return {
         id: account.id,
@@ -260,12 +276,12 @@ export class AccountRepository {
         currentState: account.currentState,
         emailVerified: account.credential?.emailVerified ?? false,
         createdAt: account.createdAt.toISOString(),
-        profileCount,
+        profileCount: countMap.get(account.id) || 0,
         profilePhoto: latestProfile?.photo?.primaryUpload?.objectKey
           ? { url: `/media/${latestProfile.photo.primaryUpload.objectKey}`, width: latestProfile.photo.primaryUpload.width, height: latestProfile.photo.primaryUpload.height }
           : null,
       };
-    }));
+    });
 
     return { accounts, total };
   }

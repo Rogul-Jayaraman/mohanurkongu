@@ -49,6 +49,9 @@ import { AdminProfilesController } from './modules/admin-profiles/admin-profiles
 import { AdminDashboardRepository } from './modules/admin-dashboard/admin-dashboard.repository.js';
 import { AdminDashboardService } from './modules/admin-dashboard/admin-dashboard.service.js';
 import { AdminDashboardController } from './modules/admin-dashboard/admin-dashboard.controller.js';
+import { MembershipService } from './modules/membership/membership.service.js';
+import { MembershipGuard } from './modules/membership/membership.guard.js';
+import { MembershipController } from './modules/membership/membership.controller.js';
 
 // Controllers
 import { AuthController } from './modules/auth/auth.controller.js';
@@ -71,6 +74,7 @@ import { createAdminVerificationRoutes } from './modules/admin-verification/admi
 import { createAdminProfilesRoutes } from './modules/admin-profiles/admin-profiles.routes.js';
 import { createAdminDashboardRoutes } from './modules/admin-dashboard/admin-dashboard.routes.js';
 import horoscopeRouter from './modules/horoscope/index.js';
+import { createMembershipRoutes } from './modules/membership/membership.routes.js';
 
 export function createApp() {
   const app = express();
@@ -223,14 +227,19 @@ export function createApp() {
   const uploadService = new UploadService(storageService, imagePipelineService);
   const uploadController = new UploadController(uploadService);
 
+  // MembershipModule
+  const membershipService = new MembershipService();
+  const membershipGuard = new MembershipGuard(membershipService);
+  const membershipController = new MembershipController(membershipService, membershipGuard);
+
   // ProfileModule
   const profileRepo = new ProfileRepository();
-  const profileService = new ProfileService(profileRepo, storageService, accountService);
+  const profileService = new ProfileService(profileRepo, storageService, accountService, membershipGuard);
   const profileController = new ProfileController(profileService);
 
   // AdminVerificationModule
   const adminVerificationRepo = new AdminVerificationRepository();
-  const adminVerificationService = new AdminVerificationService(adminVerificationRepo);
+  const adminVerificationService = new AdminVerificationService(adminVerificationRepo, storageService);
   const adminVerificationController = new AdminVerificationController(adminVerificationService);
 
   // AdminProfilesModule
@@ -252,8 +261,49 @@ export function createApp() {
   });
   app.use('/admin/queues', serverAdapter.getRouter());
 
-  // Serve uploaded media (local dev)
-  app.use('/media', express.static(appConfig.storageDir));
+  // Serve uploaded media (local dev) — with access control
+  app.use('/media', requireSession, (req, res, next) => {
+    // Block direct access to TEMP uploads
+    const { MembershipGuard } = require('./modules/membership/membership.guard.js');
+    const { prisma } = require('./database/prisma.js');
+    const path = require('path');
+    const objectKey = req.path.replace(/^\//, '');
+    if (!objectKey) return next();
+    prisma.upload.findFirst({ where: { objectKey } }).then((upload: any) => {
+      if (upload && upload.status === 'TEMP') {
+        return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied' } });
+      }
+      next();
+    }).catch(() => next());
+  }, express.static(appConfig.storageDir));
+  // Horoscope chart images require membership with fullHoroscopeAccess
+  app.use('/media/horoscope', requireSession, async (req, res, next) => {
+    const { MembershipGuard } = require('./modules/membership/membership.guard.js');
+    const guard = new MembershipGuard();
+    const caps = await guard.resolveCapabilities(req.account.sub);
+    if (!caps?.fullHoroscopeAccess) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Membership required' } });
+    }
+    next();
+  }, express.static(appConfig.storageDir));
+  // Private profile photos require contactAccess or ownership
+  app.use('/media/photos', requireSession, async (req, res, next) => {
+    const { prisma } = require('./database/prisma.js');
+    const objectKey = req.path.replace(/^\//, '');
+    if (!objectKey) return next();
+    const upload = await prisma.upload.findFirst({ where: { objectKey } });
+    if (!upload) return next();
+    const profilePhoto = await prisma.profilePhoto.findFirst({ where: { primaryUploadId: upload.id }, include: { profile: true } });
+    if (!profilePhoto) return next();
+    if (profilePhoto.profile.accountId === req.account.sub) return next();
+    const { MembershipGuard } = require('./modules/membership/membership.guard.js');
+    const guard = new MembershipGuard();
+    const caps = await guard.resolveCapabilities(req.account.sub);
+    if (!caps?.contactAccess) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Contact access required' } });
+    }
+    next();
+  }, express.static(appConfig.storageDir));
 
   // --- Routes ---
   app.use('/', createAuthRoutes(authController));
@@ -267,6 +317,7 @@ export function createApp() {
   app.use('/admin', createAdminVerificationRoutes(adminVerificationController));
   app.use('/admin', createAdminProfilesRoutes(adminProfilesController));
   app.use('/admin', createAdminDashboardRoutes(adminDashboardController));
+  app.use('/', createMembershipRoutes(membershipController));
 
   // 404
   app.use((_req, res) => {

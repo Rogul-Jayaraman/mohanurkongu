@@ -2,13 +2,14 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
-import { Shield, Search, Eye, Check, X, ShieldBan, User as UserIcon, Filter } from 'lucide-react';
+import { Shield, Search, Eye, Check, X, ShieldBan, User as UserIcon, Filter, Trash2 } from 'lucide-react';
 import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
 import { RejectionModal } from '@/modals/admin/RejectionModal';
+import { ConfirmationModal } from '@/modals/admin/ConfirmationModal';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { TableActionDropdown } from '@/components/ui/table/TableActionDropdown';
 import { DataTable, Column } from '@/components/ui/table/DataTable';
-import { fetchVerificationQueue, approveProfile, rejectProfile, fetchAdminProfiles, archiveProfile, restoreProfile } from '@/api/verification.api';
+import { fetchVerificationQueue, approveProfile, rejectProfile, fetchAdminProfiles, archiveProfile, restoreProfile, deleteProfile } from '@/api/verification.api';
 import { useDateFormatter } from '@/hooks/useDateFormatter';
 import type { AdminManagedProfile } from '@/types/admin-types';
 import { toast } from 'sonner';
@@ -36,6 +37,16 @@ const ProfileManagement: React.FC = () => {
         open: false,
         profileId: null,
         mode: 'REJECT'
+    });
+
+    const [deleteModal, setDeleteModal] = React.useState<{ open: boolean; profileId: string | null }>({
+        open: false,
+        profileId: null,
+    });
+
+    const [restoreModal, setRestoreModal] = React.useState<{ open: boolean; profileId: string | null }>({
+        open: false,
+        profileId: null,
     });
 
     const handleVerify = (id: string) => {
@@ -69,14 +80,40 @@ const ProfileManagement: React.FC = () => {
 
     const handleArchive = (id: string, currentStatus: string) => {
         if (currentStatus === 'ARCHIVED') {
-            restoreProfile(id).then(
-                () => toast.success(t('adminMatrimony.users.statusUpdateSuccess') || 'Profile restored')
-            ).catch(
-                (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.statusUpdateError'))
-            );
+            setRestoreModal({ open: true, profileId: id });
         } else if (currentStatus === 'ACTIVE') {
             setRejectionModal({ open: true, profileId: id, mode: 'ARCHIVE' });
         }
+    };
+
+    const handleDeleteClick = (id: string) => {
+        setDeleteModal({ open: true, profileId: id });
+    };
+
+    const handleConfirmDelete = () => {
+        if (!deleteModal.profileId) return;
+        const profileId = deleteModal.profileId;
+        deleteProfile(profileId).then(
+            () => {
+                toast.success(t('adminMatrimony.users.deleteSuccess') || 'Profile deleted');
+                setDeleteModal({ open: false, profileId: null });
+            }
+        ).catch(
+            (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
+        );
+    };
+
+    const handleConfirmRestore = () => {
+        if (!restoreModal.profileId) return;
+        const profileId = restoreModal.profileId;
+        restoreProfile(profileId).then(
+            () => {
+                toast.success(t('adminMatrimony.users.statusUpdateSuccess') || 'Profile restored');
+                setRestoreModal({ open: false, profileId: null });
+            }
+        ).catch(
+            (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.statusUpdateError'))
+        );
     };
 
     const columns: Column<AdminManagedProfile>[] = [
@@ -153,6 +190,16 @@ const ProfileManagement: React.FC = () => {
                             </button>
                         </Tooltip>
                     )}
+                    {profile.status !== 'DRAFT' && profile.status !== 'DELETED' && (
+                        <Tooltip content={t('adminMatrimony.common.delete') || 'Delete'}>
+                            <button 
+                                onClick={() => handleDeleteClick(profile.id)}
+                                className="p-2.5 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-all duration-300 shadow-sm border border-red-200"
+                            >
+                                <Trash2 size={18} strokeWidth={2.5} />
+                            </button>
+                        </Tooltip>
+                    )}
                 </div>
             )
         }
@@ -173,6 +220,24 @@ const ProfileManagement: React.FC = () => {
             </div>
             <DataTable columns={columns} data={data?.profiles || []} loading={isLoading} pagination={{ currentPage, totalPages: data?.meta?.totalPages || 1, totalItems: data?.meta?.total || 0, itemsPerPage, onPageChange: setCurrentPage }} emptyState={{ icon: Eye, title: t('adminMatrimony.users.noProfilesFound') }} />
             <RejectionModal isOpen={rejectionModal.open} onClose={() => setRejectionModal({ open: false, profileId: null, mode: 'REJECT' })} onConfirm={confirmReject} title={rejectionModal.mode === 'REJECT' ? t('adminMatrimony.common.rejectionReason') : t('adminMatrimony.common.blockingReason') || 'Archive Reason'} placeholder={t('adminMatrimony.common.enterReason') || "Enter the reason..."} confirmLabel={rejectionModal.mode === 'REJECT' ? t('adminMatrimony.common.reject') : t('adminMatrimony.common.confirm')} cancelLabel={t('adminMatrimony.common.cancel')} />
+            <ConfirmationModal
+                isOpen={deleteModal.open}
+                onClose={() => setDeleteModal({ open: false, profileId: null })}
+                onConfirm={handleConfirmDelete}
+                title={t('adminMatrimony.common.deleteProfile') || 'Delete Profile'}
+                message={t('adminMatrimony.users.deleteWarning') || 'Are you sure you want to delete this profile? This action cannot be undone. All associated data will be permanently removed.'}
+                confirmText={t('adminMatrimony.common.delete') || 'Delete'}
+                variant="danger"
+            />
+            <ConfirmationModal
+                isOpen={restoreModal.open}
+                onClose={() => setRestoreModal({ open: false, profileId: null })}
+                onConfirm={handleConfirmRestore}
+                title={t('adminMatrimony.common.restoreProfile') || 'Restore Profile'}
+                message={t('adminMatrimony.users.restoreWarning') || 'Are you sure you want to restore this profile? It will become visible and matchable again.'}
+                confirmText={t('adminMatrimony.common.restore') || 'Restore'}
+                variant="warning"
+            />
         </motion.div>
     );
 };

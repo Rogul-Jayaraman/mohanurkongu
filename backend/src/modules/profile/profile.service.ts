@@ -1,6 +1,7 @@
 import { ProfileRepository } from './profile.repository.js';
 import { StorageService } from '../storage/storage.service.js';
 import { AccountService } from '../account/account.service.js';
+import { MembershipGuard } from '../membership/membership.guard.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
 import { prisma } from '../../database/prisma.js';
@@ -21,6 +22,7 @@ export class ProfileService {
     private repo: ProfileRepository,
     private storageService: StorageService,
     private accountService: AccountService,
+    private membershipGuard?: MembershipGuard,
   ) {}
 
   private mapBasicData(data: any) {
@@ -187,9 +189,20 @@ export class ProfileService {
     if (!sections.basic) {
       throw new AppError(400, ErrorCodes.PROFILE_MISSING_BASIC, 'PROFILE_MISSING_BASIC');
     }
+    const basic = sections.basic;
+    if (!basic.gender) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'GENDER_REQUIRED');
+    if (!basic.dob) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'DOB_REQUIRED');
+    if (!basic.diet) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'DIET_REQUIRED');
+    if (!basic.heightId && basic.heightId !== 0) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'HEIGHT_REQUIRED');
+    if (!basic.profileFor) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'PROFILE_FOR_REQUIRED');
+
     if (!sections.community) {
       throw new AppError(400, ErrorCodes.PROFILE_MISSING_COMMUNITY, 'PROFILE_MISSING_COMMUNITY');
     }
+    const community = sections.community;
+    if (!community.community) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'COMMUNITY_REQUIRED');
+    if (!community.caste) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'CASTE_REQUIRED');
+
     if (!photos?.primaryUploadId) {
       throw new AppError(400, ErrorCodes.PROFILE_MISSING_PHOTO, 'PROFILE_MISSING_PHOTO');
     }
@@ -584,6 +597,19 @@ export class ProfileService {
     const uploadIds = this.collectUploadIds(dto);
 
     return await prisma.$transaction(async (tx) => {
+      if (this.membershipGuard) {
+        const caps = await this.membershipGuard.resolveCapabilities(accountId);
+        if (caps && caps.profileSlotLimit >= 0) {
+          const current = await tx.profile.count({
+            where: { accountId, currentStatus: { in: ['DRAFT', 'PENDING', 'ACTIVE', 'ARCHIVED'] } },
+          });
+          const occupiedByThis = existingProfileId ? 1 : 0;
+          if (current - occupiedByThis >= caps.profileSlotLimit) {
+            throw new AppError(403, ErrorCodes.MEMBERSHIP_SLOT_LIMIT_REACHED, 'MEMBERSHIP_SLOT_LIMIT_REACHED');
+          }
+        }
+      }
+
       let profile;
       if (existingProfileId) {
         profile = await this.repo.findDraftById(tx, existingProfileId, accountId);
@@ -618,8 +644,14 @@ export class ProfileService {
       });
 
       if (uploadIds.length > 0) {
-        await this.storageService.bulkTransitionStatus(uploadIds, ['TEMP', 'ATTACHED'], 'ACTIVE', tx);
+        await this.storageService.bulkTransitionStatus(uploadIds, ['TEMP'], 'ATTACHED', tx);
       }
+
+      await tx.verificationQueue.upsert({
+        where: { profileId: profile.id },
+        create: { profileId: profile.id, priority: 0 },
+        update: {},
+      });
 
       return { profileId: profile.id, regNo, status: 'PENDING' };
     });
@@ -836,9 +868,20 @@ export class ProfileService {
     if (uniqueUploadIds.length > 0) {
       await this.storageService.bulkTransitionStatus(uniqueUploadIds, ['ATTACHED', 'ACTIVE'], 'DELETE_PENDING');
     }
-    await prisma.profile.update({
-      where: { id: profile.id },
-      data: { currentStatus: 'DELETED', archivedAt: new Date() },
+    await prisma.$transaction(async (tx) => {
+      await tx.profile.update({
+        where: { id: profile.id },
+        data: { currentStatus: 'DELETED' },
+      });
+
+      await tx.profileStateHistory.create({
+        data: {
+          profileId: profile.id,
+          changedByAccountId: accountId,
+          fromStatus: 'DRAFT',
+          toStatus: 'DELETED',
+        },
+      });
     });
   }
 
@@ -951,6 +994,74 @@ export class ProfileService {
   }
 
   // ─────────────────────────────────────────────────────────
+  // Showcase profiles — public endpoint for login page carousel
+  // ─────────────────────────────────────────────────────────
+  async getShowcaseProfiles() {
+    const take = 5;
+
+    const [brides, grooms] = await Promise.all([
+      prisma.profile.findMany({
+        where: {
+          currentStatus: 'ACTIVE',
+          account: { currentState: 'ACTIVE' },
+          basic: { gender: 'FEMALE' },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        include: {
+          basic: { select: { gender: true } },
+          photo: {
+            include: {
+              primaryUpload: { select: { uploadToken: true, objectKey: true, width: true, height: true } },
+            },
+          },
+          translations: true,
+        },
+      }),
+      prisma.profile.findMany({
+        where: {
+          currentStatus: 'ACTIVE',
+          account: { currentState: 'ACTIVE' },
+          basic: { gender: 'MALE' },
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+        include: {
+          basic: { select: { gender: true } },
+          photo: {
+            include: {
+              primaryUpload: { select: { uploadToken: true, objectKey: true, width: true, height: true } },
+            },
+          },
+          translations: true,
+        },
+      }),
+    ]);
+
+    const mapProfile = (p: any) => {
+      const en = p.translations?.find((t: any) => t.language === 'EN');
+      const ta = p.translations?.find((t: any) => t.language === 'TA');
+      return {
+        id: p.id,
+        regNo: p.regNo ?? '-',
+        firstNameEn: en?.firstName ?? null,
+        lastNameEn: en?.lastName ?? null,
+        firstNameTa: ta?.firstName ?? null,
+        lastNameTa: ta?.lastName ?? null,
+        gender: p.basic?.gender ?? null,
+        profilePhoto: p.photo?.primaryUpload?.objectKey
+          ? { url: `/media/${p.photo.primaryUpload.objectKey}`, width: p.photo.primaryUpload.width, height: p.photo.primaryUpload.height }
+          : null,
+      };
+    };
+
+    return {
+      brides: brides.map(mapProfile),
+      grooms: grooms.map(mapProfile),
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────
   // Browse profiles — for discovery/matching
   // ─────────────────────────────────────────────────────────
   async browseProfiles(accountId: string, params: any) {
@@ -979,7 +1090,6 @@ export class ProfileService {
       rasi,
       nakshatra,
       laganam,
-      dosham,
       education,
       jobSector,
       jobTitle,
@@ -1060,11 +1170,11 @@ export class ProfileService {
     if (caste) communityFilter.caste = { code: caste };
     if (kulam) communityFilter.kulam = { code: kulam };
     if (kulamAvoid && kulamAvoid.length > 0) {
-      const kulamCodeFilter: any = { notIn: kulamAvoid };
       if (communityFilter.kulam) {
-        communityFilter.kulam.code = { ...kulamCodeFilter };
+        const specific = communityFilter.kulam.code;
+        communityFilter.kulam = { code: { in: [specific], notIn: kulamAvoid } };
       } else {
-        communityFilter.kulam = { code: kulamCodeFilter };
+        communityFilter.kulam = { code: { notIn: kulamAvoid } };
       }
     }
     if (Object.keys(communityFilter).length > 0) {
@@ -1117,6 +1227,21 @@ export class ProfileService {
       where.translations = {
         some: { kuladeivam: { contains: kuladeivam, mode: 'insensitive' } },
       };
+    }
+
+    // ─── Membership search level restrictions ─────────────
+    if (this.membershipGuard) {
+      const searchLevel = await this.membershipGuard.getSearchLevel(accountId);
+      if (searchLevel === 'BASIC') {
+        delete where.professional;
+        delete where.horoscope;
+        delete where.assets;
+      } else if (searchLevel === 'EXTENDED') {
+        if (where.horoscope) delete where.horoscope;
+        if (where.assets) delete where.assets;
+      } else if (searchLevel === 'ADVANCED') {
+        if (where.assets) delete where.assets;
+      }
     }
 
     // ─── Sort ─────────────────────────────────────────────
@@ -1247,20 +1372,32 @@ export class ProfileService {
       throw new AppError(400, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
 
-    if (action === 'add') {
-      await prisma.shortlist.upsert({
-        where: { profileId_accountId: { profileId, accountId } },
-        create: { profileId, accountId },
-        update: {},
-      });
-      const entry = await prisma.shortlist.findUnique({
-        where: { profileId_accountId: { profileId, accountId } },
-      });
-      return { isShortlisted: true, shortlistedAt: entry?.createdAt.toISOString() };
-    } else {
-      await prisma.shortlist.deleteMany({ where: { profileId, accountId } });
-      return { isShortlisted: false };
-    }
+    return prisma.$transaction(async (tx) => {
+      if (action === 'add' && this.membershipGuard) {
+        const caps = await this.membershipGuard.resolveCapabilities(accountId);
+        if (caps && caps.shortlistLimit >= 0) {
+          const current = await tx.shortlist.count({ where: { accountId } });
+          if (current >= caps.shortlistLimit) {
+            throw new AppError(403, ErrorCodes.MEMBERSHIP_SHORTLIST_LIMIT_REACHED, 'MEMBERSHIP_SHORTLIST_LIMIT_REACHED');
+          }
+        }
+      }
+
+      if (action === 'add') {
+        await tx.shortlist.upsert({
+          where: { profileId_accountId: { profileId, accountId } },
+          create: { profileId, accountId },
+          update: {},
+        });
+        const entry = await tx.shortlist.findUnique({
+          where: { profileId_accountId: { profileId, accountId } },
+        });
+        return { isShortlisted: true, shortlistedAt: entry?.createdAt.toISOString() };
+      } else {
+        await tx.shortlist.deleteMany({ where: { profileId, accountId } });
+        return { isShortlisted: false };
+      }
+    });
   }
 
   // ─────────────────────────────────────────────────────────
@@ -1367,7 +1504,10 @@ export class ProfileService {
     }
 
     const owner = profile.accountId === accountId;
-    if (profile.currentStatus === 'DELETED' || profile.currentStatus === 'ARCHIVED') {
+    if (profile.currentStatus === 'DELETED') {
+      throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
+    }
+    if (profile.currentStatus === 'ARCHIVED' && !owner) {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
     if (profile.currentStatus === 'REJECTED' && !owner) {
@@ -1378,6 +1518,15 @@ export class ProfileService {
     }
     if (profile.account.currentState === 'SUSPENDED' && !owner) {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
+    }
+
+    // ─── Membership: track open + check quota ──────────────
+    if (!owner && this.membershipGuard) {
+      const { allowed } = await this.membershipGuard.checkOpenQuota(accountId);
+      if (!allowed) {
+        throw new AppError(403, ErrorCodes.MEMBERSHIP_QUOTA_EXCEEDED, 'MEMBERSHIP_QUOTA_EXCEEDED');
+      }
+      await this.membershipGuard.consumeOpenQuota(accountId, profileId);
     }
 
     const b = profile.basic;
@@ -1392,7 +1541,18 @@ export class ProfileService {
     const enTrans = profile.translations?.find(t => t.language === 'EN');
     const taTrans = profile.translations?.find(t => t.language === 'TA');
 
-    return {
+    // ─── Membership gating ────────────────────────────────
+    let canViewContact = false;
+    let canViewHoroscope = false;
+    if (this.membershipGuard) {
+      canViewContact = await this.membershipGuard.checkContactAccess(accountId);
+      canViewHoroscope = await this.membershipGuard.checkFullHoroscopeAccess(accountId);
+    } else {
+      canViewContact = true;
+      canViewHoroscope = true;
+    }
+
+    const result: any = {
       // Identity
       id: profile.id,
       regNo: profile.regNo ?? '-',
@@ -1400,10 +1560,6 @@ export class ProfileService {
       isOwner: owner,
       rejectionReasonEn: profile.rejectionReasonEn ?? null,
       rejectionReasonTa: profile.rejectionReasonTa ?? null,
-      statusReasonEn: null,
-      statusReasonTa: null,
-      svgDataEn: null,
-      svgDataTa: null,
       dosham: null,
 
       // Name
@@ -1411,7 +1567,6 @@ export class ProfileService {
       lastNameEn: enTrans?.lastName ?? null,
       firstNameTa: taTrans?.firstName ?? null,
       lastNameTa: taTrans?.lastName ?? null,
-      name: null,
       profileFor: b?.profileFor?.code ?? null,
 
       // Basic
@@ -1425,10 +1580,8 @@ export class ProfileService {
       maritalStatus: b?.maritalStatus ?? null,
       age: null,
 
-      // Current location — conditional on isOther
+      // Location
       ...this.mapLocationFields(b?.currentLocation, 'current', enTrans, taTrans),
-
-      // Native location — conditional on isOther
       ...this.mapLocationFields(b?.nativeLocation, 'native', enTrans, taTrans),
 
       // Community
@@ -1488,13 +1641,18 @@ export class ProfileService {
       preferredLocationEn: pp?.preferredLocation ?? null,
       preferredLocationTa: null,
 
-      // Horoscope — lookup codes (top-level for display labels)
+      // Contact (gated)
+      phone: canViewContact && !owner ? profile.account.credential?.phone ?? null : null,
+      email: canViewContact && !owner ? profile.account.credential?.email ?? null : null,
+      contactLocked: !canViewContact && !owner,
+
+      // Horoscope codes (always visible — just labels)
       star: h?.nakshatra?.code ?? null,
       rasi: h?.rasi?.code ?? null,
       lagnam: h?.lagna?.code ?? null,
 
-      // Horoscope — sub-object with chart image objects
-      horoscope: h ? {
+      // Horoscope full data (gated)
+      horoscope: h && canViewHoroscope ? {
         mode: h.mode ?? null,
         birthTime: (h.horoscopeJson as any)?.input
           ? `${(h.horoscopeJson as any).input.dateOfBirth}T${(h.horoscopeJson as any).input.timeOfBirth}:00.000Z`
@@ -1507,9 +1665,10 @@ export class ProfileService {
           ? { url: `/media/${h.navamsaChart.objectKey}`, width: h.navamsaChart.width, height: h.navamsaChart.height }
           : null,
         horoscopeJson: h.horoscopeJson ?? null,
-      } : null,
+      } : h ? { mode: h.mode, birthPlace: null, rasi: null, navamsa: null, horoscopeJson: null, locked: true } : null,
+      horoscopeLocked: !canViewHoroscope && !!h,
 
-      // Photo — image objects
+      // Photo
       profilePhoto: ph?.primaryUpload?.objectKey
         ? { url: `/media/${ph.primaryUpload.objectKey}`, width: ph.primaryUpload.width, height: ph.primaryUpload.height }
         : null,
@@ -1520,5 +1679,7 @@ export class ProfileService {
           : null)
         .filter(Boolean) ?? [],
     };
+
+    return result;
   }
 }

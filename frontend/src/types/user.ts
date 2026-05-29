@@ -8,10 +8,12 @@ export interface User {
     email: string;
     phone: string;
     role: 'USER' | 'ADMIN';
-    plan: 'BASIC' | 'PREMIUM';
     createdAt: string;
     updatedAt?: string;
-    planExpiry?: string | null;
+    membership: {
+      planCode: string;
+      expiresAt: string | null;
+    } | null;
     [key: string]: any;
 }
 

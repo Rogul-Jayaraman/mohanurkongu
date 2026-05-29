@@ -100,7 +100,7 @@ export class ProfileRepository {
         },
         translations: true,
         history: { orderBy: { createdAt: 'desc' }, take: 5 },
-        account: { select: { currentState: true } },
+        account: { select: { currentState: true, credential: { select: { phone: true, email: true } } } },
       },
     });
   }
@@ -121,7 +121,7 @@ export class ProfileRepository {
     const data: any = { currentStatus: status };
     if (regNo) data.regNo = regNo;
     if (status === 'ACTIVE') data.activatedAt = new Date();
-    if (status === 'DELETED') data.archivedAt = new Date();
+
     return prisma.profile.update({ where: { id: profileId }, data });
   }
 

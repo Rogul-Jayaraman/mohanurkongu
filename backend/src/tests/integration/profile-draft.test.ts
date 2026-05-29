@@ -3,11 +3,25 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-describe('Profile Draft Integration', () => {
-  const accountId = '00000000-0000-0000-0000-000000000001';
-  const uploadId = '00000000-0000-0000-0000-000000000002';
+const accountId = '00000000-0000-0000-0000-000000000001';
+const uploadId = '00000000-0000-0000-0000-000000000002';
 
+describe('Profile Draft Integration', () => {
   beforeAll(async () => {
+    // Create test account first
+    await prisma.account.create({
+      data: {
+        id: accountId,
+        accountNo: 'ACC001',
+        credential: {
+          create: {
+            email: 'test@example.com',
+            passwordHash: '$2b$10$hashedpassword', // dummy hash
+          },
+        },
+      },
+    });
+    
     await prisma.upload.create({
       data: {
         id: uploadId,
@@ -27,6 +41,7 @@ describe('Profile Draft Integration', () => {
   afterAll(async () => {
     await prisma.upload.deleteMany({ where: { ownerAccountId: accountId } }).catch(() => {});
     await prisma.profile.deleteMany({ where: { accountId } }).catch(() => {});
+    await prisma.account.deleteMany({ where: { id: accountId } }).catch(() => {});
     await prisma.$disconnect();
   });
 
@@ -41,12 +56,24 @@ describe('Profile Draft Integration', () => {
   });
 
   it('should upsert basic section', async () => {
+    // Use a height value outside the seeded range (122-231 cm)
+    const heightValue = 300; // Above seeded range
+    let height = await prisma.height.findUnique({ where: { valueCm: heightValue } });
+    if (!height) {
+      height = await prisma.height.create({
+        data: {
+          valueCm: heightValue,
+          label: `${heightValue} cm`,
+        },
+      });
+    }
+
     const profile = await prisma.profile.findFirst({ where: { accountId } });
     expect(profile).toBeDefined();
 
     const basic = await prisma.profileBasic.upsert({
       where: { profileId: profile!.id },
-      create: { profileId: profile!.id, profileForId: 1, gender: 'MALE', dob: new Date('1995-06-15'), diet: 'VEGETARIAN', heightId: 150 },
+      create: { profileId: profile!.id, profileForId: 1, gender: 'MALE', dob: new Date('1995-06-15'), diet: 'VEGETARIAN', heightId: height.id },
       update: { gender: 'MALE' },
     });
 
@@ -54,12 +81,17 @@ describe('Profile Draft Integration', () => {
 
     const updated = await prisma.profileBasic.upsert({
       where: { profileId: profile!.id },
-      create: { profileId: profile!.id, profileForId: 1, gender: 'FEMALE', dob: new Date('1995-06-15'), diet: 'VEGETARIAN', heightId: 150 },
+      create: { profileId: profile!.id, profileForId: 1, gender: 'FEMALE', dob: new Date('1995-06-15'), diet: 'VEGETARIAN', heightId: height.id },
       update: { gender: 'FEMALE' },
     });
 
     expect(updated.gender).toBe('FEMALE');
     expect(updated.id).toBe(basic.id);
+
+    // Clean up height only if we created it
+    if (!height) {
+      await prisma.height.delete({ where: { id: height.id } }).catch(() => {});
+    }
   });
 
   it('should attach uploads to draft', async () => {
@@ -67,13 +99,14 @@ describe('Profile Draft Integration', () => {
     expect(upload).toBeDefined();
     expect(upload!.status).toBe('TEMP');
 
+    // Upload status should transition from TEMP to ATTACHED when profile is created/submitted
     await prisma.upload.update({
       where: { id: uploadId },
-      data: { status: 'DRAFT' },
+      data: { status: 'ATTACHED' },
     });
 
     const updated = await prisma.upload.findUnique({ where: { id: uploadId } });
-    expect(updated!.status).toBe('DRAFT');
+    expect(updated!.status).toBe('ATTACHED');
   });
 
   it('should record state history', async () => {
@@ -117,25 +150,37 @@ describe('Profile Draft Integration', () => {
       }
     });
 
-    it('should persist native OTHER fields and return them on resume', async () => {
-      const loc = await prisma.location.create({ data: { isOther: true } });
-      locationId = loc.id;
+it('should persist native OTHER fields and return them on resume', async () => {
+    const loc = await prisma.location.create({ data: { isOther: true } });
+    locationId = loc.id;
 
-      const profile = await prisma.profile.create({
-        data: { accountId, currentStatus: 'DRAFT' },
-      });
-
-      await prisma.profileBasic.create({
+    // First create a height record with very high value to avoid conflicts
+    const heightValue = 9999; // Using a value unlikely to conflict with seed data
+    let height = await prisma.height.findUnique({ where: { valueCm: heightValue } });
+    if (!height) {
+      height = await prisma.height.create({
         data: {
-          profileId: profile.id,
-          profileForId: 1,
-          gender: 'MALE',
-          dob: new Date('1995-06-15'),
-          diet: 'VEGETARIAN',
-          heightId: 150,
-          nativeLocationId: loc.id,
+          valueCm: heightValue,
+          label: `${heightValue} cm`,
         },
       });
+    }
+
+    const profile = await prisma.profile.create({
+      data: { accountId, currentStatus: 'DRAFT' },
+    });
+
+     await prisma.profileBasic.create({
+       data: {
+         profileId: profile.id,
+         profileForId: 1,
+         gender: 'MALE',
+         dob: new Date('1995-06-15'),
+         diet: 'VEGETARIAN',
+         heightId: height.id,
+         nativeLocationId: loc.id,
+       },
+     });
 
       await prisma.profileTranslation.create({
         data: {
@@ -148,34 +193,37 @@ describe('Profile Draft Integration', () => {
         },
       });
 
-      await prisma.profileTranslation.create({
-        data: {
-          profileId: profile.id,
-          language: 'TA',
-          firstName: 'டெஸ்ட்',
-          nativeCity: 'சென்னை',
-          nativeState: 'தமிழ்நாடு',
-          nativeCountry: 'இந்தியா',
-        },
-      });
+       await prisma.profileTranslation.create({
+         data: {
+           profileId: profile.id,
+           language: 'TA',
+           firstName: 'டெஸ்ட்',
+           nativeCity: 'சென்னை',
+           nativeState: 'தமிழ்நாடு',
+           nativeCountry: 'இந்தியா',
+         },
+       });
 
-      const saved = await prisma.profile.findFirst({
-        where: { id: profile.id },
-        include: {
-          basic: { include: { nativeLocation: true } },
-          translations: true,
-        },
-      });
+       const saved = await prisma.profile.findFirst({
+         where: { id: profile.id },
+         include: {
+           basic: { include: { nativeLocation: true } },
+           translations: true,
+         },
+       });
 
-      expect(saved?.basic?.nativeLocation?.isOther).toBe(true);
-      const enTrans = saved?.translations?.find(t => t.language === 'EN');
-      const taTrans = saved?.translations?.find(t => t.language === 'TA');
-      expect(enTrans?.nativeCity).toBe('Chennai');
-      expect(enTrans?.nativeState).toBe('Tamil Nadu');
-      expect(enTrans?.nativeCountry).toBe('India');
-      expect(taTrans?.nativeCity).toBe('சென்னை');
-      expect(taTrans?.nativeState).toBe('தமிழ்நாடு');
-      expect(taTrans?.nativeCountry).toBe('இந்தியா');
-    });
+       expect(saved?.basic?.nativeLocation?.isOther).toBe(true);
+       const enTrans = saved?.translations?.find(t => t.language === 'EN');
+       const taTrans = saved?.translations?.find(t => t.language === 'TA');
+       expect(enTrans?.nativeCity).toBe('Chennai');
+       expect(enTrans?.nativeState).toBe('Tamil Nadu');
+       expect(enTrans?.nativeCountry).toBe('India');
+       expect(taTrans?.nativeCity).toBe('சென்னை');
+       expect(taTrans?.nativeState).toBe('தமிழ்நாடு');
+       expect(taTrans?.nativeCountry).toBe('இந்தியா');
+       
+       // Clean up height
+       await prisma.height.delete({ where: { id: height.id } }).catch(() => {});
+     });
   });
 });

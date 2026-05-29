@@ -75,19 +75,54 @@ export class AdminProfilesService {
     const accEn = p.account?.translations?.find((t: any) => t.language === 'EN');
     const accTa = p.account?.translations?.find((t: any) => t.language === 'TA');
 
-    const mapLocation = (loc: any, prefix: string) => ({
-      [`${prefix}District`]: loc?.district?.nameEn ?? null,
-      [`${prefix}DistrictEn`]: loc?.district?.nameEn ?? null,
-      [`${prefix}DistrictTa`]: loc?.district?.nameTa ?? null,
-      [`${prefix}Taluk`]: loc?.taluk?.nameEn ?? null,
-      [`${prefix}TalukTa`]: loc?.taluk?.nameTa ?? null,
-      [`${prefix}CityEn`]: null,
-      [`${prefix}CityTa`]: null,
-      [`${prefix}StateEn`]: null,
-      [`${prefix}StateTa`]: null,
-      [`${prefix}CountryEn`]: null,
-      [`${prefix}CountryTa`]: null,
-    });
+    const et = enTrans as any;
+    const tt = taTrans as any;
+    const mapLocation = (loc: any, prefix: string) => {
+      if (!loc) {
+        return {
+          [`${prefix}IsOther`]: false,
+          [`${prefix}DistrictEn`]: null,
+          [`${prefix}District`]: null,
+          [`${prefix}DistrictTa`]: null,
+          [`${prefix}Taluk`]: null,
+          [`${prefix}TalukTa`]: null,
+          [`${prefix}CityEn`]: null,
+          [`${prefix}CityTa`]: null,
+          [`${prefix}StateEn`]: null,
+          [`${prefix}StateTa`]: null,
+          [`${prefix}CountryEn`]: null,
+          [`${prefix}CountryTa`]: null,
+        };
+      }
+      const isOther = loc.isOther ?? false;
+      const result: any = { [`${prefix}IsOther`]: isOther };
+      if (isOther) {
+        result[`${prefix}DistrictEn`] = null;
+        result[`${prefix}District`] = 'OTHER';
+        result[`${prefix}DistrictTa`] = null;
+        result[`${prefix}Taluk`] = null;
+        result[`${prefix}TalukTa`] = null;
+        result[`${prefix}CityEn`] = et?.[`${prefix}City`] ?? null;
+        result[`${prefix}CityTa`] = tt?.[`${prefix}City`] ?? null;
+        result[`${prefix}StateEn`] = et?.[`${prefix}State`] ?? null;
+        result[`${prefix}StateTa`] = tt?.[`${prefix}State`] ?? null;
+        result[`${prefix}CountryEn`] = et?.[`${prefix}Country`] ?? null;
+        result[`${prefix}CountryTa`] = tt?.[`${prefix}Country`] ?? null;
+      } else {
+        result[`${prefix}DistrictEn`] = loc.district?.code ?? null;
+        result[`${prefix}District`] = loc.district?.code ?? null;
+        result[`${prefix}DistrictTa`] = loc.district?.code ?? null;
+        result[`${prefix}Taluk`] = loc.taluk?.code ?? null;
+        result[`${prefix}TalukTa`] = loc.taluk?.code ?? null;
+        result[`${prefix}CityEn`] = et?.[`${prefix}City`] ?? null;
+        result[`${prefix}CityTa`] = tt?.[`${prefix}City`] ?? null;
+        result[`${prefix}StateEn`] = et?.[`${prefix}State`] ?? null;
+        result[`${prefix}StateTa`] = tt?.[`${prefix}State`] ?? null;
+        result[`${prefix}CountryEn`] = et?.[`${prefix}Country`] ?? null;
+        result[`${prefix}CountryTa`] = tt?.[`${prefix}Country`] ?? null;
+      }
+      return result;
+    };
 
     return {
       id: p.id,
@@ -294,14 +329,14 @@ export class AdminProfilesService {
     if (!profile) {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
-    if (!['PENDING', 'ACTIVE', 'ARCHIVED'].includes(profile.currentStatus)) {
+    if (!['DRAFT', 'PENDING', 'ACTIVE', 'ARCHIVED', 'REJECTED'].includes(profile.currentStatus)) {
       throw new AppError(400, ErrorCodes.PROFILE_WRONG_STATUS, 'PROFILE_WRONG_STATUS');
     }
 
     return prisma.$transaction(async (tx) => {
       await tx.profile.update({
         where: { id: profileId },
-        data: { currentStatus: 'DELETED', archivedAt: new Date() },
+        data: { currentStatus: 'DELETED' },
       });
 
       await tx.profileStateHistory.create({

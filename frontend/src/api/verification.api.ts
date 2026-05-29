@@ -37,3 +37,7 @@ export function archiveProfile(id: string, reasonEn: string, reasonTa?: string) 
 export function restoreProfile(id: string) {
   return api.post(`/admin/profiles/${id}/restore`);
 }
+
+export function deleteProfile(id: string) {
+  return api.post(`/admin/profiles/${id}/delete`);
+}

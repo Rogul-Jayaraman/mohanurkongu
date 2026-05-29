@@ -69,6 +69,9 @@ export class ImagePipelineService {
         uploadToken,
       };
     } catch (err) {
+      if (processPath !== tempFilePath) {
+        await fs.unlink(processPath).catch(() => {});
+      }
       await fs.rm(outputDir, { recursive: true, force: true });
       throw err;
     }

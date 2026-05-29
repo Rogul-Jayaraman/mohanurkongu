@@ -1,16 +1,16 @@
 import type { PrismaClient } from '@prisma/client';
 import { SEED_CONFIG } from '../config.js';
 import {
-  random, randomInt, randomFloat, weightedPick, pickRandom, pickNRandom,
-  calculateAge, generateDob, clampNormal, randomBool, randomDate,
+  random, randomInt, weightedPick, pickRandom, pickNRandom,
+  generateDob, clampNormal, randomBool,
   randomDateBefore, randomDateAfter, generateRegNo, shuffleArray,
-  weightedPickRaw, progressBar,
+  weightedPickRaw, generateLongText, progressBar,
 } from '../helpers.js';
 import {
-  MALE_NAMES_EN, FEMALE_NAMES_EN, SURNAMES_EN,
   EDUCATION_LEVELS, JOB_TITLES, COMPANY_NAMES,
 } from '../names.js';
 import type { AccountPlan } from './account.factory.js';
+import type { UploadIndex } from './upload.factory.js';
 
 interface LocationDef {
   districtCode: string;
@@ -88,7 +88,7 @@ async function ensureLocation(
 export async function seedProfiles(
   prisma: PrismaClient,
   accountIndex: Record<number, any>,
-  uploadIds: string[],
+  uploadIndex: UploadIndex,
   refs: any,
 ): Promise<Record<string, any>> {
   const profileIndex: Record<string, any> = {};
@@ -111,14 +111,22 @@ export async function seedProfiles(
       if (!accEntry) continue;
       const plan: AccountPlan = accEntry.plan;
 
+      const isEdgeCase = random() < 0.05;
+      const isBigGallery = random() < (isEdgeCase ? 0.30 : SEED_CONFIG.EDGE_CASE_CONFIG.LARGE_GALLERY_PCT);
+      const noHoroscope = random() < SEED_CONFIG.EDGE_CASE_CONFIG.MISSING_HOROSCOPE_PCT;
+      const emptyGallery = random() < SEED_CONFIG.EDGE_CASE_CONFIG.EMPTY_GALLERY_PCT;
+      const singlePhoto = random() < SEED_CONFIG.EDGE_CASE_CONFIG.SINGLE_PHOTO_PCT;
+      const veryLongBio = random() < SEED_CONFIG.EDGE_CASE_CONFIG.VERY_LONG_BIO_PCT;
+      const conflictingPrefs = random() < SEED_CONFIG.EDGE_CASE_CONFIG.CONFLICTING_PREFERENCES_PCT;
+
       const dob = generateDob(plan.age);
       const hasBasic = status !== 'DRAFT' || randomBool(60);
       const hasCommunity = status !== 'DRAFT' || randomBool(50);
       const hasProfessional = hasBasic && (status === 'DRAFT' ? randomBool(20) : randomBool(SEED_CONFIG.SECTION_COMPLETION.PROFESSIONAL * 100));
       const hasFamily = hasBasic && randomBool(SEED_CONFIG.SECTION_COMPLETION.FAMILY * 100);
-      const hasHoroscope = hasBasic && randomBool(SEED_CONFIG.SECTION_COMPLETION.HOROSCOPE * 100);
+      const hasHoroscope = hasBasic && !noHoroscope && (status === 'DRAFT' ? randomBool(10) : randomBool(SEED_CONFIG.SECTION_COMPLETION.HOROSCOPE * 100));
       const hasPrimaryPhoto = hasBasic && (status === 'DRAFT' ? randomBool(20) : randomBool(SEED_CONFIG.SECTION_COMPLETION.PRIMARY_PHOTO * 100));
-      const hasGallery = hasPrimaryPhoto && randomBool(SEED_CONFIG.SECTION_COMPLETION.GALLERY * 100);
+      const hasGallery = hasPrimaryPhoto && !emptyGallery && (isBigGallery || randomBool(SEED_CONFIG.SECTION_COMPLETION.GALLERY * 100));
       const hasAssets = hasBasic && randomBool(SEED_CONFIG.SECTION_COMPLETION.ASSETS * 100);
       const hasPartnerPref = hasBasic && randomBool(SEED_CONFIG.SECTION_COMPLETION.PARTNER_PREFERENCE * 100);
       const hasTaTrans = randomBool(SEED_CONFIG.SECTION_COMPLETION.TA_TRANSLATION * 100);
@@ -126,16 +134,18 @@ export async function seedProfiles(
       const createdAt = plan.createdAt || randomDateBefore(new Date(), 180);
       let activatedAt: Date | null = null;
       let approvedAt: Date | null = null;
+      let approvedBy: string | null = null;
       let archivedAt: Date | null = null;
       let rejectedAt: Date | null = null;
       let rejectionReasonEn: string | null = null;
       let rejectionReasonTa: string | null = null;
 
       if (status === 'ACTIVE') {
-        activatedAt = randomDateAfter(createdAt, 14);
+        activatedAt = randomDateAfter(createdAt, randomInt(1, 14));
         approvedAt = activatedAt;
+        approvedBy = accountIndex[0]?.account?.id || null;
       } else if (status === 'REJECTED') {
-        rejectedAt = randomDateAfter(createdAt, 7);
+        rejectedAt = randomDateAfter(createdAt, randomInt(1, 7));
         const rej = weightedPickRaw(
           SEED_CONFIG.REJECTION_REASONS,
           SEED_CONFIG.REJECTION_REASONS.map(r => r.weight),
@@ -143,11 +153,12 @@ export async function seedProfiles(
         rejectionReasonEn = rej.reasonEn;
         rejectionReasonTa = rej.reasonTa;
       } else if (status === 'ARCHIVED') {
-        activatedAt = randomDateAfter(createdAt, 14);
+        activatedAt = randomDateAfter(createdAt, randomInt(1, 14));
         approvedAt = activatedAt;
-        archivedAt = randomDateAfter(activatedAt, 90);
+        approvedBy = accountIndex[0]?.account?.id || null;
+        archivedAt = randomDateAfter(activatedAt, randomInt(30, 180));
       } else if (status === 'DELETED') {
-        archivedAt = randomDateAfter(createdAt, 30);
+        archivedAt = randomDateAfter(createdAt, randomInt(1, 30));
       }
 
       const regNo = status === 'DRAFT' || status === 'DELETED' ? null : generateRegNo(regNoCounter++);
@@ -175,12 +186,31 @@ export async function seedProfiles(
           updatedAt: createdAt,
           activatedAt,
           approvedAt,
+          approvedBy,
           archivedAt: archivedAt,
           rejectedAt,
           rejectionReasonEn,
           rejectionReasonTa,
+          archiveReasonEn: status === 'ARCHIVED' ? pickRandom(SEED_CONFIG.ARCHIVE_REASONS) : null,
+          archiveReasonTa: status === 'ARCHIVED' ? 'சுயவிவரம் செயலிழந்தது' : null,
         },
       });
+
+      if (regNo) {
+        try {
+          await prisma.publishLog.create({
+            data: {
+              idempotencyKey: `seed-${accountId}-${profile.id}`,
+              profileId: profile.id,
+              regNo,
+              accountId,
+              createdAt,
+            },
+          });
+        } catch {
+          // idempotency key collision — skip
+        }
+      }
 
       if (hasBasic) {
         await prisma.profileBasic.create({
@@ -234,6 +264,7 @@ export async function seedProfiles(
             jobDetail: pickRandom(JOB_TITLES),
             jobLocation: loc.districtCode,
             monthlySalary: salary,
+            salaryCurrency: 'INR',
             companyName: randomBool(60) ? pickRandom(COMPANY_NAMES) : null,
           },
         });
@@ -254,8 +285,8 @@ export async function seedProfiles(
             motherName: motherAlive ? pickRandom(['Lakshmi', 'Devi', 'Saraswathi', 'Parvathi', 'Kalyani', 'Gowri', 'Malliga']) : null,
             motherJob: motherAlive && randomBool(30) ? 'Housewife' : null,
             motherSalary: motherAlive && randomBool(5) ? randomInt(10000, 30000) : null,
-            noOfBrother: randomInt(0, 3),
-            noOfSister: randomInt(0, 3),
+            noOfBrother: randomInt(0, 4),
+            noOfSister: randomInt(0, 4),
           },
         });
       }
@@ -268,10 +299,28 @@ export async function seedProfiles(
         const nakshatra = refs.nakshatras.find((n: any) => n.code === nakshatraCode);
         const lagna = refs.lagnas.find((l: any) => l.code === lagnaCode);
 
-        const rasiUploadIds = uploadIds.filter(() => randomBool(10));
-        const navamsaUploadId = uploadIds.filter(() => randomBool(7));
+        const accountUploads = uploadIndex.byAccount.get(accountId);
+        const myHoroscopeIds = accountUploads?.horoscope || [];
+        const mode = weightedPick(SEED_CONFIG.HOROSCOPE_MODE_DISTRIBUTION) as 'GENERATED' | 'UPLOADED';
+        const hasRasiChart = mode === 'UPLOADED' && myHoroscopeIds.length > 0 && randomBool(70);
+        const hasNavamsaChart = mode === 'UPLOADED' && myHoroscopeIds.length > 0 && randomBool(40);
+        const rasiChartId = hasRasiChart ? pickRandom(myHoroscopeIds) : null;
+        const navamsaChartId = hasNavamsaChart ? pickRandom(myHoroscopeIds) : null;
 
-        const mode = randomBool(60) ? 'GENERATED' : 'UPLOADED';
+        const generatedData = mode === 'GENERATED' ? {
+          rasi: rasiCode,
+          nakshatra: nakshatraCode,
+          lagna: lagnaCode,
+          birthStar: nakshatraCode,
+          padam: randomInt(1, 4),
+          charan: randomInt(1, 4),
+          dosham: randomBool(25) ? 'Sevvai Dosham' : null,
+          birthDetails: {
+            day: pickRandom(['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']),
+            time: `${randomInt(0, 23)}:${String(randomInt(0, 59)).padStart(2, '0')}`,
+            place: loc.districtCode,
+          },
+        } : null;
 
         await prisma.profileHoroscope.create({
           data: {
@@ -280,15 +329,19 @@ export async function seedProfiles(
             rasiId: rasi?.id || null,
             nakshatraId: nakshatra?.id || null,
             lagnaId: lagna?.id || null,
-            rasiChartUploadId: rasiUploadIds.length > 0 ? rasiUploadIds[0] : null,
-            navamsaChartUploadId: navamsaUploadId.length > 0 ? navamsaUploadId[0] : null,
-            horoscopeJson: randomBool(30) ? { rasi: rasiCode, nakshatra: nakshatraCode, lagna: lagnaCode } : null,
+            rasiChartUploadId: rasiChartId,
+            navamsaChartUploadId: navamsaChartId,
+            horoscopeJson: generatedData,
+            generatedAt: mode === 'GENERATED' ? createdAt : null,
           },
         });
       }
 
       if (hasPrimaryPhoto) {
-        const unused = uploadIds.filter(id => !usedPrimaryUploads.has(id));
+        const accountUploads = uploadIndex.byAccount.get(accountId);
+        const myProfileIds = accountUploads?.profile || [];
+
+        const unused = myProfileIds.filter(id => !usedPrimaryUploads.has(id));
         let primaryUploadId: string | null = null;
         if (unused.length > 0) {
           primaryUploadId = pickRandom(unused);
@@ -303,8 +356,18 @@ export async function seedProfiles(
         });
 
         if (hasGallery && primaryUploadId) {
-          const galleryCount = randomInt(1, 8);
-          const galleryPool = uploadIds.filter(id => id !== primaryUploadId);
+          const galleryCount = isBigGallery
+            ? weightedPickRaw(
+                [10, 12, 15],
+                [50, 30, 20],
+              )
+            : weightedPickRaw(
+                SEED_CONFIG.GALLERY_SIZE_DISTRIBUTION.map(g => g.size),
+                SEED_CONFIG.GALLERY_SIZE_DISTRIBUTION.map(g => g.weight),
+              );
+
+          const myGalleryIds = accountUploads?.gallery || [];
+          const galleryPool = myGalleryIds.filter(id => id !== primaryUploadId);
           const galleryUploads = pickNRandom(galleryPool, galleryCount);
 
           for (const uploadId of galleryUploads) {
@@ -325,17 +388,19 @@ export async function seedProfiles(
             profileId: profile.id,
             land: randomBool(40) ? `${randomInt(1, 10)} acres` : null,
             residenceType: residenceType as any,
-            otherAssets: randomBool(30) ? 'Car, Gold' : null,
-            vehicle: randomBool(50) ? (randomBool(60) ? 'Car' : 'Bike') : null,
+            otherAssets: randomBool(30) ? pickRandom(['Car, Gold', 'Gold, Land', 'Property', 'Investments', 'Agricultural Land']) : null,
+            vehicle: randomBool(50) ? pickRandom(['Car', 'Bike', 'Car & Bike', 'SUV']) : null,
           },
         });
       }
 
       if (hasPartnerPref) {
-        const ageMin = plan.gender === 'MALE' ? randomInt(21, 28) : randomInt(24, 30);
-        const ageMax = ageMin + randomInt(3, 8);
-        const minHeightCm = plan.gender === 'MALE' ? clampNormal(155, 4, 147, 170) : clampNormal(165, 4, 160, 183);
-        const maxHeightCm = minHeightCm + randomInt(5, 15);
+        const ageMin = plan.gender === 'MALE' ? randomInt(21, 26) : randomInt(24, 28);
+        const ageMax = conflictingPrefs ? ageMin - 2 : ageMin + randomInt(3, 8);
+        const minHeightCm = plan.gender === 'MALE'
+          ? clampNormal(155, 4, 145, 170)
+          : clampNormal(165, 4, 158, 183);
+        const maxHeightCm = conflictingPrefs ? minHeightCm - 5 : minHeightCm + randomInt(5, 15);
 
         const minHeightId = refs.heightMap.get(minHeightCm) || null;
         const maxHeightId = refs.heightMap.get(maxHeightCm) || null;
@@ -343,12 +408,15 @@ export async function seedProfiles(
         await prisma.partnerPreference.create({
           data: {
             profileId: profile.id,
-            ageMin,
-            ageMax,
+            ageMin: Math.max(18, ageMin),
+            ageMax: Math.max(ageMin, ageMax),
             heightMinId: minHeightId,
             heightMaxId: maxHeightId,
-            monthlySalary: randomInt(30000, 200000),
-            expectationNote: randomBool(40) ? 'Looking for a caring and understanding partner' : null,
+            monthlySalary: randomInt(20000, 200000),
+            salaryCurrency: 'INR',
+            expectationNote: veryLongBio
+              ? generateLongText(200)
+              : (conflictingPrefs ? 'Looking for someone tall but height min is lower than max' : null),
             preferredLocation: randomBool(50) ? 'Coimbatore, Erode, Tiruppur' : null,
           },
         });
@@ -370,29 +438,83 @@ export async function seedProfiles(
             language: 'TA',
             firstName: plan.nameTa,
             lastName: plan.surNameTa,
+            kuladeivam: randomBool(40) ? pickRandom(['Kuladeivam', 'Karuppanasamy', 'Mariamman', 'Pidari']) : null,
           },
         });
       }
 
-      const fromStatus = status === 'DRAFT' ? null : null;
       await prisma.profileStateHistory.create({
         data: {
           profileId: profile.id,
           changedByAccountId: accountId,
           fromStatus: null,
           toStatus: status as any,
+          reason: status === 'DRAFT' ? 'Profile created as draft' : 'Profile created',
           createdAt: createdAt,
         },
       });
 
-      if ((status === 'ACTIVE' || status === 'REJECTED') && profile.approvedAt) {
+      if (status === 'PENDING') {
         await prisma.profileStateHistory.create({
           data: {
             profileId: profile.id,
             changedByAccountId: accountId,
+            fromStatus: 'DRAFT' as any,
+            toStatus: 'PENDING' as any,
+            reason: 'Profile submitted for verification',
+            createdAt: randomDateAfter(createdAt, randomInt(1, 5)),
+          },
+        });
+      }
+
+      if (status === 'ACTIVE' && approvedAt) {
+        await prisma.profileStateHistory.create({
+          data: {
+            profileId: profile.id,
+            changedByAccountId: approvedBy || accountId,
             fromStatus: 'PENDING' as any,
-            toStatus: status as any,
-            createdAt: status === 'ACTIVE' ? profile.approvedAt : profile.rejectedAt,
+            toStatus: 'ACTIVE' as any,
+            reason: 'Profile approved by admin',
+            createdAt: approvedAt,
+          },
+        });
+      }
+
+      if (status === 'REJECTED' && rejectedAt) {
+        await prisma.profileStateHistory.create({
+          data: {
+            profileId: profile.id,
+            changedByAccountId: accountIndex[0]?.account?.id || accountId,
+            fromStatus: 'PENDING' as any,
+            toStatus: 'REJECTED' as any,
+            reason: rejectionReasonEn || 'Rejected by admin',
+            createdAt: rejectedAt,
+          },
+        });
+      }
+
+      if (status === 'ARCHIVED' && archivedAt && activatedAt) {
+        await prisma.profileStateHistory.create({
+          data: {
+            profileId: profile.id,
+            changedByAccountId: accountId,
+            fromStatus: 'ACTIVE' as any,
+            toStatus: 'ARCHIVED' as any,
+            reason: 'Profile archived',
+            createdAt: archivedAt,
+          },
+        });
+      }
+
+      if (status === 'DELETED' && archivedAt) {
+        await prisma.profileStateHistory.create({
+          data: {
+            profileId: profile.id,
+            changedByAccountId: accountId,
+            fromStatus: 'DRAFT' as any,
+            toStatus: 'DELETED' as any,
+            reason: 'Profile deleted by user',
+            createdAt: archivedAt,
           },
         });
       }
@@ -404,6 +526,10 @@ export async function seedProfiles(
         regNo,
         location: loc,
         plan,
+        hasPrimaryPhoto,
+        hasHoroscope,
+        hasCommunity,
+        hasBasic,
       };
 
       created++;

@@ -82,6 +82,15 @@ export class ProfileController {
     }
   };
 
+  showcase = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.profileService.getShowcaseProfiles();
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   viewProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.profileService.getProfile(req.account.sub, req.params.id as string);

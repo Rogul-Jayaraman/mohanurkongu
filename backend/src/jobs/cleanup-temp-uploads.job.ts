@@ -17,7 +17,6 @@ async function run() {
         where: {
           status: 'TEMP',
           createdAt: { lt: cutoff },
-          lastAccessedAt: { lt: cutoff },
         },
         take: BATCH,
       });
@@ -34,8 +33,9 @@ async function run() {
         }
       }
 
-      await prisma.upload.deleteMany({
+      await prisma.upload.updateMany({
         where: { id: { in: uploads.map((u) => u.id) } },
+        data: { status: 'DELETED' },
       });
 
       total += uploads.length;

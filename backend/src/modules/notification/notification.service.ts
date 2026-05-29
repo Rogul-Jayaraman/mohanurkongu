@@ -9,30 +9,6 @@ export class NotificationService {
     });
   }
 
-  async sendOtpEmail(to: string, otp: string): Promise<void> {
-    await enqueueTemplateEmail('login-otp', {
-      to,
-      otpCode: otp,
-      unsubscribeUrl: '',
-    });
-  }
-
-  async sendVerificationEmail(to: string, verifyUrl: string): Promise<void> {
-    await enqueueTemplateEmail('email-verification', {
-      to,
-      verifyUrl,
-      unsubscribeUrl: '',
-    });
-  }
-
-  async sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
-    await enqueueTemplateEmail('password-reset', {
-      to,
-      resetUrl,
-      unsubscribeUrl: '',
-    });
-  }
-
   async sendPasswordResetOtpEmail(to: string, otp: string): Promise<void> {
     await enqueueTemplateEmail('password-reset-otp', {
       to,

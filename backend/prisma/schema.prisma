@@ -22,6 +22,25 @@ enum RoleCode {
   ADMIN
 }
 
+enum MembershipPlanCode {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum PlanStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SearchLevel {
+  BASIC
+  EXTENDED
+  ADVANCED
+  FULL
+}
+
 enum MembershipStatus {
   ACTIVE
   EXPIRED
@@ -131,7 +150,9 @@ model Account {
   translations  AccountTranslation[]
   credential    AccountCredential?
   roles         AccountRole[]
-  memberships   AccountMembership[]
+  subscriptions Subscription[]
+  membershipUsage MembershipUsage?
+  profileOpens  ProfileOpen[]
   statusHistory AccountStatusHistory[]
   sessions      AccountSession[]
   profiles      Profile[]
@@ -206,36 +227,120 @@ model AccountRole {
 }
 
 model MembershipPlan {
-  id          String  @id @default(uuid())
-  code        String  @unique @db.VarChar(50)
-  displayName String  @db.VarChar(100)
-  price       Decimal @db.Decimal(10, 2)
-  currency    String  @default("INR") @db.VarChar(3)
-  active      Boolean @default(true)
+  id          String   @id @default(uuid()) @db.Uuid
+  code        MembershipPlanCode @unique
+  displayName String   @db.VarChar(100)
+  status      PlanStatus @default(ACTIVE)
 
-  memberships AccountMembership[]
+  displayPrice Decimal @db.Decimal(10, 2)
+  durationDays Int     @default(0)
+
+  openLimit         Int @default(10)
+  shortlistLimit    Int @default(0)
+  profileSlotLimit  Int @default(1)
+
+  contactAccess      Boolean   @default(false)
+  fullHoroscopeAccess Boolean  @default(false)
+
+  printProfile    Boolean @default(false)
+  printHoroscope  Boolean @default(false)
+
+  searchLevel SearchLevel @default(BASIC)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
 
   @@map("membership_plans")
 }
 
-model AccountMembership {
+model Subscription {
   id        String           @id @default(uuid())
   accountId String           @db.Uuid
   planId    String
-  planCode  String           @db.VarChar(50)
-  planName  String           @db.VarChar(100)
-  planPrice Decimal          @db.Decimal(10, 2)
-  currency  String           @default("INR") @db.VarChar(3)
-  startsAt  DateTime
-  expiresAt DateTime?
   status    MembershipStatus @default(ACTIVE)
+
+  startedAt DateTime
+  expiresAt DateTime?
+
+  assignedByAdminId String? @db.Uuid
+
+  snapshotPlanCode        MembershipPlanCode
+  snapshotPlanName        String         @db.VarChar(100)
+  snapshotDisplayPrice    Decimal        @db.Decimal(10, 2)
+  snapshotDurationDays    Int            @default(0)
+
+  snapshotOpenLimit        Int @default(10)
+  snapshotShortlistLimit   Int @default(0)
+  snapshotProfileSlotLimit Int @default(1)
+
+  snapshotContactAccess       Boolean @default(false)
+  snapshotFullHoroscopeAccess Boolean @default(false)
+
+  snapshotPrintProfile   Boolean @default(false)
+  snapshotPrintHoroscope Boolean @default(false)
+
+  snapshotSearchLevel SearchLevel @default(BASIC)
+
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   account Account        @relation(fields: [accountId], references: [id])
   plan    MembershipPlan @relation(fields: [planId], references: [id])
 
+  profileOpens ProfileOpen[]
+  usage        MembershipUsage?
+
   @@index([accountId])
   @@index([planId])
-  @@map("account_memberships")
+  @@index([status])
+  @@index([expiresAt])
+  @@map("subscriptions")
+}
+
+model SystemSetting {
+  key             String   @id @db.VarChar(100)
+  value           String   @db.Text
+  updatedAt       DateTime @updatedAt
+  updatedByAdminId String? @db.Uuid
+
+  @@map("system_settings")
+}
+
+model MembershipUsage {
+  id             String @id @default(uuid())
+  accountId      String @unique @db.Uuid
+  subscriptionId String @unique
+
+  openUsed Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  account      Account      @relation(fields: [accountId], references: [id])
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@map("membership_usage")
+}
+
+model ProfileOpen {
+  id               String   @id @default(uuid())
+  viewerAccountId  String   @db.Uuid
+  profileId        String   @db.Uuid
+  openedAt         DateTime @default(now())
+  subscriptionId   String
+
+  viewerAccount Account     @relation(fields: [viewerAccountId], references: [id], onDelete: Cascade)
+  profile       Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  subscription  Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([viewerAccountId, profileId])
+  @@index([viewerAccountId])
+  @@index([profileId])
+  @@map("profile_opens")
 }
 
 model AccountStatusHistory {
@@ -246,7 +351,7 @@ model AccountStatusHistory {
   changedBy String?      @db.VarChar(50)
   changedAt DateTime     @default(now())
 
-  account Account @relation(fields: [accountId], references: [id])
+  account Account @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   @@index([accountId, changedAt])
   @@map("account_status_history")
@@ -549,6 +654,7 @@ model Profile {
   verificationQueue VerificationQueue?
   reviews           ProfileReview[]
   shortlists        Shortlist[]
+  profileOpens      ProfileOpen[]
 
   @@index([accountId])
   @@index([currentStatus])

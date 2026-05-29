@@ -1,5 +1,6 @@
 import React from 'react';
 import { LazyImage } from '@/components/ui/atoms/LazyImage';
+import { getImageUrl } from '@/utils/getImageUrl';
 
 
 interface ImageObject {
@@ -17,7 +18,7 @@ interface ProfileShowcaseCardProps {
     firstNameTa?: string | null;
     lastNameTa?: string | null;
     profilePhoto?: string | ImageObject | null;
-    gender?: string;
+    gender?: string | null;
   };
   isTamil?: boolean;
 }
@@ -49,12 +50,11 @@ export const ProfileShowcaseCard: React.FC<ProfileShowcaseCardProps> = React.mem
     ? [profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' ') || [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ') || 'Profile'
     : [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ') || [profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' ') || 'Profile';
 
-  const photoUrl = typeof profile.profilePhoto === 'string'
+const photoUrl =
+  typeof profile.profilePhoto === 'string'
     ? profile.profilePhoto
     : profile.profilePhoto?.url || '';
-  const imageUrl = photoUrl && (/^https?:\/\//i.test(photoUrl) || photoUrl.startsWith('/media/'))
-    ? photoUrl
-    : renderPlaceholderSVG(fullName, isTamil);
+const imageUrl = getImageUrl(photoUrl) || renderPlaceholderSVG(fullName, isTamil);
 
   return (
     <div className="

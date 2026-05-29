@@ -33,7 +33,7 @@ export const browseSchema = z.object({
   rasi: z.string().optional(),
   nakshatra: z.string().optional(),
   laganam: z.string().optional(),
-  dosham: z.string().optional(),
+
 
   // Professional
   education: z.string().optional(),

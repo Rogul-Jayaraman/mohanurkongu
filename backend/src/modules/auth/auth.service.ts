@@ -133,18 +133,26 @@ export class AuthService {
         data: { accountId: account.id, roleId: userRole.id },
       });
 
-      const basicPlan = await tx.membershipPlan.findUnique({ where: { code: 'BASIC' } });
-      if (basicPlan) {
-        await tx.accountMembership.create({
+      const freePlan = await tx.membershipPlan.findUnique({ where: { code: 'BRONZE' } });
+      if (freePlan) {
+        await tx.subscription.create({
           data: {
             accountId: account.id,
-            planId: basicPlan.id,
-            planCode: basicPlan.code,
-            planName: basicPlan.displayName,
-            planPrice: basicPlan.price,
-            currency: basicPlan.currency,
-            startsAt: new Date(),
+            planId: freePlan.id,
+            startedAt: new Date(),
             status: 'ACTIVE',
+            snapshotPlanCode: freePlan.code,
+            snapshotPlanName: freePlan.displayName,
+            snapshotDisplayPrice: freePlan.displayPrice,
+            snapshotDurationDays: freePlan.durationDays,
+            snapshotOpenLimit: freePlan.openLimit,
+            snapshotShortlistLimit: freePlan.shortlistLimit,
+            snapshotProfileSlotLimit: freePlan.profileSlotLimit,
+            snapshotContactAccess: freePlan.contactAccess,
+            snapshotFullHoroscopeAccess: freePlan.fullHoroscopeAccess,
+            snapshotPrintProfile: freePlan.printProfile,
+            snapshotPrintHoroscope: freePlan.printHoroscope,
+            snapshotSearchLevel: freePlan.searchLevel,
           },
         });
       }
@@ -233,7 +241,20 @@ export class AuthService {
 
     await enqueueAuditEvent('LOGIN_SUCCESS', credential.accountId, { device: device?.fingerprint });
 
+    this.notificationService.sendSecurityAlert(
+      dto.identifier,
+      new Date().toISOString(),
+      device?.fingerprint || 'Unknown device',
+      '',
+      `${appConfig.appUrl}/account/activity`,
+      `${appConfig.appUrl}/account/security`,
+    ).catch(() => {});
+
     const roles = credential.account.roles.map((r: any) => r.role.code);
+
+    if (roles.includes('ADMIN')) {
+      throw new AppError(403, ErrorCodes.AUTH_FORBIDDEN, 'ADMIN_PORTAL_REQUIRED');
+    }
 
     const session = await this.sessionService.createSession(
       credential.accountId,
@@ -246,7 +267,7 @@ export class AuthService {
       accessToken: session.accessToken,
       refreshToken: session.refreshToken,
       accountId: credential.accountId,
-      role: roles.includes('ADMIN') ? ('ADMIN' as const) : ('USER' as const),
+      role: 'USER' as const,
       sessionId: session.sessionId,
     };
   }

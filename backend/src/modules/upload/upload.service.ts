@@ -1,6 +1,5 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import os from 'node:os';
 import { StorageService } from '../storage/storage.service.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
@@ -56,13 +55,7 @@ export class UploadService {
       pipelineResult.outputPath,
     );
 
-    try {
-      await fs.unlink(file.path).catch(() => {});
-      const tempDir = path.dirname(file.path);
-      if (tempDir.startsWith(os.tmpdir())) {
-        await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
-      }
-    } catch {}
+    await fs.unlink(file.path).catch(() => {});
 
     await this.pipeline.cleanup(pipelineResult);
 

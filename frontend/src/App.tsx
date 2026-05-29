@@ -32,6 +32,7 @@ import MyAccount from '@/pages/user/MyAccount';
 import SystemSettings from '@/pages/admin/Settings';
 import NotFound from '@/pages/common/NotFound';
 import ComingSoonPage from '@/pages/common/ComingSoonPage';
+import PlanUpgrade from '@/pages/user/PlanUpgrade';
 
 // Matrimony Admin Pages
 import ProfileVerification from '@/pages/admin/matrimony/Verification';
@@ -106,7 +107,7 @@ const router = createBrowserRouter([
               { path: "manamaalai/my-account", element: <MyAccount /> },
               { path: "manamaalai/new-profile", element: <NewProfile /> },
               { path: "manamaalai/view-profile/:id", element: <ProfileView /> },
-              { path: "manamaalai/plan-upgrade", element: <ComingSoonPage /> },
+              { path: "manamaalai/plan-upgrade", element: <PlanUpgrade /> },
             ],
           },
         ],

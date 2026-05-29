@@ -17,8 +17,7 @@ export function mapAccountToUser(account: BackendAccount, accessToken: string): 
     email: account.email,
     phone: account.phone || '',
     role: roles.includes('ADMIN') ? 'ADMIN' : 'USER',
-    plan: account.membership?.planCode === 'PREMIUM' ? 'PREMIUM' : 'BASIC',
-    planExpiry: account.membership?.expiresAt || null,
+    membership: account.membership,
     createdAt: account.createdAt,
     updatedAt: account.createdAt,
   };

@@ -152,9 +152,27 @@ export const WelcomeHeaderSection: React.FC<{ user: any; isLoading?: boolean }> 
                   <div className="h-4 w-20 skeleton rounded-lg" />
                 ) : (
                   <span className="text-sm font-serif font-black tracking-wide text-rosewood">
-                    {t("dashboard:basic_plan")}
+                    {user?.membership?.planCode || t("dashboard:basic_plan")}
                   </span>
                 )}
+              </div>
+              {user?.membership?.expiresAt && (
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-rosewood/50 font-bold uppercase tracking-wider">
+                    {i18n.language === 'ta' ? 'காலாவதி' : 'Expires'}
+                  </span>
+                  <span className="text-xs text-rosewood/70">
+                    {formatDate(user.membership.expiresAt)}
+                  </span>
+                </div>
+              )}
+              <div className="pt-1">
+                <Link
+                  to="/manamaalai/plan-upgrade"
+                  className="block text-center text-[10px] font-bold uppercase tracking-widest text-gold hover:text-rosewood transition-colors"
+                >
+                  {i18n.language === 'ta' ? 'மேம்படுத்துக' : 'Upgrade'}
+                </Link>
               </div>
             </div>
           </div>

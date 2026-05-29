@@ -5,8 +5,10 @@ export enum AccountRole {
 }
 
 export enum AccountPlan {
-  BASIC = 'BASIC',
-  PREMIUM = 'PREMIUM',
+  BRONZE = 'BRONZE',
+  SILVER = 'SILVER',
+  GOLD = 'GOLD',
+  PLATINUM = 'PLATINUM',
 }
 
 export enum VerificationStatus {

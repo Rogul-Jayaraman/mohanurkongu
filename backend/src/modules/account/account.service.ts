@@ -18,7 +18,7 @@ export class AccountService {
 
     const enTranslation = account.translations.find((t) => t.language === 'EN');
     const taTranslation = account.translations.find((t) => t.language === 'TA');
-    const activeMembership = account.memberships[0];
+    const activeMembership = account.subscriptions[0];
 
     return {
       accountNo: account.accountNo,
@@ -30,7 +30,7 @@ export class AccountService {
       phone: account.credential?.phone || '',
       membership: activeMembership
         ? {
-            planCode: activeMembership.planCode,
+            planCode: activeMembership.snapshotPlanCode,
             expiresAt: activeMembership.expiresAt,
           }
         : null,

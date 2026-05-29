@@ -63,6 +63,7 @@ const NAV_KEYS: { id: string; key: string }[] = [
   { id: "professional", key: "professional" },
   { id: "family", key: "family" },
   { id: "assets", key: "assets" },
+  { id: "contact", key: "contact" },
   { id: "horoscope", key: "horoscope" },
   { id: "gallery", key: "gallery" },
   { id: "partner-preference", key: "partner_preference" },
@@ -841,6 +842,41 @@ const ProfileViewPartnerPreference: React.FC<{
 };
 
 // ═══════════════════════════════════════════════════════════
+// ProfileViewContact
+// ═══════════════════════════════════════════════════════════
+const ProfileViewContact: React.FC<{ profile: any; isLoading: boolean }> = ({ profile, isLoading }) => {
+  const { t, i18n } = useTranslation(["common"]);
+  const isTamil = i18n.language === "ta";
+  const locked = profile?.contactLocked;
+
+  return (
+    <SectionCard3D isLoading={isLoading}>
+      <SectionHeaderRedesigned
+        title={isTamil ? 'தொடர்பு தகவல்' : 'Contact'}
+        icon={<Info size={16} />}
+        gradient="bg-rosewood-gradient"
+        isTamil={isTamil}
+        isLoading={isLoading}
+      />
+      {isLoading ? null : locked ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <Lock size={32} className="text-slate-300 mb-3" />
+          <p className="text-sm text-slate-500 font-medium">
+            {isTamil
+              ? 'தொடர்பு தகவலைப் பார்க்க மேம்படுத்தவும்'
+              : 'Upgrade your plan to view contact information'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
+          <DetailRow label={isTamil ? 'தொலைபேசி' : 'Phone'} value={profile?.phone || '-'} isLoading={isLoading} />
+          <DetailRow label={isTamil ? 'மின்னஞ்சல்' : 'Email'} value={profile?.email || '-'} isLoading={isLoading} />
+        </div>
+      )}
+    </SectionCard3D>
+  );
+};
+
 // ProfileViewHoroscope
 // ═══════════════════════════════════════════════════════════
 const ProfileViewHoroscope: React.FC<{ profile: any; isLoading: boolean }> = ({
@@ -865,7 +901,7 @@ const ProfileViewHoroscope: React.FC<{ profile: any; isLoading: boolean }> = ({
     ? getEnumLabel(profile.dosham, DOSHAM_OPTIONS)
     : "";
   const hasCharts =
-    profile?.horoscope && (profile.horoscope.rasi || profile.horoscope.navamsa);
+    profile?.horoscope && (profile.horoscope.rasi || profile.horoscope.navamsa || (profile.horoscope.mode === 'GENERATED' && profile.horoscope.horoscopeJson));
 
   return (
     <SectionCard3D isLoading={isLoading}>
@@ -1205,7 +1241,15 @@ const ProfileView: React.FC = () => {
         </AnimatedSection>
         <SectionDivider />
 
-        {/* Section 6: Partner Preference */}
+        {/* Section 6: Contact */}
+        <AnimatedSection>
+          <div id="section-contact" className="scroll-mt-20">
+            <ProfileViewContact profile={profile} isLoading={isLoading} />
+          </div>
+        </AnimatedSection>
+        <SectionDivider />
+
+        {/* Section 7: Partner Preference -- was 6 before Contact addition */}
         <AnimatedSection>
           <div id="section-partner-preference" className="scroll-mt-20">
             <ProfileViewPartnerPreference

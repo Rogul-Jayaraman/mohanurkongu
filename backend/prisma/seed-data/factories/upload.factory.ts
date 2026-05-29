@@ -3,7 +3,7 @@ import { SEED_CONFIG } from '../config.js';
 import {
   randomInt, randomDateBefore, randomDateAfter,
   generatePublicId, generateUploadToken, generateChecksum,
-  pickRandom, randomBool, pickNRandom, shuffleArray, progressBar,
+  pickRandom, randomBool, weightedPick, progressBar,
 } from '../helpers.js';
 
 const MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
@@ -22,61 +22,70 @@ const UPLOAD_COMPOSITION: UploadDefinition[] = [
   { status: 'DELETED', count: SEED_CONFIG.UPLOAD_DISTRIBUTION.DELETED },
 ];
 
-function randomSize(status: string): number {
-  if (status === 'TEMP') return randomInt(5000, 50000);
-  if (status === 'ACTIVE') return randomInt(20000, 500000);
-  if (status === 'ATTACHED') return randomInt(10000, 200000);
-  if (status === 'DELETE_PENDING') return randomInt(30000, 400000);
-  return randomInt(1000, 100000);
+export interface UploadIndex {
+  byAccount: Map<string, { profile: string[]; gallery: string[]; horoscope: string[] }>;
+  total: number;
 }
 
-function randomDimensions(): { w: number; h: number } {
-  const ratios = [
-    { w: 400, h: 500 }, { w: 800, h: 1000 }, { w: 1200, h: 1500 },
-    { w: 600, h: 600 }, { w: 200, h: 300 }, { w: 1024, h: 768 },
-  ];
-  return pickRandom(ratios);
+function randomSize(status: string): number {
+  switch (status) {
+    case 'TEMP': return randomInt(5000, 100000);
+    case 'ACTIVE': return randomInt(50000, 2000000);
+    case 'ATTACHED': return randomInt(30000, 500000);
+    case 'DELETE_PENDING': return randomInt(50000, 800000);
+    default: return randomInt(1000, 100000);
+  }
 }
 
 export async function seedUploads(
   prisma: PrismaClient,
   accountIndex: Record<number, any>,
-): Promise<string[]> {
-  const allUploadIds: string[] = [];
+): Promise<UploadIndex> {
   const accountIds = Object.values(accountIndex).map((ai: any) => ai.account.id);
-  let totalUploads = 0;
-  const uploadDefs = UPLOAD_COMPOSITION;
-
-  for (const def of uploadDefs) {
-    totalUploads += def.count;
+  const byAccount = new Map<string, { profile: string[]; gallery: string[]; horoscope: string[] }>();
+  for (const aid of accountIds) {
+    byAccount.set(aid, { profile: [], gallery: [], horoscope: [] });
   }
 
+  let totalUploads = 0;
+  for (const def of UPLOAD_COMPOSITION) totalUploads += def.count;
   let created = 0;
 
-  for (const def of uploadDefs) {
-    const batchSize = 50;
+  for (const def of UPLOAD_COMPOSITION) {
+    for (let i = 0; i < def.count; i++) {
+      const ownerId = pickRandom(accountIds);
+      const mimeIdx = randomInt(0, MIME_TYPES.length - 1);
+      const dims = (def.status === 'ACTIVE' || def.status === 'ATTACHED')
+        ? pickRandom([
+            { w: 400, h: 500 }, { w: 800, h: 1000 }, { w: 1200, h: 1500 },
+            { w: 600, h: 600 }, { w: 200, h: 300 }, { w: 1920, h: 2560 },
+          ])
+        : { w: 0, h: 0 };
+      const now = new Date();
+      const createdAt = def.status === 'TEMP'
+        ? randomDateBefore(now, 7)
+        : randomDateBefore(now, 90);
 
-    for (let b = 0; b < def.count; b += batchSize) {
-      const batch = Math.min(batchSize, def.count - b);
-      const data: any[] = [];
+      const uploadType = weightedPick([
+        { value: 'profile_photo', weight: 35 },
+        { value: 'gallery_photo', weight: 40 },
+        { value: 'horoscope_chart', weight: 10 },
+        { value: 'temp', weight: 15 },
+      ]);
 
-      for (let j = 0; j < batch; j++) {
-        const ownerId = pickRandom(accountIds);
-        const mimeIdx = randomInt(0, MIME_TYPES.length - 1);
-        const dims = def.status === 'ACTIVE' || def.status === 'ATTACHED' ? randomDimensions() : { w: 0, h: 0 };
-        const now = new Date();
-        const createdAt = randomDateBefore(now, 60);
+      const isUsable = def.status === 'ACTIVE' || def.status === 'ATTACHED';
 
-        let timestamps: any = { createdAt, updatedAt: createdAt };
-        if (def.status === 'ACTIVE') {
-          timestamps.updatedAt = randomDateAfter(createdAt, 30);
-        }
+      const folder = uploadType === 'profile_photo' ? 'profiles'
+        : uploadType === 'gallery_photo' ? 'gallery'
+        : uploadType === 'horoscope_chart' ? 'horoscope'
+        : 'temp';
 
-        const upload: any = {
+      const upload = await prisma.upload.create({
+        data: {
           publicId: generatePublicId(),
-          uploadToken: generateUploadToken(),
+          uploadToken: def.status !== 'DELETED' ? generateUploadToken() : null,
           ownerAccountId: ownerId,
-          objectKey: `profiles/${ownerId}/${generatePublicId()}.${EXTENSIONS[mimeIdx]}`,
+          objectKey: `${folder}/${ownerId}/${generatePublicId()}.${EXTENSIONS[mimeIdx]}`,
           originalFileName: `photo_${generatePublicId()}.${EXTENSIONS[mimeIdx]}`,
           mimeType: MIME_TYPES[mimeIdx],
           extension: EXTENSIONS[mimeIdx],
@@ -86,40 +95,26 @@ export async function seedUploads(
           version: 1,
           width: dims.w > 0 ? dims.w : null,
           height: dims.h > 0 ? dims.h : null,
-          ...timestamps,
-        };
+          lastAccessedAt: def.status === 'ACTIVE' ? randomDateBefore(now, 30) : null,
+          createdAt,
+          updatedAt: def.status === 'ACTIVE'
+            ? randomDateAfter(createdAt, 30)
+            : createdAt,
+          deletedAt: def.status === 'DELETED' ? new Date() : null,
+        },
+      });
 
-        if (def.status === 'DELETED') {
-          upload.deletedAt = new Date();
-        }
-
-        data.push(upload);
+      if (isUsable) {
+        const entry = byAccount.get(ownerId) || byAccount.values().next().value;
+        if (uploadType === 'profile_photo') entry.profile.push(upload.id);
+        else if (uploadType === 'gallery_photo') entry.gallery.push(upload.id);
+        else if (uploadType === 'horoscope_chart') entry.horoscope.push(upload.id);
       }
 
-      for (const d of data) {
-        await prisma.upload.create({ data: d });
-        created++;
-        allUploadIds.push('');
-        progressBar(created, totalUploads, 'Uploads');
-      }
+      created++;
+      progressBar(created, totalUploads, 'Uploads');
     }
   }
 
-  const allUploads = await prisma.upload.findMany({
-    where: { status: { in: ['ACTIVE', 'ATTACHED'] } },
-    select: { id: true, status: true, ownerAccountId: true },
-  });
-
-  const result = allUploads.map(u => u.id);
-  return result;
-}
-
-export async function getUploadsByOwner(
-  prisma: PrismaClient,
-  accountId: string,
-  status?: string,
-): Promise<any[]> {
-  const where: any = { ownerAccountId: accountId };
-  if (status) where.status = status;
-  return prisma.upload.findMany({ where, select: { id: true, status: true } });
+  return { byAccount, total: totalUploads };
 }

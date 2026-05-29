@@ -17,7 +17,7 @@ export class VerificationController {
   sendRegistrationOtp = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const otp = await this.verificationService.sendOtp('EMAIL', req.body.email, 'REGISTER');
-      await this.notificationService.sendRegistrationOtpEmail(req.body.email, otp);
+      this.notificationService.sendRegistrationOtpEmail(req.body.email, otp).catch(() => {});
       sendSuccess(res, null);
     } catch (err) {
       next(err);
@@ -56,7 +56,7 @@ export class VerificationController {
   sendPasswordResetOtp = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const otp = await this.verificationService.sendOtp('EMAIL', req.body.email, 'RESET_PASSWORD');
-      await this.notificationService.sendPasswordResetOtpEmail(req.body.email, otp);
+      this.notificationService.sendPasswordResetOtpEmail(req.body.email, otp).catch(() => {});
       sendSuccess(res, null);
     } catch (err) {
       next(err);

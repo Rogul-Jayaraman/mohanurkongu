@@ -145,6 +145,9 @@ export interface Profile {
   updatedAt: string;
   canViewFullProfile: boolean;
 
+  contactLocked?: boolean;
+  horoscopeLocked?: boolean;
+
   [key: string]: any;
 }
 
@@ -172,6 +175,22 @@ export interface ProfileSummary {
   currentCountryTa: string | null;
   profilePhoto: string | ImageObject | null;
   isShortlisted: boolean;
+}
+
+export interface ShowcaseProfile {
+  id: string;
+  regNo: string;
+  firstNameEn: string | null;
+  lastNameEn: string | null;
+  firstNameTa: string | null;
+  lastNameTa: string | null;
+  gender: string | null;
+  profilePhoto: ImageObject | null;
+}
+
+export interface ShowcaseProfilesResponse {
+  brides: ShowcaseProfile[];
+  grooms: ShowcaseProfile[];
 }
 
 export interface BrowseProfilesParams {

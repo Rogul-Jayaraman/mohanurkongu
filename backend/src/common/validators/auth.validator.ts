@@ -34,6 +34,7 @@ export const signupSchema = z.object({
 export const loginSchema = z.object({
   identifier: z.string().min(1, 'REQUIRED'),
   password: z.string().min(1, 'REQUIRED'),
+  portal: z.enum(['USER', 'ADMIN']).optional(),
 });
 
 export const refreshSchema = z.object({

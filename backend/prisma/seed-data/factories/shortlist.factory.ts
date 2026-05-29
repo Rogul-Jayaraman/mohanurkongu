@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
-import { randomInt, pickRandom, shuffleArray, progressBar } from '../helpers.js';
+import { SEED_CONFIG } from '../config.js';
+import { randomInt, pickRandom, shuffleArray, randomBool, progressBar } from '../helpers.js';
 
 export async function seedShortlists(
   prisma: PrismaClient,
@@ -23,18 +24,20 @@ export async function seedShortlists(
 
   let created = 0;
 
-  const hotProfileCount = Math.min(5, activeProfileIds.length);
+  const hotProfileCount = Math.min(8, activeProfileIds.length);
   const hotProfiles = shuffleArray(activeProfileIds).slice(0, hotProfileCount);
 
-  const batchSize = 50;
   const entries: { profileId: string; accountId: string; createdAt: Date }[] = [];
 
   for (const hp of hotProfiles) {
     const possibleAccounts = accountIds.filter(
       (aid: string) => aid !== profileOwnerMap.get(hp),
     );
-    const shortlistCount = randomInt(50, 100);
-    const chosen = shuffleArray(possibleAccounts).slice(0, shortlistCount);
+    const shortlistCount = randomInt(
+      SEED_CONFIG.HOT_PROFILE_SHORTLISTS.min,
+      SEED_CONFIG.HOT_PROFILE_SHORTLISTS.max + 1,
+    );
+    const chosen = shuffleArray(possibleAccounts).slice(0, Math.min(shortlistCount, possibleAccounts.length));
     for (const acctId of chosen) {
       entries.push({
         profileId: hp,
@@ -43,6 +46,10 @@ export async function seedShortlists(
       });
     }
   }
+
+  const coldProfileIds = shuffleArray(activeProfileIds.filter(
+    id => !hotProfiles.includes(id)
+  ));
 
   while (entries.length < targetCount) {
     const profileId = pickRandom(activeProfileIds);
@@ -63,6 +70,7 @@ export async function seedShortlists(
     }
   }
 
+  const batchSize = 100;
   for (let b = 0; b < entries.length; b += batchSize) {
     const batch = entries.slice(b, b + batchSize);
     for (const entry of batch) {
@@ -70,7 +78,7 @@ export async function seedShortlists(
         await prisma.shortlist.create({ data: entry });
         created++;
       } catch {
-        // Skip duplicates
+        // skip duplicates
       }
       progressBar(created, targetCount, 'Shortlists');
     }

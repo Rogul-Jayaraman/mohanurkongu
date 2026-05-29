@@ -26,6 +26,7 @@ frontend/build/
 *.swo
 .DS_Store
 
+
 # Environment variables
 .env
 .env.local
@@ -42,5 +43,13 @@ temp/
 
 #refrence files
 refrence/
-
 storage/
+
+# agent
+.agents/
+.claude/
+.opencode/
+
+
+#docs
+docs/

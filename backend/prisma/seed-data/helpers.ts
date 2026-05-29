@@ -131,6 +131,32 @@ export function generateChecksum(): string {
   return result;
 }
 
+export function pickWeightedFromMap(map: Record<string, number>): string {
+  const entries = Object.entries(map);
+  const weights = entries.map(([, w]) => w);
+  const item = weightedPickRaw(entries, weights);
+  return item[0];
+}
+
+export function skewedRandom(skewFactor: number): number {
+  const u = rng();
+  if (skewFactor === 0) return u;
+  return Math.pow(u, Math.exp(-skewFactor));
+}
+
+export function generateLongText(wordCount: number): string {
+  const words = [
+    'திருமணம்', 'மணமக்கள்', 'குடும்பம்', 'அன்பு', 'பண்பாடு', 'மரபு',
+    'வாழ்க்கை', 'இணக்கம்', 'சமுதாயம்', 'கல்வி', 'பொருளாதாரம்', 'நம்பிக்கை',
+    'எதிர்காலம்', 'வெற்றி', 'சந்தோஷம்', 'மகிழ்ச்சி', 'நிறைவேறும்', 'ஆசி',
+    'வேண்டுதல்', 'வாழ்த்து', 'looking', 'caring', 'understanding', 'respectful',
+    'educated', 'settled', 'kind', 'loving', 'family', 'values', 'tradition',
+    'culture', 'modern', 'professional', 'sincere', 'honest', 'compatible',
+    'partner', 'life', 'companion', 'relationship', 'marriage',
+  ];
+  return Array.from({ length: wordCount }, () => pickRandom(words)).join(' ');
+}
+
 export const progressBar = (current: number, total: number, label: string) => {
   const pct = Math.round((current / total) * 100);
   const bar = '█'.repeat(Math.floor(pct / 5)) + '░'.repeat(20 - Math.floor(pct / 5));

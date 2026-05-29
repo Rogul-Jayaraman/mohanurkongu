@@ -166,6 +166,29 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
                             {t('adminMatrimony:verification.submittedOn')}: {new Date(profile.submittedAt).toLocaleDateString()}
                         </div>
                     )}
+
+                    {(adminActions?.onAccept || adminActions?.onReject) && (
+                        <div className="grid grid-cols-2 gap-2">
+                            {adminActions.onAccept && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); adminActions.onAccept!(profile.id); }}
+                                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-linear-to-b from-emerald-500 to-emerald-700 text-white shadow-sm hover:shadow-md hover:from-emerald-600 hover:to-emerald-800 active:scale-95 transition-all duration-200 text-[10px] font-bold tracking-wide"
+                                >
+                                    <Check size={14} strokeWidth={2.5} />
+                                    {t('common:approve') || 'Approve'}
+                                </button>
+                            )}
+                            {adminActions.onReject && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); adminActions.onReject!(profile.id); }}
+                                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white text-rosewood/70 border border-red-200 shadow-sm hover:bg-red-50 hover:border-red-300 hover:text-red-600 active:scale-95 transition-all duration-200 text-[10px] font-bold tracking-wide"
+                                >
+                                    <X size={14} strokeWidth={2.5} />
+                                    {t('common:reject') || 'Reject'}
+                                </button>
+                            )}
+                        </div>
+                    )}
                     
                     <button
                         onClick={(e) => { e.stopPropagation(); handleViewProfile(); }}

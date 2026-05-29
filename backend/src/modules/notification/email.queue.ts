@@ -57,31 +57,5 @@ export async function enqueueTemplateEmail<T extends EmailTemplate>(
   await queue.add('send-template-email', jobData);
 }
 
-export async function enqueueOtpEmail(to: string, otp: string, purpose: string): Promise<void> {
-  if (purpose === 'REGISTER') {
-    await enqueueTemplateEmail('email-verification', {
-      to,
-      verifyUrl: '',
-      unsubscribeUrl: '',
-    });
-  } else {
-    await enqueueTemplateEmail('password-reset', {
-      to,
-      resetUrl: '',
-      unsubscribeUrl: '',
-    });
-  }
-}
-
-export async function enqueueWelcomeEmail(to: string, name: string): Promise<void> {
-  await enqueueTemplateEmail('welcome', {
-    to,
-    name,
-    profileUrl: '',
-    exploreUrl: '',
-    unsubscribeUrl: '',
-  });
-}
-
 export { SUBJECT_MAP };
 export type { EmailTemplate };
