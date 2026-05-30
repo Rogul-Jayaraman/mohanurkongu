@@ -7,6 +7,8 @@ import rateLimit from 'express-rate-limit';
 import type { UploadController } from './upload.controller.js';
 import { requireSession } from '../../common/middleware/requireAuth.js';
 
+const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+
 const diskStorage = multer.diskStorage({
   destination: os.tmpdir(),
   filename: (_req, file, cb) => {
@@ -15,7 +17,17 @@ const diskStorage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage: diskStorage, limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({
+  storage: diskStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_MIMES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Allowed: JPEG, PNG, WEBP, HEIC, HEIF'));
+    }
+  },
+});
 
 const uploadLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -30,13 +42,9 @@ export function createUploadRoutes(controller: UploadController): Router {
 
   router.post(
     '/uploads',
-    (req, _res, next) => { console.log('[upload.routes] requireSession start'); next(); },
     requireSession,
-    (req, _res, next) => { console.log('[upload.routes] requireSession done, uploadLimiter start'); next(); },
     uploadLimiter,
-    (req, _res, next) => { console.log('[upload.routes] uploadLimiter done, multer start'); next(); },
     upload.single('file'),
-    (req, _res, next) => { console.log('[upload.routes] multer done, controller start'); next(); },
     controller.upload,
   );
 

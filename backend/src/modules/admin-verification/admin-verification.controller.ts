@@ -48,7 +48,7 @@ export class AdminVerificationController {
       const { reasonEn, reasonTa } = req.body;
 
       if (!reasonEn || reasonEn.trim().length === 0) {
-        throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'REJECTION_REASON_REQUIRED');
+        throw new AppError(400, ErrorCodes.VERIFICATION_REASON_REQUIRED, ErrorCodes.VERIFICATION_REASON_REQUIRED);
       }
 
       const result = await this.verificationService.rejectProfile(

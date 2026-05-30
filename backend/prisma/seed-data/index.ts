@@ -16,6 +16,7 @@ import {
 import { seedProfileOpens, seedAdminAuditBulk } from './factories/audit.factory.js';
 import { seedEdgeCases } from './factories/edge-case.factory.js';
 import { seedSecurityTestData, seedAccountStatusTransitions } from './factories/security.factory.js';
+import { seedMockImages } from './factories/mock-images.factory.js';
 
 const prisma = new PrismaClient();
 
@@ -136,6 +137,10 @@ export async function generateTestData(): Promise<void> {
     console.log('  → Seeding bulk admin audit events...');
     await seedAdminAuditBulk(prisma, adminAccountIds, profileIndex, 500);
   }
+
+  // ── Phase 13: Real Mock Images ──
+  console.log('\n🔷 Phase 13/13 — Seeding real mock images...');
+  await seedMockImages(prisma, accountIndex, profileIndex);
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log('\n' + '━'.repeat(60));

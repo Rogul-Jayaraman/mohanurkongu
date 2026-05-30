@@ -47,7 +47,7 @@ const DIETS = ['VEGETARIAN', 'NON_VEGETARIAN'] as const;
 const MARITAL_STATUSES = ['NEVER_MARRIED', 'DIVORCED', 'WIDOWED'] as const;
 const BLOOD_GROUPS = ['A_POSITIVE', 'A_NEGATIVE', 'B_POSITIVE', 'B_NEGATIVE', 'O_POSITIVE', 'O_NEGATIVE', 'AB_POSITIVE', 'AB_NEGATIVE'] as const;
 const PROFILE_FORS = ['MYSELF', 'MY_SON', 'MY_DAUGHTER', 'MY_SISTER', 'MY_BROTHER'] as const;
-const RESIDENCES = ['OWN_HOUSE', 'RENTED'] as const;
+const RESIDENCES = ['OWNED', 'RENTED'] as const;
 
 const schemas: Record<string, z.ZodType> = {
   firstNameEn: z.string().min(NAME_MIN, `PROFILE_FIRST_NAME_TOO_SHORT:${NAME_MIN}`).max(NAME_MAX, `PROFILE_FIRST_NAME_TOO_LONG:${NAME_MAX}`).regex(nameRegex, 'PROFILE_FIRST_NAME_INVALID'),

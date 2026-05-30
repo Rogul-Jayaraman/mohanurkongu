@@ -58,6 +58,7 @@ export const commonEn = {
       fri: "Fr",
       sat: "Sa"
     },
+    no_results: "No results found",
     select_year: "Select year",
     brand: "Mohanur Kongu ",
     tagline: "Manamaalai",
@@ -122,6 +123,7 @@ export const commonEn = {
     view: "View",
     create: "Create",
     shortlisted: "Shortlisted",
+    add: "Add",
     add_shortlist: "Shortlist",
     yrs: "yrs",
     estimated_income: "Estimated Income",
@@ -139,6 +141,7 @@ export const commonEn = {
     error_shortlist: "Failed to update shortlist",
     loading: "Loading...",
     error: "Error",
+    retry: "Retry",
     success: "Success",
     cancel: "Cancel",
     confirm: "Confirm",
@@ -148,6 +151,8 @@ export const commonEn = {
     confirm_delete_message: "Are you sure you want to delete this profile? This action cannot be undone and all data will be permanently removed.",
     delete_success: "Profile deleted successfully",
     delete_error: "Failed to delete profile",
+    approve: "Approve",
+    reject: "Reject",
     update: "Update",
     search: "Search....",
     save: "Save",
@@ -240,8 +245,9 @@ export const commonEn = {
       title: "Unsaved Progress",
       description: "You've meticulously crafted this profile. Would you like to preserve your progress as a draft before leaving?",
       save_draft: "Save as Draft",
-      discard: "Discard Changes",
-      keep_editing: "Keep Editing"
+      discard: "Leave Without Saving",
+      keep_editing: "Keep Editing",
+      discard_note: "Your existing saved draft will be kept. Only the current unsaved changes will be lost."
     },
     districts: {
       'TIRUVALLUR': 'Tiruvallur',

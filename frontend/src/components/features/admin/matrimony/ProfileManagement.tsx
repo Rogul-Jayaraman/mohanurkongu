@@ -15,6 +15,7 @@ import type { AdminManagedProfile } from '@/types/admin-types';
 import { toast } from 'sonner';
 
 import { Tooltip } from '@/components/ui/Tooltip';
+import { getImageUrl } from '@/utils/getImageUrl';
 
 // ═══════════════════════════════════════════════════════════
 // ProfileManagement (Main Orchestrator)
@@ -120,13 +121,14 @@ const ProfileManagement: React.FC = () => {
         {
             header: t('adminMatrimony.profiles.table.profile') || 'Matrimony Profile',
             render: (profile) => {
-                const photoValue = profile.photo;
-                const imageUrl = photoValue && typeof photoValue === 'object' && 'url' in photoValue ? (photoValue as any).url : photoValue as string | null;
+                const photoValue = profile.profilePhoto || profile.photo || (profile.photos && profile.photos[0]);
+                const rawUrl = typeof photoValue === 'string' ? photoValue : photoValue?.url || null;
+                const imageUrl = getImageUrl(rawUrl);
                 const displayName = isTamil ? ([profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' ') || [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ')) : ([profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' '));
                 return (
                     <div className="flex items-center gap-3">
                         <div className="relative w-12 h-14 rounded-lg overflow-hidden shrink-0 border border-gold/20 bg-ivory shadow-sm group-hover:scale-105 transition-transform duration-300">
-                            {imageUrl ? <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-rosewood bg-gold/10 text-xl font-serif font-bold">{displayName.charAt(0).toUpperCase()}</div>}
+                            {imageUrl ? <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" loading="lazy" decoding="async" /> : <div className="w-full h-full flex items-center justify-center text-rosewood bg-gold/10 text-xl font-serif font-bold">{displayName.charAt(0).toUpperCase()}</div>}
                         </div>
                         <div>
                             <div className="font-bold text-rosewood text-sm leading-tight mb-0.5">{displayName}</div>
@@ -181,7 +183,7 @@ const ProfileManagement: React.FC = () => {
                         </Tooltip>
                     )}
                     {profile.status === 'ARCHIVED' && (
-                        <Tooltip content="Restore">
+                        <Tooltip content={t('adminMatrimony.common.restore') || 'Restore'}>
                             <button 
                                 onClick={() => handleArchive(profile.id, profile.status)}
                                 className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-800 transition-all duration-300 shadow-sm border border-emerald-200"

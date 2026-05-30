@@ -81,10 +81,8 @@ export const SEED_CONFIG = {
   ],
 
   RESIDENCE_TYPE_DISTRIBUTION: [
-    { value: 'OWNED', weight: 55 },
-    { value: 'RENTED', weight: 25 },
-    { value: 'PARENTAL', weight: 15 },
-    { value: 'LEASED', weight: 5 },
+    { value: 'OWNED', weight: 65 },
+    { value: 'RENTED', weight: 35 },
   ],
 
   PROFILE_FOR_DISTRIBUTION: [

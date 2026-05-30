@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { ShieldCheck, CheckCircle } from 'lucide-react';
+import { ModalShell } from '@/components/ui/modals/ModalShell';
 import { useLanguage } from '@/context/LanguageContext';
 import { OTPInput } from '@/components/ui/forms/OTPInput';
 
@@ -45,120 +44,66 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
     const { language } = useLanguage();
     const isTamil = language === 'ta';
 
-    useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-        }
-        return () => { document.body.style.overflow = 'unset'; };
-    }, [isOpen]);
-
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        if (isOpen) {
-            window.addEventListener('keydown', handleEscape);
-        }
-        return () => window.removeEventListener('keydown', handleEscape);
-    }, [isOpen, onClose]);
-
-    const modalContent = (
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-                    />
-
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl flex flex-col max-h-[95vh] overflow-hidden"
+    return (
+        <ModalShell
+            isOpen={isOpen}
+            onClose={onClose}
+            icon={
+                <div className="size-10 bg-rosewood rounded-xl flex items-center justify-center shadow-md shadow-rosewood/20 shrink-0">
+                    <ShieldCheck size={20} className="text-ivory" />
+                </div>
+            }
+            title={otpBtnText}
+            size="sm"
+            footer={
+                !isOTPVerified ? (
+                    <button
+                        type="button"
+                        onClick={onVerify}
+                        disabled={verifyIsPending || otp.length !== 6}
+                        className="w-full py-3.5 bg-rosewood text-ivory font-bold rounded-xl hover:shadow-lg transition-all text-sm shadow-md shadow-rosewood/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0">
-                                <div className="flex items-center gap-4 min-w-0">
-                                    <div className="size-10 bg-rosewood-gradient rounded-xl flex items-center justify-center shadow-md shadow-rosewood/20 shrink-0">
-                                        <span className="material-symbols-outlined text-ivory text-lg font-variation-fill">verified</span>
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h3 className={`text-lg font-bold text-rosewood tracking-tight truncate leading-tight ${isTamil ? 'font-sans' : 'font-serif'}`}>
-                                            {otpBtnText}
-                                        </h3>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={onClose}
-                                    className="size-8 flex items-center justify-center rounded-full bg-rosewood-gradient text-ivory hover:rotate-90 transition-all duration-300 ml-4 shrink-0 shadow-sm shadow-rosewood/20"
-                                >
-                                    <X size={18} />
-                                </button>
-                            </div>
-
-                            <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
-                                {!isOTPVerified ? (
-                                    <div className="space-y-6">
-                                        <div className="space-y-1.5">
-                                            <p className="text-slate-600 text-sm leading-relaxed">
-                                                {otpInfoText}
-                                            </p>
-                                            <p className="text-rosewood/50 text-xs break-all font-medium">
-                                                {email}
-                                            </p>
-                                        </div>
-                                        <OTPInput
-                                            value={otp}
-                                            onChange={onOTPChange}
-                                            error={error}
-                                            onResend={onResend}
-                                            resendTimer={resendTimer}
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center justify-center py-8">
-                                        <div className="flex items-center justify-center gap-3 px-6 py-4 bg-ivory-gold-gradient rounded-2xl text-xs font-black uppercase tracking-widest">
-                                            <span className="material-symbols-outlined text-lg font-variation-fill">check_circle</span>
-                                            <span>{otpVerifySuccessText}</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {!isOTPVerified && (
-                                <div className="px-6 py-4 border-t border-slate-100 shrink-0 space-y-3">
-                                    <button
-                                        type="button"
-                                        onClick={onVerify}
-                                        disabled={verifyIsPending || otp.length !== 6}
-                                        className="w-full py-3.5 bg-rosewood text-ivory font-bold rounded-xl hover:shadow-lg transition-all text-sm shadow-md shadow-rosewood/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                    >
-                                        {verifyIsPending ? (
-                                            <>
-                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                                <span>{verifyingText}</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span className="material-symbols-outlined text-base">verified</span>
-                                                <span>{otpBtnText}</span>
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </motion.div>
+                        {verifyIsPending ? (
+                            <>
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <span>{verifyingText}</span>
+                            </>
+                        ) : (
+                            <>
+                                <ShieldCheck size={16} />
+                                <span>{otpBtnText}</span>
+                            </>
+                        )}
+                    </button>
+                ) : undefined
+            }
+        >
+            {!isOTPVerified ? (
+                <div className="space-y-6">
+                    <div className="space-y-1.5">
+                        <p className="text-rosewood/60 text-sm leading-relaxed">
+                            {otpInfoText}
+                        </p>
+                        <p className="text-rosewood/50 text-xs break-all font-medium">
+                            {email}
+                        </p>
+                    </div>
+                    <OTPInput
+                        value={otp}
+                        onChange={onOTPChange}
+                        error={error}
+                        onResend={onResend}
+                        resendTimer={resendTimer}
+                    />
+                </div>
+            ) : (
+                <div className="flex items-center justify-center py-8">
+                    <div className="flex items-center justify-center gap-3 px-6 py-4 bg-rosewood/10 rounded-2xl text-xs font-black uppercase tracking-widest text-rosewood">
+                        <CheckCircle size={20} className="text-emerald-600" />
+                        <span>{otpVerifySuccessText}</span>
+                    </div>
                 </div>
             )}
-        </AnimatePresence>
+        </ModalShell>
     );
-
-    return createPortal(modalContent, document.body);
 };

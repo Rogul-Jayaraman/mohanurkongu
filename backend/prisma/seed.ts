@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import argon2 from 'argon2';
 
 const prisma = new PrismaClient();
 
@@ -117,6 +118,10 @@ async function main() {
   const districtMap = await seedDistricts();
   await seedTaluks(districtMap);
   await seedCommunity();
+  await seedMandapamPackages();
+  await seedMandapamFacilities();
+  await seedMandapamAddons();
+  await seedDefaultAdmin();
   await setDevCascade();
 
   if (process.env.SEED_DATA === 'true') {
@@ -149,8 +154,7 @@ async function seedPlans() {
         openLimit: 10,
         shortlistLimit: 0,
         profileSlotLimit: 1,
-        contactAccess: false,
-        fullHoroscopeAccess: false,
+        viewDetails: 'BASIC',
         printProfile: false,
         printHoroscope: false,
         searchLevel: 'BASIC',
@@ -168,8 +172,7 @@ async function seedPlans() {
         openLimit: 20,
         shortlistLimit: 3,
         profileSlotLimit: 3,
-        contactAccess: false,
-        fullHoroscopeAccess: false,
+        viewDetails: 'EXTENDED',
         printProfile: true,
         printHoroscope: false,
         searchLevel: 'EXTENDED',
@@ -187,8 +190,7 @@ async function seedPlans() {
         openLimit: 30,
         shortlistLimit: 10,
         profileSlotLimit: 5,
-        contactAccess: false,
-        fullHoroscopeAccess: true,
+        viewDetails: 'ADVANCED',
         printProfile: true,
         printHoroscope: true,
         searchLevel: 'ADVANCED',
@@ -206,8 +208,7 @@ async function seedPlans() {
         openLimit: -1,
         shortlistLimit: -1,
         profileSlotLimit: 10,
-        contactAccess: true,
-        fullHoroscopeAccess: true,
+        viewDetails: 'FULL',
         printProfile: true,
         printHoroscope: true,
         searchLevel: 'FULL',
@@ -370,6 +371,242 @@ async function seedCommunity() {
     create: { communityId: community.id, code: 'BC' },
   });
   console.log(`Seeded caste: ${caste.code}`);
+}
+
+async function seedMandapamPackages() {
+  const packages = [
+    {
+      code: 'STANDARD',
+      bookingType: 'HOURLY' as const,
+      durationType: 'CUSTOM_HOURS' as const,
+      pricingType: 'HOURLY' as const,
+      pricingAmount: 5000,
+      displayNameEn: 'Standard Package',
+      displayNameTa: 'நிலையான தொகுப்பு',
+      functions: [
+        { en: 'Maternity Ceremony (Baby Shower / Bangle Ceremony)', ta: 'மெட்டர்னிட்டி விழா (பேபி ஷவர் / பேங்கிள் விழா)' },
+        { en: 'Engagement Ceremony (Nichayathartham)', ta: 'நிச்சயதார்த்தம் (நிச்சயதார்த்தம்)' },
+        { en: 'Puberty Ceremony', ta: 'பூப்புனித நீராட்டு விழா' },
+        { en: 'Naming Ceremony', ta: 'பெயர் சூட்டு விழா' },
+        { en: 'Tonsure Ceremony (Mottai)', ta: 'மொட்டை போடுதல்' },
+        { en: 'Ear Piercing Ceremony (Kaathu Kuthu)', ta: 'காது குத்தும் விழா' },
+        { en: 'Birthday Celebration', ta: 'பிறந்தநாள் கொண்டாட்டம்' },
+        { en: 'Pre-Wedding Functions', ta: 'திருமணத்திற்கு முந்தைய நிகழ்வுகள்' },
+        { en: 'Post-Wedding Functions', ta: 'திருமணத்திற்கு பிந்தைய நிகழ்வுகள்' },
+        { en: 'Other Small & Medium Family Functions', ta: 'பிற சிறிய மற்றும் நடுத்தர குடும்ப நிகழ்வுகள்' },
+      ],
+    },
+    {
+      code: 'ROYAL',
+      bookingType: 'DAY_BASED' as const,
+      durationType: 'FIXED_DAY' as const,
+      durationValue: 1,
+      pricingType: 'FIXED' as const,
+      pricingAmount: 50000,
+      displayNameEn: 'Royal Package',
+      displayNameTa: 'அரச தொகுப்பு',
+      functions: [
+        { en: 'Reception Function Only', ta: 'வரவேற்பு நிகழ்வு மட்டும்' },
+      ],
+    },
+    {
+      code: 'GRAND',
+      bookingType: 'DAY_BASED' as const,
+      durationType: 'FIXED_DAY' as const,
+      durationValue: 2,
+      pricingType: 'FIXED' as const,
+      pricingAmount: 100000,
+      displayNameEn: 'Grand Package',
+      displayNameTa: 'பெருமை தொகுப்பு',
+      functions: [
+        { en: 'Marriage Ceremony', ta: 'திருமண விழா' },
+        { en: 'Reception Function', ta: 'வரவேற்பு நிகழ்வு' },
+      ],
+    },
+  ];
+
+  for (const pkg of packages) {
+    await prisma.$transaction(async (tx) => {
+      const existingPackage = await tx.mandapamPackage.findUnique({ where: { code: pkg.code } });
+      if (existingPackage) {
+        await tx.mandapamPackage.update({ where: { code: pkg.code }, data: { status: true } });
+      } else {
+        await tx.mandapamPackage.create({
+          data: {
+            code: pkg.code,
+            bookingType: pkg.bookingType,
+            durationType: pkg.durationType,
+            durationValue: pkg.durationValue ?? null,
+            status: true,
+          },
+        });
+      }
+
+      const mandapam = await tx.mandapamPackage.findUniqueOrThrow({ where: { code: pkg.code } });
+
+      await tx.mandapamPackageTranslation.upsert({
+        where: { packageId_language: { packageId: mandapam.id, language: 'EN' } },
+        update: { displayName: pkg.displayNameEn },
+        create: { packageId: mandapam.id, language: 'EN', displayName: pkg.displayNameEn },
+      });
+      await tx.mandapamPackageTranslation.upsert({
+        where: { packageId_language: { packageId: mandapam.id, language: 'TA' } },
+        update: { displayName: pkg.displayNameTa },
+        create: { packageId: mandapam.id, language: 'TA', displayName: pkg.displayNameTa },
+      });
+
+      await tx.mandapamPackageFunction.deleteMany({ where: { packageId: mandapam.id } });
+
+      for (let i = 0; i < pkg.functions.length; i++) {
+        const fn = pkg.functions[i];
+        const createdFn = await tx.mandapamPackageFunction.create({
+          data: { packageId: mandapam.id, status: true },
+        });
+        await tx.mandapamPackageFunctionTranslation.create({
+          data: { functionId: createdFn.id, language: 'EN', name: fn.en },
+        });
+        await tx.mandapamPackageFunctionTranslation.create({
+          data: { functionId: createdFn.id, language: 'TA', name: fn.ta },
+        });
+      }
+
+      const existingPricing = await tx.mandapamPackagePricing.findFirst({
+        where: { packageId: mandapam.id, isActive: true },
+      });
+      if (!existingPricing) {
+        await tx.mandapamPackagePricing.create({
+          data: {
+            packageId: mandapam.id,
+            pricingType: pkg.pricingType,
+            amount: pkg.pricingAmount,
+            currencyCode: 'INR',
+            isActive: true,
+          },
+        });
+      }
+    });
+  }
+
+  console.log(`Seeded ${packages.length} mandapam packages`);
+}
+
+async function seedMandapamFacilities() {
+  const facilities = [
+    { iconName: 'meeting_room', chargeType: 'GENERAL' as const, nameEn: 'Main Hall', nameTa: 'பிரதான மண்டபம்' },
+    { iconName: 'restaurant', chargeType: 'GENERAL' as const, nameEn: 'Dining Hall', nameTa: 'உணவு மண்டபம்' },
+    { iconName: 'buffet', chargeType: 'GENERAL' as const, nameEn: 'Buffet Hall', nameTa: 'பூஃபே மண்டபம்' },
+    { iconName: 'local_parking', chargeType: 'GENERAL' as const, nameEn: 'General Parking Space', nameTa: 'பொது வாகன நிறுத்தம்' },
+    { iconName: 'meeting_room', chargeType: 'GENERAL' as const, nameEn: 'Bride & Groom Rooms', nameTa: 'மணமகன் மற்றும் மணமகள் அறைகள்' },
+    { iconName: 'kitchen', chargeType: 'GENERAL' as const, nameEn: 'Kitchen', nameTa: 'சமையலறை' },
+    { iconName: 'hotel_class', chargeType: 'ADDITIONAL' as const, nameEn: 'Extra Premium Rooms (If Required)', nameTa: 'கூடுதல் பிரீமியம் அறைகள் (தேவைப்பட்டால்)' },
+    { iconName: 'local_parking', chargeType: 'ADDITIONAL' as const, nameEn: 'Additional Parking Space (If Required)', nameTa: 'கூடுதல் வாகன நிறுத்தம் (தேவைப்பட்டால்)' },
+    { iconName: 'ac_unit', chargeType: 'ADDITIONAL' as const, nameEn: 'Air Conditioning (AC) Facility', nameTa: 'ஏர் கண்டிஷனிங் (ஏசி) வசதி' },
+  ];
+
+  for (const facility of facilities) {
+    const existing = await prisma.mandapamFacility.findFirst({
+      where: { iconName: facility.iconName, chargeType: facility.chargeType },
+    });
+    if (!existing) {
+      await prisma.$transaction(async (tx) => {
+        const created = await tx.mandapamFacility.create({
+          data: { iconName: facility.iconName, chargeType: facility.chargeType, status: true },
+        });
+        await tx.mandapamFacilityTranslation.create({
+          data: { facilityId: created.id, language: 'EN', name: facility.nameEn },
+        });
+        await tx.mandapamFacilityTranslation.create({
+          data: { facilityId: created.id, language: 'TA', name: facility.nameTa },
+        });
+      });
+    }
+  }
+
+  console.log(`Seeded ${facilities.length} mandapam facilities`);
+}
+
+async function seedMandapamAddons() {
+  const addons = [
+    { iconName: 'restaurant_menu', pricingType: 'FIXED' as const, amount: 15000, nameEn: 'Catering Service', nameTa: 'கேட்டரிங் சேவை' },
+    { iconName: 'photo_camera', pricingType: 'FIXED' as const, amount: 8000, nameEn: 'Photography', nameTa: 'புகைப்படம்' },
+    { iconName: 'music_note', pricingType: 'HOURLY' as const, amount: 3000, nameEn: 'DJ Service', nameTa: 'டிஜே சேவை' },
+    { iconName: 'videocam', pricingType: 'FIXED' as const, amount: 12000, nameEn: 'Videography', nameTa: 'வீடியோகிராபி' },
+    { iconName: 'palette', pricingType: 'FIXED' as const, amount: 10000, nameEn: 'Flower Decoration', nameTa: 'மலர் அலங்காரம்' },
+  ];
+
+  for (const addon of addons) {
+    const existing = await prisma.mandapamAddonService.findFirst({
+      where: { iconName: addon.iconName },
+    });
+    if (!existing) {
+      await prisma.$transaction(async (tx) => {
+        const created = await tx.mandapamAddonService.create({
+          data: { iconName: addon.iconName, pricingType: addon.pricingType, amount: addon.amount, status: true },
+        });
+        await tx.mandapamAddonServiceTranslation.create({
+          data: { addonId: created.id, language: 'EN', name: addon.nameEn },
+        });
+        await tx.mandapamAddonServiceTranslation.create({
+          data: { addonId: created.id, language: 'TA', name: addon.nameTa },
+        });
+      });
+    }
+  }
+
+  console.log(`Seeded ${addons.length} mandapam addons`);
+}
+
+async function seedDefaultAdmin() {
+  const adminEmail = 'mohanurkongu@gmail.com';
+  const existing = await prisma.accountCredential.findUnique({
+    where: { email: adminEmail },
+    include: { account: { include: { translations: true } } },
+  });
+
+  if (existing) {
+    console.log('Admin account already exists — skipping');
+    return;
+  }
+
+  const passwordHash = await argon2.hash('admin123', {
+    type: argon2.argon2id,
+    memoryCost: 65536,
+    timeCost: 3,
+    parallelism: 4,
+    hashLength: 32,
+  });
+
+  const adminRole = await prisma.role.findUnique({ where: { code: 'ADMIN' } });
+  if (!adminRole) throw new Error('ADMIN role not found — run seedRoles() first');
+
+  const account = await prisma.account.create({
+    data: {
+      accountNo: 'ADMIN-01',
+      translations: {
+        create: [
+          { language: 'EN', firstName: 'Admin', lastName: 'System', isDefault: true },
+          { language: 'TA', firstName: 'அட்மின்', lastName: 'சிஸ்டம்', isDefault: false },
+        ],
+      },
+      credential: {
+        create: {
+          email: adminEmail,
+          phone: '+91-9080725466',
+          passwordHash,
+          emailVerified: true,
+        },
+      },
+      roles: {
+        create: { roleId: adminRole.id },
+      },
+      statusHistory: {
+        create: { state: 'ACTIVE', reason: 'Admin account created', changedBy: 'system' },
+      },
+    },
+    include: { credential: true, translations: true },
+  });
+
+  console.log(`Seeded admin: ${account.accountNo} / ${adminEmail} / admin123`);
 }
 
 async function setDevCascade() {

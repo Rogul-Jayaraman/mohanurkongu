@@ -1,16 +1,21 @@
 import { Router } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import type { AdminVerificationController } from './admin-verification.controller.js';
 import { requireSession } from '../../common/middleware/requireAuth.js';
 import { requireRole } from '../../common/guards/role.guard.js';
 import { authConfig } from '../../config/auth.config.js';
+import { AppError } from '../../common/errors/AppError.js';
+import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
 
 const adminMutationLimiter = rateLimit({
   windowMs: authConfig.rateLimit.windowMs,
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests' } },
+  handler: (req: Request, res: Response, next: NextFunction) => {
+    next(new AppError(429, ErrorCodes.RATE_LIMIT_EXCEEDED, ErrorCodes.RATE_LIMIT_EXCEEDED));
+  },
 });
 
 export function createAdminVerificationRoutes(controller: AdminVerificationController): Router {

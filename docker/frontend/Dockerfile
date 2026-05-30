@@ -16,6 +16,19 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_comp_level 6;
+    gzip_vary on;
+    gzip_min_length 256;
+    gzip_static on;
+
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }

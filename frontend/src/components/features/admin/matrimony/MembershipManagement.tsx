@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { useLanguage } from '@/context/LanguageContext';
 import { ToggleLeft, ToggleRight, RotateCcw } from 'lucide-react';
 import { AdminMembershipCard } from './AdminMembershipCard';
 import { EditPlanModal } from './EditPlanModal';
@@ -9,8 +8,6 @@ import { adminListPlans, adminGetSetting, adminUpdateSetting } from '@/api/admin
 import type { MembershipPlan } from '@/api/membership.api';
 
 const MembershipManagement: React.FC = () => {
-  const { language } = useLanguage();
-  const isTamil = language === 'ta';
   const { t } = useTranslation();
 
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
@@ -61,7 +58,7 @@ const MembershipManagement: React.FC = () => {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-8 max-w-7xl mx-auto pb-16 pt-8">
       <div className="flex items-center justify-between px-4">
         <h1 className="text-xl font-bold text-rosewood">
-          {isTamil ? 'உறுப்பினர் திட்டங்கள்' : 'Membership Plans'}
+          {t('adminMatrimony:plans.title')}
         </h1>
         <button
           onClick={handleToggle}
@@ -74,17 +71,15 @@ const MembershipManagement: React.FC = () => {
         >
           {membershipEnabled ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
           {membershipEnabled
-            ? (isTamil ? 'செயலில்' : 'Enabled')
-            : (isTamil ? 'முடக்கப்பட்டது' : 'Disabled')}
+            ? t('adminMatrimony:plans.active')
+            : t('adminMatrimony:common.inactive')}
         </button>
       </div>
 
       {!membershipEnabled && (
         <div className="mx-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
           <p className="text-sm text-amber-700 font-medium">
-            {isTamil
-              ? 'உறுப்பினர் முறை முடக்கப்பட்டுள்ளது. அனைத்து பயனர்களுக்கும் அனைத்து அம்சங்களும் இலவசமாக கிடைக்கும்.'
-              : 'Membership system is disabled. All features are free for all users.'}
+            {t('adminMatrimony:plans.disabledWarning')}
           </p>
         </div>
       )}
@@ -92,13 +87,13 @@ const MembershipManagement: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-4">
         {plans.map((plan, i) => (
           <motion.div key={plan.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}>
-            <AdminMembershipCard plan={plan} isTamil={isTamil} onEdit={setEditingPlan} />
+            <AdminMembershipCard plan={plan} onEdit={setEditingPlan} onRefresh={fetchData} />
           </motion.div>
         ))}
       </div>
 
       {editingPlan && (
-        <EditPlanModal plan={editingPlan} isTamil={isTamil} onClose={() => setEditingPlan(null)} onSaved={fetchData} />
+        <EditPlanModal plan={editingPlan} onClose={() => setEditingPlan(null)} onSaved={fetchData} />
       )}
     </motion.div>
   );

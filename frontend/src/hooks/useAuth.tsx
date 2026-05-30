@@ -4,6 +4,7 @@ import { storeSession, clearSession, decodeJwtPayload } from '../adapters/auth.a
 import * as authApi from '../api/auth.api';
 import * as adminApi from '../api/admin.api';
 import { setAccessToken, getAccessToken, clearAccessToken } from '../lib/session';
+import { setLastAuthRole } from '../lib/api';
 
 export type AuthStatus = 'anonymous' | 'otp_pending' | 'register_pending' | 'authenticated' | 'expired';
 
@@ -52,8 +53,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = useCallback(async (accessToken: string, role?: string): Promise<User | Admin> => {
     setAccessToken(accessToken);
-    const account = role === 'ADMIN' ? await adminApi.adminGetProfile() : await authApi.getProfile();
+    const isAdmin = role === 'ADMIN';
+    setLastAuthRole(isAdmin ? 'ADMIN' : 'USER');
+    const account = isAdmin ? await adminApi.adminGetProfile() : await authApi.getProfile();
     const user = storeSession(accessToken, account);
+    localStorage.setItem('auth_cache', JSON.stringify({ user, token: accessToken }));
     setState({ status: 'authenticated', user, token: accessToken });
     return user;
   }, []);
@@ -71,6 +75,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     clearAccessToken();
     clearSession();
+    setLastAuthRole(isAdmin ? 'ADMIN' : 'USER');
+    localStorage.removeItem('auth_cache');
     setState({ status: 'anonymous', user: null, token: null });
     window.location.href = isAdmin ? '/admin/login' : '/manamaalai/login';
   }, [state.user]);
@@ -124,9 +130,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const payload = decodeJwtPayload(token);
       const isAdmin = payload.roles?.includes('ADMIN');
+      setLastAuthRole(isAdmin ? 'ADMIN' : 'USER');
+
+      const cached = localStorage.getItem('auth_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.token === token && parsed.user?.role === (isAdmin ? 'ADMIN' : 'USER')) {
+          setState({ status: 'authenticated', user: parsed.user, token });
+          return true;
+        }
+      }
 
       const account = isAdmin ? await adminApi.adminGetProfile() : await authApi.getProfile();
       const user = storeSession(token, account);
+      localStorage.setItem('auth_cache', JSON.stringify({ user, token }));
       setState({ status: 'authenticated', user, token });
       return true;
     } catch {
@@ -139,8 +156,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const newToken = getAccessToken()!;
           const payload = decodeJwtPayload(newToken);
           const isAdmin = payload.roles?.includes('ADMIN');
+          setLastAuthRole(isAdmin ? 'ADMIN' : 'USER');
+          const cached = localStorage.getItem('auth_cache');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed.token === newToken) {
+              setState({ status: 'authenticated', user: parsed.user, token: newToken });
+              return true;
+            }
+          }
           const account = isAdmin ? await adminApi.adminGetProfile() : await authApi.getProfile();
           const user = storeSession(newToken, account);
+          localStorage.setItem('auth_cache', JSON.stringify({ user, token: newToken }));
           setState({ status: 'authenticated', user, token: newToken });
           return true;
         } catch {

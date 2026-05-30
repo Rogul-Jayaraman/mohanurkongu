@@ -1,0 +1,562 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+  ArrowLeft, User, Crown, Shield, Calendar, Clock,
+  Eye, Search, Printer, Star, Users, CreditCard,
+  ChevronDown, ChevronUp, ShieldBan, RotateCcw,
+  UserMinus, UserCheck, XCircle,
+} from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
+import {
+  fetchAdminAccountDetail, suspendAccount, restoreAccount,
+} from '@/api/admin-accounts.api';
+import type { AdminAccountDetailResponse, AdminAccountProfile, AdminShortlistedProfile } from '@/api/admin-accounts.api';
+import { ConfirmationModal } from '@/components/modals/admin/ConfirmationModal';
+import { RejectionModal } from '@/components/modals/admin/RejectionModal';
+import { ModalShell } from '@/components/ui/modals/ModalShell';
+import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
+import { SectionCard3D, SectionHeaderRedesigned, DetailRow } from '@/components/features/matrimony/ProfileViewPrimitives';
+import { AnimatedSection } from '@/components/ui/AnimatedSection';
+import AccountProfileCard from './AccountProfileCard';
+import AssignPlanModal from './AssignPlanModal';
+import CancelSubscriptionModal from './CancelSubscriptionModal';
+import { adminCancelSubscription } from '@/api/admin-membership.api';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
+
+const LoadingSkeleton: React.FC = () => (
+  <div className="space-y-6 max-w-[1500px] mx-auto p-6">
+    <div className="h-8 w-48 skeleton" />
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="h-64 skeleton rounded-xl" />
+      <div className="h-64 skeleton rounded-xl" />
+    </div>
+    <div className="h-32 skeleton rounded-xl" />
+    <div className="h-48 skeleton rounded-xl" />
+  </div>
+);
+
+const btnBase =
+  'rounded-xl font-bold text-sm px-4 py-2.5 sm:py-3 flex items-center justify-center gap-2 ' +
+  'hover:shadow-md hover:-translate-y-0.5 active:scale-95 transition-all duration-200 shadow-sm';
+
+const AccountDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { t, language, translateError } = useLanguage();
+  const isTamil = language === 'ta';
+
+  const [data, setData] = useState<AdminAccountDetailResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [suspendModal, setSuspendModal] = useState(false);
+  const [restoreConfirm, setRestoreConfirm] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const result = await fetchAdminAccountDetail(id);
+      setData(result);
+    } catch {
+      toast.error(t('common.error') || 'Failed to load account details');
+    } finally {
+      setLoading(false);
+    }
+  }, [id, t]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleCancelSubscription = async (action: 'cancel' | 'revert') => {
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      await adminCancelSubscription(id, action);
+      const msg = action === 'cancel'
+        ? (isTamil ? 'இலவச திட்டத்திற்கு மாற்றப்பட்டது' : 'Downgraded to BRONZE plan')
+        : (isTamil ? 'முந்தைய திட்டத்திற்கு மாற்றப்பட்டது' : 'Reverted to previous plan');
+      toast.success(msg);
+      setCancelModalOpen(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(translateError(err) || 'Failed to cancel subscription');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSuspend = async (reasonEn: string, reasonTa: string) => {
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      await suspendAccount(id, reasonEn, reasonTa);
+      toast.success(t('adminMatrimony:users.suspendSuccess') || 'Account suspended');
+      setSuspendModal(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(translateError(err) || t('adminMatrimony:users.suspendError') || 'Failed to suspend');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!id) return;
+    setActionLoading(true);
+    try {
+      await restoreAccount(id);
+      toast.success(t('adminMatrimony:users.revokeSuccess') || 'Account restored');
+      setRestoreConfirm(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(translateError(err) || t('adminMatrimony:users.revokeError') || 'Failed to restore');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const isSuspended = data?.account?.currentState === 'SUSPENDED';
+
+  if (loading) return <LoadingSkeleton />;
+
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-slate-500">{t('common.notFound') || 'Account not found'}</p>
+      </div>
+    );
+  }
+
+  const { account, subscription, capabilities, history, revertableSubscription, availablePlans, profiles, shortlistedProfiles } = data;
+  const accountName = isTamil
+    ? [account.firstNameTa, account.lastNameTa].filter(Boolean).join(' ')
+    : [account.firstNameEn, account.lastNameEn].filter(Boolean).join(' ');
+
+  const planName = subscription?.snapshotPlanName || 'BRONZE';
+  const planCode = subscription?.snapshotPlanCode || 'BRONZE';
+  const expiresAt = subscription?.expiresAt || null;
+
+  const showPaymentMethod = (method: string | null | undefined) => {
+    if (!method) return '—';
+    const labels: Record<string, string> = {
+      CASH: isTamil ? 'ரொக்கம்' : 'Cash',
+      UPI: 'UPI',
+      BANK_TRANSFER: isTamil ? 'வங்கி பரிமாற்றம்' : 'Bank Transfer',
+      CHEQUE: isTamil ? 'காசோலை' : 'Cheque',
+      OTHER: isTamil ? 'மற்றவை' : 'Other',
+    };
+    return labels[method] || method;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6 max-w-[1500px] mx-auto pb-16"
+    >
+      <div className="flex items-center justify-between pt-2 pb-4 gap-2">
+        <motion.button
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => navigate('/admin/matrimony/account')}
+          className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2
+                     bg-ivory-gold-gradient rounded-xl text-[10px] sm:text-xs
+                     font-bold shadow-sm btn-shine shrink-0"
+        >
+          <ArrowLeft size={14} className="sm:size-4" />
+          <span className="hidden sm:inline">{t('common:back') || 'Back'}</span>
+        </motion.button>
+
+        <div className="flex items-center gap-2">
+          <span className="hidden sm:inline text-[10px] font-black text-rosewood/40 uppercase tracking-wider">
+            {t('adminMatrimony:accountDetail.regNo') || 'ID'}
+          </span>
+          <div className="px-3 py-1.5 rounded-lg bg-ivory border border-gold/10 text-rosewood font-serif font-black text-sm shadow-sm tracking-tight">
+            {account.accountNo || account.id}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SectionCard3D>
+          <SectionHeaderRedesigned
+            title={t('adminMatrimony:accountDetail.accountInfo') || 'Account Info'}
+            icon={<User size={16} />}
+            gradient="bg-ivory-gold-gradient text-rosewood"
+            isTamil={isTamil}
+          />
+          <div className="space-y-0">
+            <DetailRow label={t('adminMatrimony:accountDetail.name') || 'Name'} value={accountName} />
+            <DetailRow label="Email" value={account.credential?.email} />
+            <DetailRow label={t('adminMatrimony:accountDetail.phone') || 'Phone'} value={account.credential?.phone} />
+            <DetailRow label={t('adminMatrimony:accountDetail.regNo') || 'Reg No'} value={account.accountNo} />
+            <DetailRow
+              label={t('adminMatrimony:accountDetail.status') || 'Status'}
+              value={<StatusBadge status={(account.currentState || 'ACTIVE').toLowerCase() as any} minimal />}
+            />
+            <DetailRow
+              label={t('adminMatrimony:accountDetail.joined') || 'Joined'}
+              value={account.createdAt ? format(new Date(account.createdAt), 'MMM dd, yyyy') : '—'}
+            />
+          </div>
+        </SectionCard3D>
+
+        <SectionCard3D>
+          <SectionHeaderRedesigned
+            title={t('adminMatrimony:accountDetail.membership') || 'Membership'}
+            icon={<Crown size={16} />}
+            gradient="bg-ivory-gold-gradient text-rosewood"
+            isTamil={isTamil}
+          />
+          <div className="mb-4">
+            <p className="text-[10px] font-bold text-gold-500 mb-1">
+              {t('adminMatrimony:accountDetail.currentPlan') || 'Current Plan'}
+            </p>
+            <h3 className="text-xl font-serif font-black text-gold tracking-tight">
+              {planName}
+            </h3>
+          </div>
+
+          <div className="p-4 rounded-xl bg-linear-to-br from-ivory to-white border border-gold/20 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gold/10 rounded-xl">
+                <Calendar size={16} className="text-gold" />
+              </div>
+              <div>
+                <p className="text-[8px] font-black text-rosewood/30 uppercase">
+                  {t('myaccount:membership.valid_until') || 'Valid Until'}
+                </p>
+                <p className="text-sm font-black text-rosewood">
+                  {expiresAt
+                    ? format(new Date(expiresAt), 'MMM dd, yyyy')
+                    : (planCode === 'BRONZE' && !expiresAt
+                      ? (isTamil ? 'காலவரையின்றி' : 'Lifetime')
+                      : (isTamil ? 'கிடைக்கவில்லை' : 'N/A'))}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {capabilities && (
+            <div className="grid grid-cols-2 gap-3">
+              <CapabilityBadge
+                icon={<Search size={14} />}
+                label={isTamil ? 'தேடல்' : 'Search'}
+                value={capabilities.searchLevel || '—'}
+              />
+              <CapabilityBadge
+                icon={<Users size={14} />}
+                label={isTamil ? 'சுயவிவரங்கள்' : 'Profiles'}
+                value={capabilities.profileSlotLimit < 0 ? (isTamil ? 'வரம்பில்லை' : 'Unlimited') : `${capabilities.profileSlotLimit}`}
+              />
+              <CapabilityBadge
+                icon={<Star size={14} />}
+                label={isTamil ? 'குறும்பட்டியல்' : 'Shortlist'}
+                value={capabilities.shortlistLimit < 0 ? (isTamil ? 'வரம்பில்லை' : 'Unlimited') : `${capabilities.shortlistLimit}`}
+              />
+              <CapabilityBadge
+                icon={<Printer size={14} />}
+                label={isTamil ? 'அச்சு' : 'Print'}
+                value={capabilities.printProfile ? (isTamil ? 'ஆம்' : 'Yes') : (isTamil ? 'இல்லை' : 'No')}
+              />
+            </div>
+          )}
+
+          {!subscription && (
+            <p className="mt-3 text-xs text-sage font-medium">
+              {isTamil
+                ? 'செயலில் உள்ள திட்டம் இல்லை — முன்னிருப்பாக BRONZE (இலவசம்) பொருந்தும்'
+                : 'No active plan — BRONZE (free) applies by default'}
+            </p>
+          )}
+        </SectionCard3D>
+      </div>
+
+      <SectionCard3D>
+        <SectionHeaderRedesigned
+          title={t('adminMatrimony:accountDetail.actions') || 'Actions'}
+          icon={<Shield size={16} />}
+          gradient="bg-rosewood-gradient text-white"
+          isTamil={isTamil}
+        >
+          <StatusBadge status={(account.currentState || 'ACTIVE').toLowerCase() as any} minimal />
+        </SectionHeaderRedesigned>
+
+        <div className="flex flex-wrap gap-3 w-full">
+          {isSuspended ? (
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ y: 0 }}
+              onClick={() => setCancelModalOpen(true)}
+              className={`${btnBase} flex-1 bg-red-50 text-red-700 border border-red-200 hover:border-red-300 hover:bg-red-100 shadow-sm`}
+            >
+              <XCircle size={16} />
+              <span className="truncate">{isTamil ? 'சந்தாவை ரத்துசெய்' : 'Cancel Subscription'}</span>
+            </motion.button>
+          ) : (
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ y: 0 }}
+              onClick={() => setAssignModalOpen(true)}
+              className={`${btnBase} flex-1 bg-ivory-gold-gradient text-rosewood shadow-gold/10`}
+            >
+              <Crown size={16} />
+              <span className="truncate">{isTamil ? 'திட்டத்தை மேம்படுத்து' : 'Upgrade Plan'}</span>
+            </motion.button>
+          )}
+
+          <motion.button
+            whileHover={{ y: -2 }}
+            whileTap={{ y: 0 }}
+            onClick={() => setHistoryModalOpen(true)}
+            className={`${btnBase} flex-1 bg-white text-rosewood border border-gold/20 shadow-sm`}
+          >
+            <Clock size={16} />
+            <span className="truncate">{isTamil ? 'திட்ட வரலாறு' : 'Plan History'}</span>
+          </motion.button>
+
+          {isSuspended ? (
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ y: 0 }}
+              onClick={() => setRestoreConfirm(true)}
+              className={`${btnBase} flex-1 bg-linear-to-br from-emerald-500 to-emerald-700 text-white shadow-emerald-500/20`}
+            >
+              <UserCheck size={16} />
+              <span className="truncate">{isTamil ? 'கணக்கை மீட்டெடுக்கவும்' : 'Restore Account'}</span>
+            </motion.button>
+          ) : (
+            <motion.button
+              whileHover={{ y: -2 }}
+              whileTap={{ y: 0 }}
+              onClick={() => setSuspendModal(true)}
+              className={`${btnBase} flex-1 bg-rosewood-gradient text-white shadow-rosewood/20`}
+            >
+              <UserMinus size={16} />
+              <span className="truncate">{isTamil ? 'கணக்கை இடைநிறுத்து' : 'Suspend Account'}</span>
+            </motion.button>
+          )}
+        </div>
+      </SectionCard3D>
+
+      <ModalShell
+        isOpen={historyModalOpen}
+        onClose={() => setHistoryModalOpen(false)}
+        title={isTamil ? 'சந்தா வரலாறு' : 'Subscription History'}
+        icon={<Clock size={16} />}
+        size="lg"
+      >
+        {history && history.length > 0 ? (
+          <div className="relative max-h-[60vh] overflow-y-auto">
+            <div className="absolute left-[8px] top-0 bottom-0 w-px bg-linear-to-b from-emerald-300 via-slate-200 to-slate-100" />
+            <div className="space-y-0">
+              {history.map((h: any, idx: number) => {
+                const isActive = h.status === 'ACTIVE';
+                return (
+                  <div key={idx} className="relative pl-[20px] pb-6">
+                    <div className={`absolute left-[2px] top-[19px] z-10 w-3 h-3 rounded-full border-2 bg-white shadow-sm ${
+                      isActive ? 'border-emerald-500' : 'border-slate-300'
+                    }`} />
+                    <div className={`flex-1 min-w-0 rounded-xl border bg-white shadow-sm transition-all hover:shadow-md ${
+                      isActive
+                        ? 'border-emerald-200 hover:border-emerald-300'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}>
+                      <div className={`px-4 py-3.5 flex items-center justify-between gap-3 border-b ${
+                        isActive ? 'bg-emerald-50/40 border-emerald-100' : 'bg-slate-50 border-slate-100'
+                      }`}>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Crown size={15} className={`shrink-0 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
+                          <span className="text-sm font-bold text-slate-800 truncate">{h.snapshotPlanName}</span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                            {h.status}
+                          </span>
+                        </div>
+                        <span className={`text-sm font-bold font-mono shrink-0 tabular-nums ${
+                          isActive ? 'text-emerald-700' : 'text-slate-500'
+                        }`}>
+                          ₹{Number(h.snapshotDisplayPrice || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="px-4 py-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-3 text-xs text-slate-500">
+                            <span className="flex items-center gap-1.5">
+                              <Calendar size={13} className="text-slate-400" />
+                              {h.startedAt ? format(new Date(h.startedAt), 'MMM dd, yyyy') : '—'}
+                            </span>
+                            {h.expiresAt && (
+                              <span className="flex items-center gap-1.5">
+                                <span className="text-slate-300">→</span>
+                                <Calendar size={13} className="text-slate-400" />
+                                {format(new Date(h.expiresAt), 'MMM dd, yyyy')}
+                              </span>
+                            )}
+                          </div>
+                          {h.paymentMethod && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                              {showPaymentMethod(h.paymentMethod)}
+                            </span>
+                          )}
+                        </div>
+                        {(h.adminName || h.notes) && (
+                          <div className="pt-2.5 border-t border-dashed border-slate-100 space-y-1">
+                            {h.adminName && (
+                              <p className="text-[11px] text-slate-400">
+                                Assigned by <span className="font-semibold text-slate-500">{h.adminName}</span>
+                              </p>
+                            )}
+                            {h.notes && (
+                              <p className="text-[11px] text-slate-400 italic leading-relaxed">{h.notes}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <CreditCard size={32} className="text-slate-300 mx-auto mb-3" />
+            <p className="text-sm text-slate-500 font-medium">
+              {isTamil ? 'சந்தா வரலாறு எதுவும் இல்லை' : 'No subscription history'}
+            </p>
+          </div>
+        )}
+      </ModalShell>
+
+      <SectionCard3D>
+        <SectionHeaderRedesigned
+          title={`${isTamil ? 'சுயவிவரங்கள்' : 'Profiles'} (${profiles?.length || 0})`}
+          icon={<Users size={16} />}
+          gradient="bg-ivory-gold-gradient text-rosewood"
+          isTamil={isTamil}
+        />
+
+        {isSuspended && (
+          <div className="p-4 mb-4 rounded-xl bg-amber-50 border border-amber-200">
+            <p className="text-sm font-bold text-amber-700">
+              {isTamil
+                ? 'கணக்கு இடைநிறுத்தப்பட்டது — சுயவிவரங்கள் மறைக்கப்பட்டுள்ளன'
+                : 'Account suspended — profiles are hidden'}
+            </p>
+          </div>
+        )}
+
+        {(!profiles || profiles.length === 0) ? (
+          <div className="text-center py-8">
+            <User size={32} className="text-slate-300 mx-auto mb-3" />
+            <p className="text-sm text-slate-500 font-medium">
+              {isTamil
+                ? 'இந்தப் பயனர் இன்னும் எந்த சுயவிவரத்தையும் உருவாக்கவில்லை'
+                : "This user hasn't created any profiles yet"}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {profiles.map((profile: AdminAccountProfile) => (
+              <AccountProfileCard key={profile.id} profile={profile} />
+            ))}
+          </div>
+        )}
+      </SectionCard3D>
+
+      <SectionCard3D>
+        <SectionHeaderRedesigned
+          title={`${isTamil ? 'குறும்பட்டியல் சுயவிவரங்கள்' : 'Shortlisted Profiles'} (${shortlistedProfiles?.length || 0})`}
+          icon={<Star size={16} />}
+          gradient="bg-ivory-gold-gradient text-rosewood"
+          isTamil={isTamil}
+        />
+
+        {isSuspended && (
+          <div className="p-4 mb-4 rounded-xl bg-amber-50 border border-amber-200">
+            <p className="text-sm font-bold text-amber-700">
+              {isTamil
+                ? 'கணக்கு இடைநிறுத்தப்பட்டது — சுயவிவரங்கள் மறைக்கப்பட்டுள்ளன'
+                : 'Account suspended — shortlisted profiles are hidden'}
+            </p>
+          </div>
+        )}
+
+        {(!shortlistedProfiles || shortlistedProfiles.length === 0) ? (
+          <div className="text-center py-8">
+            <Star size={32} className="text-slate-300 mx-auto mb-3" />
+            <p className="text-sm text-slate-500 font-medium">
+              {t('adminMatrimony:accountDetail.noShortlistedProfiles') || 'No shortlisted profiles'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {shortlistedProfiles.map((profile: AdminShortlistedProfile) => (
+              <AccountProfileCard key={profile.id} profile={profile} shortlistedAt={profile.shortlistedAt} />
+            ))}
+          </div>
+        )}
+      </SectionCard3D>
+
+      <CancelSubscriptionModal
+        isOpen={cancelModalOpen}
+        onClose={() => setCancelModalOpen(false)}
+        onConfirm={handleCancelSubscription}
+        currentPlanName={subscription?.snapshotPlanName || '—'}
+        revertablePlanName={revertableSubscription?.snapshotPlanName || null}
+      />
+
+      <AssignPlanModal
+        accountId={id!}
+        currentPlanCode={subscription?.snapshotPlanCode}
+        availablePlans={availablePlans || []}
+        isOpen={assignModalOpen}
+        onClose={() => setAssignModalOpen(false)}
+        onAssigned={fetchData}
+      />
+
+      <RejectionModal
+        isOpen={suspendModal}
+        onClose={() => setSuspendModal(false)}
+        onConfirm={handleSuspend}
+        title={isTamil ? 'கணக்கை இடைநிறுத்துவதற்கான காரணம்' : 'Suspension Reason'}
+        description={isTamil
+          ? 'இது பயனர் கணக்கை முடக்கி, அவர்களின் அனைத்து சுயவிவரங்களையும் உலகளவில் மறைக்கும்'
+          : 'This will deactivate the user account and hide all their profiles globally'}
+      />
+
+      <ConfirmationModal
+        isOpen={restoreConfirm}
+        onClose={() => setRestoreConfirm(false)}
+        onConfirm={handleRestore}
+        title={isTamil ? 'கணக்கை மீட்டெடுக்கவும்' : 'Restore Account'}
+        message={isTamil
+          ? 'இந்தக் கணக்கை மீட்டெடுப்பது அதை மீண்டும் செயலில் உள்ள நிலைக்கு மாற்றும் மற்றும் அனைத்து சுயவிவரங்களையும் மீண்டும் தெரியும்படி செய்யும். தொடர வேண்டுமா?'
+          : 'Restoring this account will reactivate it and make all profiles visible again. Continue?'}
+        variant="warning"
+        confirmText={isTamil ? 'ஆம், மீட்டெடுக்கவும்' : 'Yes, Restore'}
+      />
+    </motion.div>
+  );
+};
+
+const CapabilityBadge: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
+  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-ivory border border-gold/10">
+    <div className="text-gold shrink-0">{icon}</div>
+    <div className="min-w-0">
+      <p className="text-[9px] font-bold text-rosewood/40 uppercase tracking-wider">{label}</p>
+      <p className="text-[11px] font-bold text-rosewood truncate">{value}</p>
+    </div>
+  </div>
+);
+
+export default AccountDetail;

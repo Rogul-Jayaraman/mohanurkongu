@@ -1,8 +1,7 @@
-import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, X } from 'lucide-react';
+import React from 'react';
+import { AlertTriangle } from 'lucide-react';
+import { ModalShell } from '@/components/ui/modals/ModalShell';
 import { useLanguage } from '@/context/LanguageContext';
-import { scrollToTop } from '@/components/ui/layout/ScrollToTop';
 
 interface ConfirmationModalProps {
     isOpen: boolean;
@@ -30,89 +29,52 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     const { t, language } = useLanguage();
     const isTamil = language === 'ta';
 
-    useEffect(() => {
-        if (!isOpen) {
-            scrollToTop();
-        }
-    }, [isOpen]);
-
-    const colors = {
-        danger: 'bg-rosewood-gradient shadow-rosewood/30 text-ivory hover:brightness-110',
-        warning: 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200',
-        info: 'bg-gold hover:bg-gold/90 text-white shadow-gold/20'
+    const variantColors = {
+        danger: 'bg-rosewood text-ivory hover:shadow-lg shadow-rosewood/20',
+        warning: 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-200',
+        info: 'bg-gold text-white hover:bg-gold/90 shadow-gold/20'
     };
 
-    const iconColors = {
-        danger: 'bg-rosewood-gradient text-ivory',
+    const iconVariants = {
+        danger: 'bg-rosewood/10 text-rosewood',
         warning: 'text-amber-500 bg-amber-50',
         info: 'text-gold bg-gold-soft/20'
     };
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-9999 flex items-center justify-center p-4">
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+        <ModalShell
+            isOpen={isOpen}
+            onClose={onClose}
+            icon={<div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconVariants[variant]}`}><AlertTriangle size={20} /></div>}
+            title={title}
+            size="sm"
+            noFooter={false}
+            footer={
+                <div className="flex flex-col sm:flex-row gap-3 w-full">
+                    <button
                         onClick={onClose}
-                        className="absolute inset-0 bg-gold-soft/20 backdrop-blur-md"
-                    />
-
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="relative w-full max-w-md bg-white/70 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden border border-gold/20"
+                        disabled={isLoading}
+                        className="flex-1 px-6 py-3 border border-gold/10 text-rosewood font-bold rounded-xl hover:bg-ivory transition-all text-sm disabled:opacity-50"
                     >
-                        <div className="p-6 pb-0 flex items-start justify-between">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${iconColors[variant]}`}>
-                                <AlertTriangle className="w-6 h-6" />
-                            </div>
-                            <button 
-                                onClick={onClose}
-                                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-gray-100 hover:text-slate-600 transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-3">
-                            <h3 className={`text-xl font-bold text-rosewood ${isTamil ? 'font-sans' : 'font-serif'}`}>
-                                {title}
-                            </h3>
-                            <p className="text-slate-500 text-sm leading-relaxed">
-                                {message}
-                            </p>
-                        </div>
-
-                        <div className="p-6 bg-gold-soft/10 border-t border-gold/5 flex flex-col sm:flex-row gap-3">
-                            <button
-                                onClick={onClose}
-                                disabled={isLoading}
-                                className="flex-1 px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50"
-                            >
-                                {cancelText || (isTamil ? 'இரத்து செய்' : 'Cancel')}
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onConfirm();
-                                }}
-                                disabled={isLoading}
-                                className={`flex-1 px-6 py-3 rounded-2xl font-bold text-sm shadow-lg transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 ${colors[variant]}`}
-                            >
-                                {isLoading ? (
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    confirmText || (isTamil ? 'உறுதிப்படுத்து' : 'Confirm')
-                                )}
-                            </button>
-                        </div>
-                    </motion.div>
+                        {cancelText || t('common.cancel')}
+                    </button>
+                    <button
+                        onClick={() => onConfirm()}
+                        disabled={isLoading}
+                        className={`flex-1 px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${variantColors[variant]}`}
+                    >
+                        {isLoading ? (
+                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                            confirmText || t('common.confirm')
+                        )}
+                    </button>
                 </div>
-            )}
-        </AnimatePresence>
+            }
+        >
+            <p className="text-sm text-rosewood/60 leading-relaxed">
+                {message}
+            </p>
+        </ModalShell>
     );
 };

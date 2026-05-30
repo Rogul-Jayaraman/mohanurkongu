@@ -73,7 +73,7 @@ export class StorageRepository {
   async findTempOlderThan(hours: number) {
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
     return prisma.upload.findMany({
-      where: { status: 'TEMP', createdAt: { lt: cutoff } },
+      where: { status: 'TEMP', updatedAt: { lt: cutoff } },
     });
   }
 
@@ -82,7 +82,7 @@ export class StorageRepository {
   async findExpiredTemp(hours: number) {
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
     return prisma.upload.findMany({
-      where: { status: 'TEMP', createdAt: { lt: cutoff } },
+      where: { status: 'TEMP', updatedAt: { lt: cutoff } },
       take: 100,
     });
   }

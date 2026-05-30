@@ -9,6 +9,7 @@ import { KULAM_OPTIONS } from '@/constants/options';
 import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
 import { useInitials } from '@/hooks/useInitials';
 import { formatFullName } from '@/utils/formatName';
+import { getImageUrl } from '@/utils/getImageUrl';
 
 
 interface AdminActions {
@@ -95,13 +96,11 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
 
     const resolveImageUrl = (url: string | null | undefined) => {
         if (!url) return renderPlaceholderImage();
-        if (/^(https?:\/\/|\/media\/)/i.test(url)) return url;
-        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-        return `${API_BASE}/media/${url}`;
+        return getImageUrl(url) || renderPlaceholderImage();
     };
 
     const profilePhoto = profile.profilePhoto || profile.photo || (profile.photos && profile.photos[0]);
-    const profilePhotoUrl = typeof profilePhoto === 'string' ? resolveImageUrl(profilePhoto) : profilePhoto?.url || '';
+    const profilePhotoUrl = typeof profilePhoto === 'string' ? resolveImageUrl(profilePhoto) : (profilePhoto?.url ? resolveImageUrl(profilePhoto.url) : renderPlaceholderImage());
 
     return (
         <div className="p-3.5 rounded-xl shadow-sm flex flex-col sm:flex-row gap-5 bg-white border border-gold/10 hover:border-gold/40 hover:shadow-xl transition-all duration-500 relative group overflow-hidden">

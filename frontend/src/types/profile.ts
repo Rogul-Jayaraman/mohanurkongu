@@ -184,7 +184,6 @@ export interface ShowcaseProfile {
   lastNameEn: string | null;
   firstNameTa: string | null;
   lastNameTa: string | null;
-  gender: string | null;
   profilePhoto: ImageObject | null;
 }
 

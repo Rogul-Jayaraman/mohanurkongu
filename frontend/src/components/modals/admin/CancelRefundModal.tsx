@@ -1,183 +1,164 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Info, XCircle, X } from 'lucide-react';
+import { Info, XCircle } from 'lucide-react';
+import { ModalShell } from '@/components/ui/modals/ModalShell';
 import { Input } from '@/components/ui/forms/Input';
-import type { MandapamBooking } from '@/types/admin-types';
+import type { Booking, RefundType, PaymentMethodType } from '@/types/mandapam';
 import { useLanguage } from '@/context/LanguageContext';
-import { scrollToTop } from '@/components/ui/layout/ScrollToTop';
+import { formatCurrency } from '@/utils/format';
+
+const REFUND_OPTIONS: { value: string; label: string }[] = [
+  { value: 'none', label: 'No Refund' },
+  { value: 'PARTIAL_REFUND', label: 'Partial Refund' },
+  { value: 'FULL_REFUND', label: 'Full Refund' },
+];
+
+const REFUND_METHODS: { value: PaymentMethodType; label: string }[] = [
+  { value: 'CASH', label: 'Cash' },
+  { value: 'UPI', label: 'UPI / QR' },
+  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+  { value: 'CARD', label: 'Card' },
+  { value: 'CHEQUE', label: 'Cheque' },
+];
 
 interface CancelRefundModalProps {
     isOpen: boolean;
-    booking: MandapamBooking | null;
+    booking: Booking | null;
     onClose: () => void;
     t: any;
-    onConfirm: (booking: MandapamBooking, refundType: string, refundAmount: string) => void;
+    onConfirm: (booking: Booking, refundType: string, refundAmount: string, refundMethod: string) => void;
 }
 
 export const CancelRefundModal: React.FC<CancelRefundModalProps> = ({ isOpen, booking, onClose, t, onConfirm }) => {
     const { language } = useLanguage();
     const isTamil = language === 'ta';
-    const [refundType, setRefundType] = useState<'not_refunded' | 'partial' | 'advance' | 'full'>('not_refunded');
+    const [refundOption, setRefundOption] = useState<string>('none');
     const [refundAmount, setRefundAmount] = useState('');
+    const [refundMethod, setRefundMethod] = useState<PaymentMethodType>('CASH');
 
     useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-            scrollToTop();
+        if (booking) {
+            setRefundOption('none');
+            setRefundAmount('');
+            setRefundMethod('CASH');
         }
-        return () => { document.body.style.overflow = 'unset'; };
-    }, [isOpen]);
-
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        if (isOpen) {
-            window.addEventListener('keydown', handleEscape);
-        }
-        return () => window.removeEventListener('keydown', handleEscape);
-    }, [isOpen, onClose]);
+    }, [booking]);
 
     if (!booking) return null;
 
-    const modalContent = (
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => onClose()}
-                        className="absolute inset-0 bg-gold-soft/10 backdrop-blur-md"
-                    />
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative w-full max-w-md bg-gold-soft/5 backdrop-blur-3xl border-2 border-gold/30 rounded-xl shadow-2xl flex flex-col max-h-[95vh] overflow-hidden"
+    const payments = (booking.paymentEntries || []).reduce((s, e) => s + e.amount, 0);
+    const refunds = (booking.refundEntries || []).reduce((s, e) => s + e.amount, 0);
+    const netPaid = payments - refunds;
+
+    const needsRefundEntry = refundOption === 'PARTIAL_REFUND' || refundOption === 'FULL_REFUND';
+
+    return (
+        <ModalShell
+            isOpen={isOpen}
+            onClose={onClose}
+            icon={<XCircle size={24} className="text-rose-600" />}
+            title={t('adminMandapam.bookings.cancelBookingTitle') || 'Cancel Booking'}
+            size="sm"
+            footer={
+                <div className="flex gap-3">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 px-6 py-3 border border-gold/10 text-rosewood font-bold rounded-xl hover:bg-ivory transition-all text-sm"
                     >
-                        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                            <div className="px-6 py-5 bg-gold-soft/5 backdrop-blur-xl border-b border-gold/10 flex items-center justify-between shrink-0">
-                                <div className="flex items-center gap-4">
-                                    <div className="shrink-0">
-                                        <XCircle size={24} className="text-rose-600" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h3 className="text-lg font-black text-rosewood tracking-tight truncate leading-tight">
-                                            {t('adminMandapam.bookings.cancelBookingTitle') || 'Cancel Booking'}
-                                        </h3>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={onClose}
-                                    className="p-2 hover:bg-ivory rounded-full transition-all text-rosewood/40 hover:text-rosewood hover:rotate-90 duration-300 ml-4"
-                                    aria-label="Close modal"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
-                            <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
-                                <div className="space-y-6">
-                                    <div className="bg-rose-50/50 p-4 rounded-xl border border-rose-600/10">
-                                        <p className="text-[10px] font-black text-rose-800/40 uppercase tracking-[0.15em] mb-1">{t('adminMandapam.bookings.eventName') || 'Event Name'}</p>
-                                        <p className="text-base font-black text-rosewood tracking-tight">{booking.eventTitleEn}</p>
-                                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-rose-600/5">
-                                            <p className="text-xs font-bold text-rosewood/60">{booking.contactNameEn}</p>
-                                            <p className="text-xs font-black text-rose-700">Paid: ₹{booking.paidAmount?.toLocaleString() || '0'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 flex items-start gap-3">
-                                        <Info size={18} className="text-amber-600 shrink-0 mt-0.5" />
-                                        <p className="text-xs text-amber-800 font-medium leading-relaxed">
-                                            {t('adminMandapam.bookings.cancelBookingWarning') || 'Are you sure you want to cancel this booking? This action cannot be undone and will release the slot.'}
-                                        </p>
-                                    </div>
-                                    <div className="space-y-3">
-                                        <label className="text-[11px] font-black text-rosewood/30 uppercase tracking-[0.2em] block ml-1">{t('adminMandapam.bookings.refundStatus') || 'Refund Disposition'}</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {[
-                                                { id: 'not_refunded', label: t('adminMandapam.bookings.notRefunded') || 'No Refund' },
-                                                { id: 'partial', label: t('adminMandapam.bookings.partialRefund') || 'Partial Refund' },
-                                                { id: 'advance', label: t('adminMandapam.bookings.advance') || 'Full Advance' },
-                                                { id: 'full', label: t('adminMandapam.bookings.fullRefund') || 'Whole Amount' }
-                                            ].map((type) => (
-                                                <button
-                                                    key={type.id}
-                                                    onClick={() => setRefundType(type.id as any)}
-                                                    className={`px-3 py-2.5 rounded-xl border-2 text-[10px] font-bold transition-all ${
-                                                        refundType === type.id
-                                                        ? 'bg-rosewood text-ivory border-rosewood shadow-md'
-                                                        : 'bg-white text-rosewood/40 border-gold/10 hover:border-gold/30'
-                                                    }`}
-                                                >
-                                                    {type.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="min-h-[120px]">
-                                        <AnimatePresence mode="wait">
-                                            {refundType === 'partial' && (
-                                                <motion.div
-                                                    key="partial"
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, y: -10 }}
-                                                    className="space-y-3"
-                                                >
-                                                    <Input
-                                                        label={t('adminMandapam.bookings.refundAmount') || 'Refund Amount'}
-                                                        name="refundAmount"
-                                                        type="text"
-                                                        inputMode="decimal"
-                                                        value={refundAmount}
-                                                        onChange={(e) => setRefundAmount(e.target.value)}
-                                                        placeholder="0.00"
-                                                        icon="currency_rupee"
-                                                        autoFormat={true}
-                                                    />
-                                                    {refundAmount && Number(refundAmount.replace(/,/g, '')) > 0 && (
-                                                        <div className="px-4 py-3 bg-gold/5 border border-gold/10 rounded-xl">
-                                                            <span className="text-[10px] font-black text-rosewood/40 tracking-wider block mb-0.5 uppercase">
-                                                                {t('adminMandapam.bookings.confirmedRefundAmount') || 'CONFIRMED REFUND AMOUNT'}
-                                                            </span>
-                                                            <span className="text-base font-black text-rosewood">
-                                                                ₹ {Number(refundAmount.replace(/,/g, '')).toLocaleString('en-IN')}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="px-6 py-5 bg-gold-soft/5 backdrop-blur-xl border-t border-gold/10 shrink-0">
-                                <div className="flex gap-3">
+                        {t('common.cancel') || 'Cancel'}
+                    </button>
+                    <button
+                        onClick={() => onConfirm(booking, refundOption === 'none' ? 'NO_REFUND' : refundOption, refundAmount, refundMethod)}
+                        className="flex-1 px-6 py-3 bg-rose-700 text-ivory font-bold rounded-xl hover:shadow-lg transition-all text-sm shadow-lg shadow-rose-700/20 active:scale-95"
+                    >
+                        {t('adminMandapam.bookings.confirmCancel') || 'Confirm Cancellation'}
+                    </button>
+                </div>
+            }
+        >
+            <div className="space-y-6">
+                <div className="bg-rose-50/50 p-4 rounded-xl border border-rose-600/10">
+                    <p className="text-[10px] font-black text-rose-800/40 uppercase tracking-[0.15em] mb-1">{t('adminMandapam.bookings.eventName') || 'Event Name'}</p>
+                    <p className="text-base font-black text-rosewood tracking-tight">{isTamil ? booking.eventTitle.ta : booking.eventTitle.en}</p>
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-rose-600/5">
+                        <p className="text-xs font-bold text-rosewood/60">{isTamil ? booking.customerName.ta : booking.customerName.en}</p>
+                        <p className="text-xs font-black text-rose-700">{t('adminMandapam.bookings.paidToDate') || 'Paid'}: {formatCurrency(netPaid)}</p>
+                    </div>
+                </div>
+                <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 flex items-start gap-3">
+                    <Info size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-800 font-medium leading-relaxed">
+                        {t('adminMandapam.bookings.cancelBookingWarning') || 'Are you sure you want to cancel this booking? This action cannot be undone and will release the slot.'}
+                    </p>
+                </div>
+                <div className="space-y-3">
+                    <label className="text-[11px] font-black text-rosewood/30 uppercase tracking-[0.2em] block ml-1">{t('adminMandapam.bookings.refundStatus') || 'Refund Disposition'}</label>
+                    <div className="grid grid-cols-3 gap-2">
+                        {REFUND_OPTIONS.map(ro => (
+                            <button
+                                key={ro.value}
+                                onClick={() => setRefundOption(ro.value)}
+                                className={`px-3 py-2.5 rounded-xl border-2 text-[10px] font-bold transition-all ${
+                                    refundOption === ro.value
+                                    ? 'bg-rosewood text-ivory border-rosewood shadow-md'
+                                    : 'bg-white text-rosewood/40 border-gold/10 hover:border-gold/30'
+                                }`}
+                            >
+                                {ro.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                {needsRefundEntry && (
+                    <>
+                        <div className="space-y-3">
+                            <label className="text-[11px] font-black text-rosewood/30 uppercase tracking-[0.2em] block ml-1">{t('adminMandapam.bookings.refundMethod') || 'Refund Method'}</label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {REFUND_METHODS.map(rm => (
                                     <button
-                                        onClick={onClose}
-                                        className="flex-1 px-6 py-3 border border-gold/10 text-rosewood font-bold rounded-xl hover:bg-ivory transition-all text-sm"
+                                        key={rm.value}
+                                        onClick={() => setRefundMethod(rm.value)}
+                                        className={`px-3 py-2.5 rounded-xl border-2 text-[10px] font-bold transition-all ${
+                                            refundMethod === rm.value
+                                            ? 'bg-rosewood text-ivory border-rosewood shadow-md'
+                                            : 'bg-white text-rosewood/40 border-gold/10 hover:border-gold/30'
+                                        }`}
                                     >
-                                        {t('common.cancel') || 'Cancel'}
+                                        {rm.label}
                                     </button>
-                                    <button
-                                        onClick={() => onConfirm(booking, refundType, refundAmount)}
-                                        className="flex-1 px-6 py-3 bg-rose-700 text-ivory font-bold rounded-xl hover:shadow-lg transition-all text-sm shadow-lg shadow-rose-700/20 active:scale-95"
-                                    >
-                                        {t('adminMandapam.bookings.confirmCancel') || 'Confirm Cancellation'}
-                                    </button>
-                                </div>
+                                ))}
                             </div>
                         </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
+                        <div className="space-y-3">
+                            <Input
+                                label={t('adminMandapam.bookings.refundAmount') || 'Refund Amount'}
+                                name="refundAmount"
+                                type="text"
+                                inputMode="decimal"
+                                value={refundAmount}
+                                onChange={(e) => setRefundAmount(e.target.value)}
+                                placeholder={refundOption === 'FULL_REFUND' ? String(netPaid) : '0.00'}
+                                icon="currency_rupee"
+                                autoFormat={true}
+                            />
+                            {refundAmount && Number(refundAmount.replace(/,/g, '')) > 0 && (
+                                <div className="px-4 py-3 bg-gold/5 border border-gold/10 rounded-xl">
+                                    <span className="text-[10px] font-black text-rosewood/40 tracking-wider block mb-0.5 uppercase">
+                                        {t('adminMandapam.bookings.confirmedRefundAmount') || 'CONFIRMED REFUND AMOUNT'}
+                                    </span>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-base font-black text-rosewood">
+                                            {formatCurrency(Number(refundAmount.replace(/,/g, '')))}
+                                        </span>
+                                        <span className="text-[10px] font-bold text-rosewood/40">
+                                            {t('adminMandapam.bookings.via') || 'via'} {refundMethod}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+            </div>
+        </ModalShell>
     );
-
-    return createPortal(modalContent, document.body);
 };

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { DISTRICT_TAMIL, TALUK_TAMIL } from '../constants/locations';
+import { formatCurrency } from '@/utils/format';
 
 export const useProfileUtils = () => {
     const { t, i18n } = useTranslation(['profile_new', 'common', 'dashboard']);
@@ -78,8 +79,7 @@ export const useProfileUtils = () => {
 
     const formatSalary = (salary: number | null | undefined) => {
         if (!salary) return '-';
-        const formatted = salary.toLocaleString('en-IN');
-        return `₹ ${formatted}`;
+        return formatCurrency(salary);
     };
 
     const preparePlanets = (data?: any, isNavamsa = false) => {

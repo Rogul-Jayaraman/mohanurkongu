@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PlanetData } from '@/types/horoscope';
+import './horoscope-grid.css';
+import './horoscope-table.css';
 
 interface BirthChartProps {
   lagnaSignIndex: number;

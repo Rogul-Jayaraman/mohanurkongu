@@ -1,20 +1,11 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
+import type { Request, Response, NextFunction } from 'express';
 import type { AdminAuthController } from './admin-auth.controller.js';
 import { requireSession } from '../../common/middleware/requireAuth.js';
 import { requireRole } from '../../common/guards/role.guard.js';
 import { validate } from '../../common/middleware/validate.js';
 import { loginSchema } from '../../common/validators/auth.validator.js';
-import { authConfig } from '../../config/auth.config.js';
-
-const createRateLimiter = (max: number) =>
-  rateLimit({
-    windowMs: authConfig.rateLimit.windowMs,
-    max,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests' } },
-  });
+import { createRateLimiter } from '../shared/rateLimiter.js';
 
 export function createAdminAuthRoutes(controller: AdminAuthController): Router {
   const router = Router();
@@ -26,17 +17,8 @@ export function createAdminAuthRoutes(controller: AdminAuthController): Router {
     controller.login,
   );
 
-  router.post(
-    '/auth/refresh',
-    createRateLimiter(authConfig.rateLimit.refreshMax),
-    controller.refresh,
-  );
-
-  router.post(
-    '/auth/logout',
-    createRateLimiter(20),
-    controller.logout,
-  );
+  router.post('/auth/refresh', createRateLimiter(10), controller.refresh);
+  router.post('/auth/logout', createRateLimiter(20), controller.logout);
 
   router.get(
     '/account/me',

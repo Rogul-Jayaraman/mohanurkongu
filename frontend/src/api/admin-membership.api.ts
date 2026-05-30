@@ -1,5 +1,6 @@
 import api from '../lib/api';
 import type { MembershipPlan, SubscriptionInfo } from './membership.api';
+import type { PaymentMethodType } from './admin-accounts.api';
 
 export interface UpdatePlanDto {
   displayName?: string;
@@ -9,8 +10,7 @@ export interface UpdatePlanDto {
   openLimit?: number;
   shortlistLimit?: number;
   profileSlotLimit?: number;
-  contactAccess?: boolean;
-  fullHoroscopeAccess?: boolean;
+  viewDetails?: string;
   printProfile?: boolean;
   printHoroscope?: boolean;
   searchLevel?: string;
@@ -32,8 +32,12 @@ export function adminUpdateSetting(membershipEnabled: boolean): Promise<{ member
   return api.put('/admin/membership/settings', { membershipEnabled });
 }
 
-export function adminAssignSubscription(accountId: string, planId: string, notes?: string): Promise<{ subscription: SubscriptionInfo }> {
-  return api.post('/admin/membership/subscriptions', { accountId, planId, notes });
+export function adminAssignSubscription(accountId: string, planId: string, options?: { paymentMethod?: PaymentMethodType; notes?: string }): Promise<{ subscription: SubscriptionInfo }> {
+  return api.post('/admin/membership/subscriptions', { accountId, planId, ...options });
+}
+
+export function adminCancelSubscription(accountId: string, action: 'cancel' | 'revert'): Promise<{ subscription: any }> {
+  return api.post(`/admin/membership/subscriptions/${accountId}/cancel`, { action });
 }
 
 export function adminListSubscriptions(params: { limit?: number; cursor?: string; status?: string }): Promise<{ subscriptions: SubscriptionInfo[]; pagination: { cursor: string | null; hasMore: boolean } }> {

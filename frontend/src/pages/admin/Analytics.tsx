@@ -1,8 +1,8 @@
 import React from 'react';
-import AnalyticsPage from '@/components/features/admin/Analytics';
+import { AnalyticsDashboard } from '@/components/features/admin/analytics/v2/AnalyticsDashboard';
 
 const Analytics: React.FC = () => {
-    return <AnalyticsPage />;
+  return <AnalyticsDashboard />;
 };
 
 export default Analytics;

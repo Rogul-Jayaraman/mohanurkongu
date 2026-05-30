@@ -57,7 +57,7 @@ export function formToDraft(formData: Record<string, unknown>): ProfileDraft {
       noOfSister: formData.noOfSisters ?? null,
     },
     horoscope: {
-      mode: (formData as any).astrology?.mode || null,
+      mode: ((formData as any).astrology?.mode && (formData as any).astrology?.mode !== 'none') ? (formData as any).astrology?.mode : null,
       rasi: formData.rasi || null,
       nakshatra: formData.star || null,
       lagna: formData.laganam || null,
@@ -74,7 +74,7 @@ export function formToDraft(formData: Record<string, unknown>): ProfileDraft {
     assets: {
       landEn: formData.land || null,
       landTa: formData.landTa || null,
-      residenceType: formData.residence === 'OWN_HOUSE' ? 'OWNED' : (formData.residence || null),
+      residenceType: formData.residence || null,
       otherAssetsEn: formData.otherAssets || null,
       otherAssetsTa: formData.otherAssetsTa || null,
       vehicle: formData.vehicle || null,
@@ -144,7 +144,7 @@ export function draftToForm(draft: Partial<ProfileDraft>): Record<string, unknow
     motherIsLate: !draft.family?.motherAlive,
     noOfBrothers: draft.family?.noOfBrother ?? null,
     noOfSisters: draft.family?.noOfSister ?? null,
-    residence: draft.assets?.residenceType === 'OWNED' ? 'OWN_HOUSE' : (draft.assets?.residenceType ?? null),
+    residence: draft.assets?.residenceType ?? null,
     primaryUploadId: draft.photos?.primaryUploadId ?? null,
     primaryUploadUrl: draft.photos?.primaryUploadUrl ?? null,
     galleryUploadIds: draft.photos?.galleryUploadIds ?? [],

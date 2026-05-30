@@ -8,8 +8,8 @@ import {
 import { SouthIndianChart } from '@/components/shared/horoscope';
 import type { PlanetData, HoroscopeResult } from '@/types/horoscope';
 import { getBilingualValue } from '@/utils/bilingual';
+import { getImageUrl } from '@/utils/getImageUrl';
 import logo from '@/assets/images/logo.png';
-const safeGetImageUrl = (url: any) => { const u = typeof url === 'object' && url?.url ? url.url : (typeof url === 'string' ? url : ''); if (!u) return ''; if (/^https?:\/\//i.test(u) || u.startsWith('data:')) return u; if (u.startsWith('/media/')) { const b = import.meta.env.VITE_API_URL || 'http://localhost:4000'; return `${b}${u}`; } return ''; };
 
 
 /* ---------- Shared helpers ---------- */
@@ -104,7 +104,7 @@ const BiodataCommunity: React.FC<{
 const BiodataJathagam: React.FC<{
     star: string; rasi: string; lagna: string; dosham: string;
     horoscope: any; isTamil: boolean; mode?: string;
-    getImageUrl: (url: string) => string;
+    getImageUrl: (url: string | null | undefined) => string | null;
     parseHoroscopeData: (data: any) => any;
 }> = ({ star, rasi, lagna, dosham, horoscope, isTamil, mode, getImageUrl, parseHoroscopeData }) => (
     <div className="mt-[-6px]">
@@ -143,7 +143,7 @@ const BiodataJathagam: React.FC<{
                             {horoscope?.rasi?.url ? (
                                     <div className="w-full h-full border border-gray-200 bg-white flex items-center justify-center p-2">
                                         <img
-                                            src={getImageUrl(horoscope.rasi.url)}
+                                            src={getImageUrl(horoscope.rasi.url) ?? undefined}
                                             alt="Rasi Chart"
                                             className="max-w-full max-h-full object-contain grayscale"
                                             crossOrigin="anonymous"
@@ -159,7 +159,7 @@ const BiodataJathagam: React.FC<{
                             {horoscope?.navamsa?.url ? (
                                     <div className="w-full h-full border border-gray-200 bg-white flex items-center justify-center p-2">
                                         <img
-                                            src={getImageUrl(horoscope.navamsa.url)}
+                                            src={getImageUrl(horoscope.navamsa.url) ?? undefined}
                                             alt="Navamsa Chart"
                                             className="max-w-full max-h-full object-contain grayscale"
                                             crossOrigin="anonymous"
@@ -269,7 +269,7 @@ const PrintProfile: React.FC<{ profile: any }> = ({ profile }) => {
                     star={star} rasi={rasiComputed} lagna={lagna} dosham={dosham}
                     horoscope={profile.horoscope} isTamil={isTamil}
                     mode={profile.horoscope?.mode}
-                     getImageUrl={safeGetImageUrl}
+                     getImageUrl={getImageUrl}
                     parseHoroscopeData={parseHoroscopeData}
                 />
 
@@ -313,12 +313,6 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
     const lagna = profile.lagnam ? getEnumLabel(profile.lagnam, RASI_OPTIONS) : '-';
     const dosham = profile.dosham ? getEnumLabel(profile.dosham, DOSHAM_OPTIONS) : '-';
 
-    const getImageUrl = (url: string) => {
-        if (!url) return '';
-        if (url.startsWith('/media/') || url.startsWith('http') || url.startsWith('data:')) return url;
-        return '';
-    };
-
     const parseHoroscopeData = (data: any) => {
         if (!data) return null;
         if (typeof data === 'object') return data;
@@ -346,7 +340,7 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
                     star={star} rasi={rasiComputed} lagna={lagna} dosham={dosham}
                     horoscope={profile.horoscope} isTamil={isTamil}
                     mode={profile.horoscope?.mode}
-                     getImageUrl={safeGetImageUrl}
+                     getImageUrl={getImageUrl}
                     parseHoroscopeData={parseHoroscopeData}
                 />
 

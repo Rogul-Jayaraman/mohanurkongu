@@ -1,187 +1,131 @@
 import React from 'react';
-import { CheckCircle2, XCircle, CreditCard, Eye, CalendarX, Trash2 } from 'lucide-react';
-import type { MandapamBooking } from '@/types/admin-types';
-import { TableActionDropdown } from '@/components/ui/table/TableActionDropdown';
-import { DataTable, Column } from '@/components/ui/table/DataTable';
-import { format } from 'date-fns';
-import { ta } from 'date-fns/locale';
-import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
-import { useLanguage } from '@/context/LanguageContext';
+import { motion } from 'framer-motion';
+import { Eye, CreditCard, XCircle, CheckCircle, Trash2, Loader2 } from 'lucide-react';
+import { DataTable } from '@/components/ui/table/DataTable';
+import type { Column } from '@/components/ui/table/DataTable';
+import type { Booking } from '@/types/mandapam';
 
 interface BookingsTableProps {
-    t: any;
-    filteredBookings: MandapamBooking[];
-    handleCompleteBooking: (booking: MandapamBooking) => void;
-    handleModifyPayment: (booking: MandapamBooking) => void;
-    handleCancelBooking: (booking: MandapamBooking) => void;
-    handleDeleteBooking: (booking: MandapamBooking) => void;
-    handleViewDetails: (booking: MandapamBooking) => void;
-    currentPage: number;
-    totalPages: number;
-    totalItems: number;
-    itemsPerPage: number;
-    onPageChange: (page: number) => void;
-    loading?: boolean;
-    error?: string | null;
-    onRetry?: () => void;
+  t: any;
+  language: string;
+  bookings: Booking[];
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage: number;
+  onPageChange: (page: number) => void;
+  onViewDetails: (b: Booking) => void;
+  onModifyPayment: (b: Booking) => void;
+  onComplete: (b: Booking) => void;
+  onCancel: (b: Booking) => void;
+  onDelete: (b: Booking) => void;
 }
 
+const STATUS_STYLES: Record<string, string> = {
+  CONFIRMED: 'bg-blue-100 text-blue-700 border-blue-200',
+  EVENT_IN_PROGRESS: 'bg-amber-100 text-amber-700 border-amber-200',
+  EVENT_COMPLETED: 'bg-purple-100 text-purple-700 border-purple-200',
+  SETTLEMENT_PENDING: 'bg-orange-100 text-orange-700 border-orange-200',
+  COMPLETED: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  CANCELLED: 'bg-rose-100 text-rose-700 border-rose-200',
+};
+
 export const BookingsTable: React.FC<BookingsTableProps> = ({
-    t, filteredBookings, handleCompleteBooking, handleModifyPayment, handleCancelBooking, handleDeleteBooking, handleViewDetails,
-    currentPage, totalPages, totalItems, itemsPerPage, onPageChange,
-    loading = false, error = null, onRetry
+  t, language, bookings, loading, error, onRetry,
+  currentPage, totalPages, totalItems, itemsPerPage, onPageChange,
+  onViewDetails, onModifyPayment, onComplete, onCancel, onDelete,
 }) => {
-    const { language } = useLanguage();
-    const isTamil = language === 'ta';
+  const columns: Column<Booking>[] = [
+    {
+      header: t('adminMandapam.bookings.bookingNo') || 'Booking #',
+      key: 'bookingNo',
+      className: 'font-mono font-bold text-xs',
+    },
+    {
+      header: t('adminMandapam.bookings.customer') || 'Customer',
+      render: (b) => language === 'ta' ? b.customerName.ta : b.customerName.en,
+      className: 'font-medium',
+    },
+    {
+      header: t('adminMandapam.bookings.phone') || 'Phone',
+      key: 'customerPhone',
+    },
+    {
+      header: t('adminMandapam.bookings.event') || 'Event',
+      render: (b) => language === 'ta' ? b.eventTitle.ta : b.eventTitle.en,
+      className: 'max-w-[200px] truncate',
+    },
+    {
+      header: t('adminMandapam.bookings.dates') || 'Dates',
+      render: (b) => `${b.bookingConfig.startDate} → ${b.bookingConfig.endDate}`,
+      className: 'text-xs font-mono',
+    },
+    {
+      header: t('adminMandapam.bookings.status') || 'Status',
+      render: (b) => (
+        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${STATUS_STYLES[b.status] || 'bg-gray-100 text-gray-700'}`}>
+          {b.status.replace(/_/g, ' ')}
+        </span>
+      ),
+    },
+    {
+      header: t('adminMandapam.bookings.outstanding') || 'Outstanding',
+      render: (b) => {
+        const outstanding = b._outstanding ?? 0;
+        return (
+          <span className={`font-mono font-bold text-xs ${outstanding > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+            ₹{outstanding.toLocaleString()}
+          </span>
+        );
+      },
+    },
+    {
+      header: t('adminMandapam.bookings.actions') || 'Actions',
+      render: (b) => (
+        <div className="flex items-center gap-1">
+          <button onClick={() => onViewDetails(b)} className="p-1.5 rounded-lg hover:bg-rosewood/5 text-rosewood/50 hover:text-rosewood transition-all" title={t('common.view') || 'View'}>
+            <Eye size={14} />
+          </button>
+          <button onClick={() => onModifyPayment(b)} className="p-1.5 rounded-lg hover:bg-rosewood/5 text-rosewood/50 hover:text-rosewood transition-all" title={t('adminMandapam.bookings.payment') || 'Payment'}>
+            <CreditCard size={14} />
+          </button>
+          <button onClick={() => onComplete(b)} className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-500 hover:text-emerald-700 transition-all" title={t('adminMandapam.bookings.complete') || 'Complete'}>
+            <CheckCircle size={14} />
+          </button>
+          <button onClick={() => onCancel(b)} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-500 hover:text-amber-700 transition-all" title={t('adminMandapam.bookings.cancel') || 'Cancel'}>
+            <XCircle size={14} />
+          </button>
+          <button onClick={() => onDelete(b)} className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-500 hover:text-rose-700 transition-all" title={t('common.delete') || 'Delete'}>
+            <Trash2 size={14} />
+          </button>
+        </div>
+      ),
+    },
+  ];
 
-    // Helper to determine if booking can be modified
-    const isActionable = (status?: string) => !status || status === 'UPCOMING';
-
-    const actions = (booking: MandapamBooking) => [
-        {
-            label: t('adminMandapam.bookings.viewDetails') || 'View Details',
-            icon: Eye,
-            onClick: () => handleViewDetails(booking)
-        },
-        {
-            label: t('adminMandapam.bookings.completeBookingTitle') || 'Mark Completed',
-            icon: CheckCircle2,
-            onClick: () => handleCompleteBooking(booking),
-            show: isActionable(booking.status)
-        },
-        {
-            label: t('adminMandapam.bookings.updatePayment') || 'Modify Payment',
-            icon: CreditCard,
-            onClick: () => handleModifyPayment(booking),
-            show: isActionable(booking.status) && booking.paymentStatus !== 'FULLY_PAID'
-        },
-        {
-            label: t('adminMandapam.bookings.cancelBookingTitle') || 'Cancel Booking',
-            icon: XCircle,
-            onClick: () => handleCancelBooking(booking),
-            show: isActionable(booking.status),
-            danger: true
-        },
-        {
-            label: t('common.delete') || 'Delete Permanently',
-            icon: Trash2,
-            onClick: () => handleDeleteBooking(booking),
-            danger: true
-        }
-    ];
-
-    const getPaymentLabel = (status: string) => {
-        return status === 'FULLY_PAID' ? t('adminMandapam.bookings.fullyPaid') : 
-               status === 'ADVANCE' ? t('adminMandapam.bookings.currentAdvance') : 
-               status === 'NOT_PAID' ? t('adminMandapam.bookings.notPaid') :
-               status.replace('_', ' ');
-    };
-
-    const paymentStatusMap: Record<string, any> = {
-        'FULLY_PAID': 'approved',
-        'ADVANCE': 'pending',
-        'NOT_PAID': 'rejected'
-    };
-
-    const columns: Column<MandapamBooking>[] = [
-        {
-            header: t('adminMandapam.bookings.bookingId') || 'Booking ID',
-            render: (booking) => (
-                <span className="text-xs text-gold font-bold">
-                    {booking.eventId}
-                </span>
-            )
-        },
-        {
-            header: t('adminMandapam.bookings.eventDetails') || 'Event Details',
-            render: (booking) => {
-                const title = isTamil ? booking.eventTitleTa : booking.eventTitleEn;
-                return (
-                    <div className="font-semibold text-rosewood text-sm truncate max-w-48" title={title}>
-                        {title}
-                    </div>
-                );
-            }
-        },
-        {
-            header: t('adminMandapam.bookings.clientName') || 'Client',
-            render: (booking) => (
-                <div className="text-sm text-slate-700 font-medium">
-                    {isTamil ? booking.contactNameTa : booking.contactNameEn}
-                </div>
-            )
-        },
-        {
-            header: t('adminMandapam.bookings.dateSession') || 'Date & Session',
-            render: (booking) => (
-                <div className="text-sm text-slate-700">
-                    <div className="font-medium">
-                        {format(new Date(booking.date), 'dd MMM yyyy', { locale: isTamil ? ta : undefined })}
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                        {booking.session === 'MORNING' ? t('adminMandapam.bookings.morning') : 
-                         booking.session === 'EVENING' ? t('adminMandapam.bookings.evening') : 
-                         t('adminMandapam.bookings.fullDay')}
-                    </div>
-                </div>
-            )
-        },
-        {
-            header: t('adminMandapam.bookings.package') || 'Package',
-            render: (booking) => (
-                <div className="text-sm">
-                    <div className="font-medium text-slate-700">
-                        {isTamil ? booking.packageNameTa : booking.packageNameEn}
-                    </div>
-                    <div className="text-xs text-gold font-semibold">₹{booking.packageSnapshotPrice.toLocaleString()}</div>
-                </div>
-            )
-        },
-        {
-            header: t('adminMandapam.bookings.status') || 'Status',
-            render: (booking) => (
-                <StatusBadge status={(booking.status || 'UPCOMING').toLowerCase() as any} minimal />
-            )
-        },
-        {
-            header: t('adminMandapam.bookings.payment') || 'Payment',
-            render: (booking) => (
-                <StatusBadge 
-                    status={paymentStatusMap[booking.paymentStatus]} 
-                    label={getPaymentLabel(booking.paymentStatus)}
-                    minimal
-                />
-            )
-        },
-        {
-            header: t('adminMandapam.bookings.actions') || 'Actions',
-            headerClassName: 'w-20 text-center',
-            className: 'text-center',
-            render: (booking) => (
-                <TableActionDropdown items={actions(booking)} />
-            )
-        }
-    ];
-
+  if (error) {
     return (
-        <DataTable
-            columns={columns}
-            data={filteredBookings}
-            loading={loading}
-            error={error}
-            onRetry={onRetry}
-            pagination={{
-                currentPage,
-                totalPages,
-                totalItems,
-                itemsPerPage,
-                onPageChange
-            }}
-            emptyState={{
-                icon: CalendarX,
-                title: t('adminMandapam.bookings.noBookingsFound') || 'No bookings found matching your criteria.',
-                description: t('adminMandapam.bookings.noBookingsDesc') || "There are no hall bookings matching your search or filters at the moment."
-            }}
-        />
+      <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl">
+        <p className="text-rose-500 font-medium">{error}</p>
+        <button onClick={onRetry} className="px-6 py-2 rounded-xl bg-rosewood text-white font-bold text-sm">{t('common.retry') || 'Retry'}</button>
+      </div>
     );
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+      <DataTable
+        columns={columns}
+        data={bookings}
+        loading={loading}
+        pagination={{ currentPage, totalPages, totalItems, itemsPerPage, onPageChange }}
+        emptyState={{
+          title: t('adminMandapam.bookings.noBookings') || 'No bookings found',
+        }}
+      />
+    </motion.div>
+  );
 };

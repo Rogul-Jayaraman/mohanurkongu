@@ -7,6 +7,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useTranslation } from 'react-i18next';
 import { stubFetchAnalyticsData, stubFetchBasicStats } from '@/utils/stubs';
 import type { AnalyticsData, BasicStats } from '@/types/admin-types';
+import { formatCurrency } from '@/utils/format';
 
 const CHART_COLORS = ['#D4AF37', '#8B1D3D', '#819683', '#e2a5a5', '#6b0028'];
 
@@ -21,8 +22,6 @@ const aggregateByMonth = (data: any[], dateKey: string, valueKey: string) => {
     });
     return Object.entries(monthly).sort(([a], [b]) => a.localeCompare(b)).map(([date, value]) => ({ date, value }));
 };
-
-const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
 
 // ═══════════════════════════════════════════════════════════
 // GlassStatCard

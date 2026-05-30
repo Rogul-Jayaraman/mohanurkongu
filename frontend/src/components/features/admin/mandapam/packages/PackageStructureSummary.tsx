@@ -1,0 +1,142 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { useLanguage } from '@/context/LanguageContext';
+import { Sparkles } from 'lucide-react';
+import type { MandapamPackage } from '@/types/mandapam';
+
+interface PackageStructureSummaryProps {
+    packages: MandapamPackage[];
+}
+
+const bookingTypeLabels: Record<string, string> = {
+    STANDARD: 'adminMandapam.packages.hoursBased',
+    ROYAL: 'adminMandapam.packages.oneDayFunction',
+    GRAND: 'adminMandapam.packages.twoDayFunction',
+};
+
+const planColors: Record<string, string> = {
+    STANDARD: 'border-slate-300/30 bg-slate-50/50',
+    ROYAL: 'border-amber-300/30 bg-amber-50/50',
+    GRAND: 'border-rosewood/20 bg-rosewood/5',
+};
+
+const planBadge: Record<string, string> = {
+    STANDARD: 'bg-slate-100 text-slate-600',
+    ROYAL: 'bg-amber-100 text-amber-700',
+    GRAND: 'bg-rosewood/10 text-rosewood',
+};
+
+export const PackageStructureSummary: React.FC<PackageStructureSummaryProps> = ({ packages }) => {
+    const { language, t } = useLanguage();
+    const lang = language === 'ta' ? 'TA' : 'EN';
+
+    const getDisplayName = (pkg: MandapamPackage) =>
+        pkg.translations.find(tr => tr.language === lang)?.displayName
+        ?? pkg.translations.find(tr => tr.language === 'EN')?.displayName
+        ?? pkg.code;
+
+    const getFunctionSummary = (pkg: MandapamPackage) => {
+        const names = pkg.functions
+            .filter(fn => fn.status)
+            .map(fn => fn.translations.find(tr => tr.language === lang)?.name
+                ?? fn.translations.find(tr => tr.language === 'EN')?.name
+                ?? '')
+            .filter(Boolean);
+        if (names.length <= 2) return names.join(', ');
+        return names.slice(0, 2).join(', ') + ` & ${names.length - 2} ${t('adminMandapam.packages.moreLabel')?.toLowerCase() || 'more'}`;
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.3 }}
+            className="rounded-xl border-2 border-slate-200/50 bg-white/10 backdrop-blur-2xl overflow-hidden shadow-sm"
+        >
+            <div className="px-6 py-5 border-b border-slate-200/50">
+                <div className="flex items-center gap-2">
+                    <Sparkles size={18} className="text-gold" />
+                    <h2 className="text-base font-bold text-rosewood uppercase tracking-wider">
+                        {t('adminMandapam.packages.structureSummary')}
+                    </h2>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                    {t('adminMandapam.packages.structureSummaryDesc')}
+                </p>
+            </div>
+
+            <div className="hidden md:block">
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="border-b border-slate-200/50">
+                            <th className="text-left px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                {t('adminMandapam.packages.packageName')}
+                            </th>
+                            <th className="text-left px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                {t('adminMandapam.packages.functionType')}
+                            </th>
+                            <th className="text-left px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                {t('adminMandapam.packages.duration')}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {packages.map((pkg) => (
+                            <tr key={pkg.id} className={`border-b border-slate-100/50 last:border-b-0 transition-colors hover:bg-white/30 ${planColors[pkg.code] || ''}`}>
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                        <span className={`inline-block px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-full ${planBadge[pkg.code] || 'bg-slate-100 text-slate-600'}`}>
+                                            {pkg.code}
+                                        </span>
+                                        <span className="text-sm font-bold text-rosewood">
+                                            {getDisplayName(pkg)}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <span className="text-xs text-slate-600 font-medium">
+                                        {getFunctionSummary(pkg)}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <span className="text-xs font-semibold text-rosewood/80 bg-rosewood/5 px-2.5 py-1 rounded-full">
+                                        {t(bookingTypeLabels[pkg.code] || 'adminMandapam.packages.hoursBased')}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <div className="md:hidden divide-y divide-slate-200/50">
+                {packages.map((pkg) => (
+                    <div key={pkg.id} className={`px-6 py-4 ${planColors[pkg.code] || ''}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-full ${planBadge[pkg.code] || 'bg-slate-100 text-slate-600'}`}>
+                                {pkg.code}
+                            </span>
+                            <span className="text-sm font-bold text-rosewood">{getDisplayName(pkg)}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                                    {t('adminMandapam.packages.functionType')}
+                                </span>
+                                <p className="text-slate-600 font-medium mt-0.5">{getFunctionSummary(pkg)}</p>
+                            </div>
+                            <div>
+                                <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                                    {t('adminMandapam.packages.duration')}
+                                </span>
+                                <p className="text-rosewood/80 font-semibold mt-0.5">
+                                    {t(bookingTypeLabels[pkg.code] || 'adminMandapam.packages.hoursBased')}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </motion.div>
+    );
+};

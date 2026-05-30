@@ -18,7 +18,6 @@ interface ProfileShowcaseCardProps {
     firstNameTa?: string | null;
     lastNameTa?: string | null;
     profilePhoto?: string | ImageObject | null;
-    gender?: string | null;
   };
   isTamil?: boolean;
 }
@@ -85,6 +84,12 @@ const imageUrl = getImageUrl(photoUrl) || renderPlaceholderSVG(fullName, isTamil
         />
 
         <div className="absolute inset-0 kolam-watermark opacity-[0.06] pointer-events-none z-[2]" />
+
+        <div className="absolute bottom-0 left-0 right-0 z-[3] flex items-end justify-center pb-2 px-2">
+          <span className="text-tiny sm:text-xs font-medium text-ivory tracking-wide px-2.5 py-0.5 rounded-full bg-rosewood-gradient shadow-sm">
+            {profile.regNo}
+          </span>
+        </div>
 
       </div>
 

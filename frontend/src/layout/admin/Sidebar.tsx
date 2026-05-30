@@ -125,7 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                                         <span className="material-symbols-outlined text-[18px]">portrait</span>
                                         <span className="flex-1">{t('adminLayout.nav.profiles')}</span>
                                     </Link>
-                                    <Link to="/admin/matrimony/users" className={`flex items-center gap-2 px-6 py-3 md:py-4 text-sm font-serif rounded-md transition-colors ${isActive('/admin/matrimony/users') ? 'text-rosewood font-medium bg-gold-soft/10' : 'text-gray-500 hover:text-rosewood hover:bg-rosewood/5'}`} onClick={handleLinkClick}>
+                                    <Link to="/admin/matrimony/account" className={`flex items-center gap-2 px-6 py-3 md:py-4 text-sm font-serif rounded-md transition-colors ${isActive('/admin/matrimony/account') ? 'text-rosewood font-medium bg-gold-soft/10' : 'text-gray-500 hover:text-rosewood hover:bg-rosewood/5'}`} onClick={handleLinkClick}>
                                         <span className="material-symbols-outlined text-[18px]">group</span>
                                         <span className="flex-1">{t('adminLayout.nav.userAccounts')}</span>
                                     </Link>

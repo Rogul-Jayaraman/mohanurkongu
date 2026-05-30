@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import type { AuthController } from './auth.controller.js';
 import { validate } from '../../common/middleware/validate.js';
 import { requireSession } from '../../common/middleware/requireAuth.js';
@@ -7,50 +6,28 @@ import {
   signupSchema,
   loginSchema,
   resetPasswordSchema,
+  changePasswordSchema,
 } from '../../common/validators/auth.validator.js';
-import { authConfig } from '../../config/auth.config.js';
-
-const createRateLimiter = (max: number) =>
-  rateLimit({
-    windowMs: authConfig.rateLimit.windowMs,
-    max,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { success: false, error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests' } },
-  });
+import { createRateLimiter } from '../shared/rateLimiter.js';
 
 export function createAuthRoutes(controller: AuthController): Router {
   const router = Router();
 
-  router.post(
-    '/auth/register',
-    createRateLimiter(authConfig.rateLimit.signupMax),
-    validate(signupSchema),
-    controller.register,
-  );
-
-  router.post(
-    '/auth/login',
-    createRateLimiter(20),
-    validate(loginSchema),
-    controller.login,
-  );
-
-  router.post(
-    '/auth/refresh',
-    createRateLimiter(authConfig.rateLimit.refreshMax),
-    controller.refresh,
-  );
-
+  // Public routes (no auth required)
+  router.post('/auth/register', createRateLimiter(5), validate(signupSchema), controller.register);
+  router.post('/auth/login', createRateLimiter(20), validate(loginSchema), controller.login);
+  router.post('/auth/refresh', createRateLimiter(10), controller.refresh);
   router.post('/auth/logout', createRateLimiter(20), controller.logout);
+
+  router.post('/auth/change-password', requireSession, createRateLimiter(5), validate(changePasswordSchema), controller.changePassword);
   router.post('/auth/logout-all', requireSession, createRateLimiter(10), controller.logoutAll);
 
-  router.post(
-    '/auth/password/reset',
-    createRateLimiter(5),
-    validate(resetPasswordSchema),
-    controller.resetPassword,
-  );
+  router.post('/auth/password/otp', createRateLimiter(5), controller.sendPasswordResetOtp);
+  router.post('/auth/password/otp/verify', createRateLimiter(10), controller.verifyPasswordResetOtp);
+  router.post('/auth/password/reset', createRateLimiter(5), validate(resetPasswordSchema), controller.resetPassword);
+
+  router.post('/auth/registration/otp', createRateLimiter(5), controller.sendRegistrationOtp);
+  router.post('/auth/registration/otp/verify', createRateLimiter(10), controller.verifyRegistrationOtp);
 
   return router;
 }

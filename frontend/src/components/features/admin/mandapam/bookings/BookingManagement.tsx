@@ -1,150 +1,182 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, AlertCircle, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { stubFetchBookings, stubUpdateBooking, stubAddPayment, stubDeleteBooking } from '@/utils/stubs';
+import { BookingsFilter } from '@/components/features/admin/mandapam/bookings/BookingsFilter';
+import { BookingsTable } from '@/components/features/admin/mandapam/bookings/BookingsTable';
 import { NewBookingModal } from '@/modals/admin/NewBookingModal';
 import { CancelRefundModal } from '@/modals/admin/CancelRefundModal';
 import { CompleteBookingModal } from '@/modals/admin/CompleteBookingModal';
 import { ModifyPaymentModal } from '@/modals/admin/ModifyPaymentModal';
 import { ViewDetailsModal } from '@/modals/admin/ViewDetailsModal';
-import { DeleteConfirmationModal } from '@/modals/admin/DeleteConfirmationModal';
-import { BookingsFilter } from '@/components/features/admin/mandapam/bookings/BookingsFilter';
-import { BookingsTable } from '@/components/features/admin/mandapam/bookings/BookingsTable';
-import type { MandapamBooking } from '@/types/admin-types';
+import { CancelConfirmationModal } from '@/modals/admin/CancelConfirmationModal';
+import {
+  adminListBookings,
+  adminUpdateBookingStatus,
+  adminAddPayment,
+  adminAddRefund,
+  adminSettlementAction,
+} from '@/api/mandapam.api';
+import type { Booking } from '@/types/mandapam';
 import { toast } from 'sonner';
 
-// BookingManagement (Main Orchestrator)
-// ═══════════════════════════════════════════════════════════
 const BookingManagement: React.FC = () => {
-    const { t } = useLanguage();
-    const isTamil = t('common.language') === 'ta';
-    const [selectedBooking, setSelectedBooking] = React.useState<MandapamBooking | null>(null);
-    const [searchQuery, setSearchQuery] = React.useState('');
-    const [statusFilter, setStatusFilter] = React.useState('All');
-    const [currentPage, setCurrentPage] = React.useState(1);
-    const itemsPerPage = 10;
-    const [isFilterOpen, setIsFilterOpen] = React.useState(false);
-    const [isBookingModalOpen, setIsBookingModalOpen] = React.useState(false);
-    const [isPaymentModalOpen, setIsPaymentModalOpen] = React.useState(false);
-    const [isCancelModalOpen, setIsCancelModalOpen] = React.useState(false);
-    const [isCompleteModalOpen, setIsCompleteModalOpen] = React.useState(false);
-    const [isViewDetailsModalOpen, setIsViewDetailsModalOpen] = React.useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const { t, language } = useLanguage();
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalItems, setTotalItems] = useState(0);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
+  const [isViewDetailsModalOpen, setIsViewDetailsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-    const [qBookings, setQBookings] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<any>(null);
-    const refetch = () => { setIsLoading(true); stubFetchBookings({ search: searchQuery, status: statusFilter }).then(setQBookings).catch(setError).finally(() => setIsLoading(false)); };
-    useEffect(() => { refetch(); }, [searchQuery, statusFilter]);
+  const fetchBookings = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const filters: any = { page: currentPage, limit: itemsPerPage };
+      if (statusFilter !== 'All') filters.status = statusFilter;
+      if (searchQuery) filters.search = searchQuery;
+      const { bookings, meta } = await adminListBookings(filters);
+      setBookings(bookings || []);
+      setTotalItems(meta?.total || 0);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch bookings');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, statusFilter, searchQuery]);
 
-    const paginationData = React.useMemo(() => {
-        const totalItems = qBookings.length;
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        return { paginatedBookings: qBookings.slice(startIndex, startIndex + itemsPerPage), totalItems, totalPages };
-    }, [qBookings, currentPage, itemsPerPage]);
+  useEffect(() => { fetchBookings(); }, [fetchBookings]);
 
-    const [isUpdatingBooking, setIsUpdatingBooking] = useState(false);
-    const [isAddingPayment, setIsAddingPayment] = useState(false);
-    const [isDeletingBooking, setIsDeletingBooking] = useState(false);
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
-    const handleConfirmPayment = (booking: MandapamBooking, paymentType: string, amount: string) => {
+  const handleConfirmPayment = async (booking: Booking, paymentType: string, amount: string, paymentMethod: string) => {
+    try {
+      const numAmount = Number(amount.replace?.(/,/g, '') ?? amount);
+      await adminAddPayment(booking.id, {
+        paymentType: paymentType as 'ADVANCE' | 'INSTALLMENT' | 'FINAL_PAYMENT',
+        paymentMethod: paymentMethod as 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE',
+        amount: numAmount,
+      });
+      toast.success(t('adminMandapam.bookings.paymentAddedToast'));
+      setIsPaymentModalOpen(false);
+      fetchBookings();
+    } catch (err: any) {
+      toast.error(err.message || t('adminMandapam.bookings.addPaymentError'));
+    }
+  };
+
+  const handleConfirmCancel = async (booking: Booking, refundType: string, refundAmount: string, refundMethod: string) => {
+    try {
+      if (refundType !== 'NO_REFUND' && refundAmount) {
+        const numAmount = Number(refundAmount.replace?.(/,/g, '') ?? refundAmount);
+        await adminAddRefund(booking.id, {
+          refundType: refundType as 'PARTIAL_REFUND' | 'FULL_REFUND',
+          refundMethod: refundMethod as 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE',
+          amount: numAmount,
+          reason: 'Cancellation refund',
+        });
+      }
+      await adminUpdateBookingStatus(booking.id, { status: 'CANCELLED' });
+      toast.success(t('adminMandapam.bookings.cancelledToast'));
+      setIsCancelModalOpen(false);
+      fetchBookings();
+    } catch (err: any) {
+      toast.error(err.message || t('adminMandapam.bookings.cancelError'));
+    }
+  };
+
+  const handleConfirmComplete = async (booking: Booking, mode: string, amount: string, paymentMethod: string) => {
+    try {
+      if (mode === 'fully_settled' && amount) {
         const numAmount = Number(amount.replace?.(/,/g, '') ?? amount);
-        if (paymentType === 'paid') {
-            setIsUpdatingBooking(true);
-            stubUpdateBooking({ id: booking.id, data: { paymentStatus: 'FULLY_PAID', paidAmount: booking.totalAmount, balance: 0 } }).then(
-                () => { toast.success('Booking fully settled'); setIsPaymentModalOpen(false); }
-            ).catch(
-                (err: any) => toast.error(err.message || 'Failed to update payment')
-            ).finally(() => setIsUpdatingBooking(false));
-        } else {
-            setIsAddingPayment(true);
-            stubAddPayment({ bookingId: booking.id, data: { amount: numAmount, paymentMethod: 'CASH' } }).then(
-                () => { toast.success('Payment added'); setIsPaymentModalOpen(false); }
-            ).catch(
-                (err: any) => toast.error(err.message || 'Failed to add payment')
-            ).finally(() => setIsAddingPayment(false));
+        if (numAmount > 0) {
+          await adminAddPayment(booking.id, {
+            paymentType: 'FINAL_PAYMENT',
+            paymentMethod: paymentMethod as 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE',
+            amount: numAmount,
+          });
         }
-    };
+        await adminUpdateBookingStatus(booking.id, { status: 'COMPLETED' });
+      } else if (mode === 'discount') {
+        const numAmount = amount ? Number(amount.replace?.(/,/g, '') ?? amount) : undefined;
+        await adminSettlementAction(booking.id, {
+          action: 'complete',
+          finalAmount: numAmount,
+        });
+      }
+      toast.success(t('adminMandapam.bookings.completedToast'));
+      setIsCompleteModalOpen(false);
+      fetchBookings();
+    } catch (err: any) {
+      toast.error(err.message || t('adminMandapam.bookings.completeError'));
+    }
+  };
 
-    const handleConfirmCancel = (booking: MandapamBooking, refundType: string, refundAmount: string) => {
-        const data: any = { status: 'CANCELLED' };
-        if (refundType === 'full') {
-            data.paidAmount = 0;
-            data.balance = booking.totalAmount;
-            data.paymentStatus = 'NOT_PAID';
-        } else if (refundType === 'advance') {
-            data.paidAmount = 0;
-            data.balance = booking.totalAmount;
-            data.paymentStatus = 'NOT_PAID';
-        } else if (refundType === 'partial' && refundAmount) {
-            const refund = Number(refundAmount.replace?.(/,/g, '') ?? refundAmount);
-            data.paidAmount = Math.max(0, booking.paidAmount - refund);
-            data.balance = booking.totalAmount - data.paidAmount;
-        }
-        setIsUpdatingBooking(true);
-        stubUpdateBooking({ id: booking.id, data }).then(
-            () => { toast.success('Booking cancelled'); setIsCancelModalOpen(false); }
-        ).catch(
-            (err: any) => toast.error(err.message || 'Failed to cancel booking')
-        ).finally(() => setIsUpdatingBooking(false));
-    };
+  const handleConfirmCancelDirect = async () => {
+    if (!selectedBooking) return;
+    try {
+      await adminUpdateBookingStatus(selectedBooking.id, { status: 'CANCELLED' });
+      toast.success(t('adminMandapam.bookings.cancelledToast'));
+      setIsDeleteModalOpen(false);
+      fetchBookings();
+    } catch (err: any) {
+      toast.error(err.message || t('adminMandapam.bookings.cancelError'));
+    }
+  };
 
-    const handleConfirmComplete = (booking: MandapamBooking, paymentStatus: string, amount: string) => {
-        const data: any = { status: 'COMPLETED' };
-        if (paymentStatus === 'discounted' && amount) {
-            const discount = Number(amount.replace?.(/,/g, '') ?? amount);
-            data.totalAmount = booking.totalAmount - discount;
-            data.paidAmount = data.totalAmount;
-            data.balance = 0;
-            data.paymentStatus = 'FULLY_PAID';
-        } else if (booking.balance > 0) {
-            data.paidAmount = booking.totalAmount;
-            data.balance = 0;
-            data.paymentStatus = 'FULLY_PAID';
-        }
-        setIsUpdatingBooking(true);
-        stubUpdateBooking({ id: booking.id, data }).then(
-            () => { toast.success('Booking completed'); setIsCompleteModalOpen(false); }
-        ).catch(
-            (err: any) => toast.error(err.message || 'Failed to complete booking')
-        ).finally(() => setIsUpdatingBooking(false));
-    };
+  const handleBookingSuccess = () => {
+    setIsBookingModalOpen(false);
+    fetchBookings();
+  };
 
-    const handleConfirmDelete = () => {
-        if (!selectedBooking) return;
-        setIsDeletingBooking(true);
-        stubDeleteBooking(selectedBooking.id).then(
-            () => { toast.success('Booking deleted permanently'); setIsDeleteModalOpen(false); refetch(); }
-        ).catch(
-            (err: any) => toast.error(err.message || 'Failed to delete booking')
-        ).finally(() => setIsDeletingBooking(false));
-    };
-
-    const handleBookingSuccess = () => { setIsBookingModalOpen(false); refetch(); };
-
-    return (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 md:space-y-10">
-            <BookingsFilter 
-                t={t} 
-                searchQuery={searchQuery} 
-                setSearchQuery={setSearchQuery} 
-                statusFilter={statusFilter} 
-                setStatusFilter={setStatusFilter} 
-                isFilterOpen={isFilterOpen} 
-                setIsFilterOpen={setIsFilterOpen} 
-                onAdd={() => setIsBookingModalOpen(true)}
-            />
-            <BookingsTable t={t} filteredBookings={paginationData.paginatedBookings} handleCompleteBooking={(b) => { setSelectedBooking(b); setIsCompleteModalOpen(true); }} handleModifyPayment={(b) => { setSelectedBooking(b); setIsPaymentModalOpen(true); }} handleCancelBooking={(b) => { setSelectedBooking(b); setIsCancelModalOpen(true); }} handleDeleteBooking={(b) => { setSelectedBooking(b); setIsDeleteModalOpen(true); }} handleViewDetails={(b) => { setSelectedBooking(b); setIsViewDetailsModalOpen(true); }} currentPage={currentPage} totalPages={paginationData.totalPages} totalItems={paginationData.totalItems} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} loading={isLoading} error={error?.message} onRetry={() => refetch()} />
-            <NewBookingModal isOpen={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} t={t as any} onSuccess={handleBookingSuccess} />
-            {selectedBooking && <ModifyPaymentModal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} t={t} booking={selectedBooking as any} onConfirm={handleConfirmPayment as any} />}
-            {selectedBooking && <CancelRefundModal isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)} t={t} booking={selectedBooking as any} onConfirm={handleConfirmCancel as any} />}
-            {selectedBooking && <CompleteBookingModal isOpen={isCompleteModalOpen} onClose={() => setIsCompleteModalOpen(false)} t={t} booking={selectedBooking as any} onConfirm={handleConfirmComplete as any} />}
-            {selectedBooking && <ViewDetailsModal isOpen={isViewDetailsModalOpen} onClose={() => setIsViewDetailsModalOpen(false)} t={t} booking={selectedBooking as any} />}
-            <DeleteConfirmationModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleConfirmDelete} booking={selectedBooking} t={t} />
-        </motion.div>
-    );
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 md:space-y-10">
+      <BookingsFilter
+        t={t}
+        searchQuery={searchQuery}
+        setSearchQuery={(v) => { setSearchQuery(v); setCurrentPage(1); }}
+        statusFilter={statusFilter}
+        setStatusFilter={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+        isFilterOpen={isFilterOpen}
+        setIsFilterOpen={setIsFilterOpen}
+        onAdd={() => setIsBookingModalOpen(true)}
+      />
+      <BookingsTable
+        t={t}
+        language={language}
+        bookings={bookings}
+        loading={isLoading}
+        error={error}
+        onRetry={fetchBookings}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        onPageChange={setCurrentPage}
+        onViewDetails={(b) => { setSelectedBooking(b); setIsViewDetailsModalOpen(true); }}
+        onModifyPayment={(b) => { setSelectedBooking(b); setIsPaymentModalOpen(true); }}
+        onComplete={(b) => { setSelectedBooking(b); setIsCompleteModalOpen(true); }}
+        onCancel={(b) => { setSelectedBooking(b); setIsCancelModalOpen(true); }}
+        onDelete={(b) => { setSelectedBooking(b); setIsDeleteModalOpen(true); }}
+      />
+      <NewBookingModal isOpen={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} t={t as any} onSuccess={handleBookingSuccess} />
+      {selectedBooking && <ModifyPaymentModal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} t={t} booking={selectedBooking} onConfirm={handleConfirmPayment} />}
+      {selectedBooking && <CancelRefundModal isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)} t={t} booking={selectedBooking} onConfirm={handleConfirmCancel} />}
+      {selectedBooking && <CompleteBookingModal isOpen={isCompleteModalOpen} onClose={() => setIsCompleteModalOpen(false)} t={t} booking={selectedBooking} onConfirm={handleConfirmComplete} />}
+      {selectedBooking && <ViewDetailsModal isOpen={isViewDetailsModalOpen} onClose={() => setIsViewDetailsModalOpen(false)} t={t} booking={selectedBooking} />}
+      <CancelConfirmationModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleConfirmCancelDirect} booking={selectedBooking} t={t} />
+    </motion.div>
+  );
 };
 
 export default BookingManagement;

@@ -60,15 +60,15 @@ export default function HoroscopeResults({ result, loading, error, language, onR
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest">{t('profile_new:dob')}</p>
-                <p className="text-sm font-bold text-slate-700 leading-relaxed">{formatDate(result.input.dateOfBirth)}</p>
+                <p className="text-sm font-bold text-slate-700 leading-relaxed">{formatDate(result.input?.dateOfBirth || '')}</p>
               </div>
               <div>
                 <p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest">{t('profile_new:horoscope.birth_time')}</p>
-                <p className="text-sm font-bold text-slate-700 leading-relaxed">{result.input.timeOfBirth}</p>
+                <p className="text-sm font-bold text-slate-700 leading-relaxed">{result.input?.timeOfBirth || ''}</p>
               </div>
               <div>
                 <p className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest">{t('profile_new:horoscope.birth_place')}</p>
-                <p className="text-sm font-bold text-slate-700 leading-relaxed">{result.summary.locationName}</p>
+                <p className="text-sm font-bold text-slate-700 leading-relaxed">{result.summary?.locationName || ''}</p>
               </div>
             </div>
           </div>

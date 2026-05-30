@@ -12,7 +12,7 @@ export const ComingSoonPage: React.FC = () => {
     <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Background Decor */}
       <div className="absolute inset-0 bg-ivory opacity-50" />
-      <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.03] scale-125 pointer-events-none" />
+      <div className="absolute inset-0 bg-kolam-pattern opacity-[0.03] scale-125 pointer-events-none" />
       
       {/* Shimmer Overlay */}
       <motion.div 

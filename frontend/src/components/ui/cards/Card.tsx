@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Crown, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { formatCurrency } from '@/utils/format';
 
 const isComponent = (x: unknown): x is React.ComponentType<{ size?: number }> =>
     typeof x === 'function' || (typeof x === 'object' && x !== null);
@@ -185,7 +186,7 @@ export const Card: React.FC<CardProps> = ({
                         {priceLabel ? (
                             <span className="text-3xl font-serif font-black text-rosewood">{priceLabel}</span>
                         ) : (
-                            <span className="text-3xl font-serif font-black text-rosewood">₹{price?.toLocaleString('en-IN')}</span>
+                            <span className="text-3xl font-serif font-black text-rosewood">{price != null ? formatCurrency(price) : ''}</span>
                         )}
                         {period && <span className="text-xs font-semibold text-slate-400 ml-1">{period}</span>}
                     </div>

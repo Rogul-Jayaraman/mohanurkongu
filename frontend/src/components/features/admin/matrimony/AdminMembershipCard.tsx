@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Edit2, IndianRupee } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { MembershipPlan } from '@/api/membership.api';
+import { adminUpdatePlan } from '@/api/admin-membership.api';
+import { formatCurrency } from '@/utils/format';
 
 interface AdminMembershipCardProps {
   plan: MembershipPlan;
-  isTamil: boolean;
   onEdit?: (plan: MembershipPlan) => void;
+  onRefresh?: () => void;
 }
 
 const planBadge: Record<string, string> = {
@@ -23,19 +26,65 @@ const planColors: Record<string, string> = {
   PLATINUM: 'from-cyan-200/30 to-cyan-400/10 border-cyan-300/30',
 };
 
-export const AdminMembershipCard: React.FC<AdminMembershipCardProps> = ({ plan, isTamil, onEdit }) => {
-  const { code, displayName, displayPrice, durationDays, openLimit, shortlistLimit, profileSlotLimit, contactAccess, fullHoroscopeAccess, printProfile, printHoroscope, searchLevel } = plan;
+export const AdminMembershipCard: React.FC<AdminMembershipCardProps> = ({ plan, onEdit, onRefresh }) => {
+  const { t } = useTranslation();
+  const [toggling, setToggling] = useState(false);
+
+  const {
+    code, displayName, displayPrice, durationDays, status,
+    openLimit, shortlistLimit, profileSlotLimit,
+    viewDetails, printProfile, printHoroscope, searchLevel,
+  } = plan;
+
+  const viewDetailsLabels: Record<string, string> = {
+    BASIC: t('adminMatrimony:plans.card.viewDetailsBasic'),
+    EXTENDED: t('adminMatrimony:plans.card.viewDetailsExtended'),
+    ADVANCED: t('adminMatrimony:plans.card.viewDetailsAdvanced'),
+    FULL: t('adminMatrimony:plans.card.viewDetailsFull'),
+  };
+
+  const searchLevelLabels: Record<string, string> = {
+    BASIC: t('adminMatrimony:plans.card.searchBasic'),
+    EXTENDED: t('adminMatrimony:plans.card.searchExtended'),
+    ADVANCED: t('adminMatrimony:plans.card.searchAdvanced'),
+    FULL: t('adminMatrimony:plans.card.searchFull'),
+  };
 
   const features: string[] = [
-    isTamil ? `தினமும் ${openLimit} வரன்கள் வரை` : `Up to ${openLimit} profile opens/day`,
-    isTamil ? `அதிகபட்சம் ${shortlistLimit} குறும்பட்டியல்` : `Up to ${shortlistLimit} shortlists`,
-    isTamil ? `அதிகபட்சம் ${profileSlotLimit} சுயவிவரங்கள்` : `Up to ${profileSlotLimit} profiles`,
-    contactAccess ? (isTamil ? 'தொடர்பு தகவல் அணுகல்' : 'Contact info access') : (isTamil ? 'தொடர்பு தகவல் இல்லை' : 'No contact access'),
-    fullHoroscopeAccess ? (isTamil ? 'முழு ஜாதகம்' : 'Full horoscope access') : (isTamil ? 'அடிப்படை ஜாதகம்' : 'Basic horoscope'),
-    printProfile ? (isTamil ? 'சுயவிவர அச்சு' : 'Profile print') : (isTamil ? 'அச்சு இல்லை' : 'No print'),
-    printHoroscope ? (isTamil ? 'ஜாதக அச்சு' : 'Horoscope print') : (isTamil ? 'அச்சு இல்லை' : 'No print'),
-    searchLevel === 'ADVANCED' ? (isTamil ? 'மேம்பட்ட தேடல்' : 'Advanced search') : (searchLevel === 'STANDARD' ? (isTamil ? 'நிலையான தேடல்' : 'Standard search') : (isTamil ? 'அடிப்படை தேடல்' : 'Basic search')),
+    t('adminMatrimony:plans.card.perDay', { count: openLimit }),
+    openLimit === -1
+      ? t('adminMatrimony:plans.card.opensUnlimited')
+      : t('adminMatrimony:plans.card.opens', { count: openLimit }),
+    shortlistLimit === -1
+      ? t('adminMatrimony:plans.card.shortlistUnlimited')
+      : shortlistLimit === 0
+        ? t('adminMatrimony:plans.card.shortlistNone')
+        : t('adminMatrimony:plans.card.shortlist', { count: shortlistLimit }),
+    t('adminMatrimony:plans.card.profiles', { count: profileSlotLimit }),
+    viewDetailsLabels[viewDetails] || viewDetails,
+    searchLevelLabels[searchLevel] || searchLevel,
+    printProfile
+      ? t('adminMatrimony:plans.card.printProfileOn')
+      : t('adminMatrimony:plans.card.printDisabled'),
+    printHoroscope
+      ? t('adminMatrimony:plans.card.printHoroscopeOn')
+      : t('adminMatrimony:plans.card.printDisabled'),
   ];
+
+  const isActive = status === 'ACTIVE';
+
+  const handleStatusToggle = async () => {
+    setToggling(true);
+    try {
+      const newStatus = isActive ? 'INACTIVE' : 'ACTIVE';
+      await adminUpdatePlan(plan.id, { status: newStatus });
+      onRefresh?.();
+    } catch {
+      // error handled by interceptor
+    } finally {
+      setToggling(false);
+    }
+  };
 
   return (
     <motion.div
@@ -55,23 +104,18 @@ export const AdminMembershipCard: React.FC<AdminMembershipCardProps> = ({ plan, 
       </div>
 
       <div className="relative flex flex-col flex-1">
-        <div className="flex justify-between items-start my-4">
+        <div className="my-4">
           <h3 className="text-lg font-bold text-rosewood tracking-tight leading-tight uppercase">{displayName}</h3>
-          {onEdit && (
-            <button onClick={() => onEdit(plan)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
-              <Edit2 size={16} className="text-slate-500" />
-            </button>
-          )}
         </div>
 
         <div className="mb-4 flex items-baseline gap-1">
           <IndianRupee size={16} className="text-gold/80" />
           <span className="text-xl font-semibold text-gold/80">
-            {displayPrice === 0 ? (isTamil ? 'இலவசம்' : 'Free') : displayPrice.toLocaleString('en-IN')}
+            {displayPrice === 0 ? t('adminMatrimony:plans.card.free') : formatCurrency(displayPrice)}
           </span>
           {durationDays > 0 && (
             <span className="text-sage text-[9px] ml-1">
-              {isTamil ? `${durationDays} நாட்கள்` : `/ ${durationDays} days`}
+              {t('adminMatrimony:plans.card.daysSuffix', { count: durationDays })}
             </span>
           )}
         </div>
@@ -86,6 +130,34 @@ export const AdminMembershipCard: React.FC<AdminMembershipCardProps> = ({ plan, 
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="relative flex items-center justify-between pt-4 mt-auto border-t border-slate-200/50">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleStatusToggle}
+            disabled={toggling}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              isActive ? 'bg-emerald-400' : 'bg-slate-300'
+            }`}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${
+                isActive ? 'translate-x-[18px]' : 'translate-x-[2px]'
+              }`}
+            />
+          </button>
+          <span className={`text-xs font-semibold ${isActive ? 'text-emerald-600' : 'text-slate-400'}`}>
+            {isActive ? t('adminMatrimony:plans.toggleActive') : t('adminMatrimony:plans.toggleInactive')}
+          </span>
+        </div>
+        <button
+          onClick={() => onEdit?.(plan)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rosewood text-white text-xs font-semibold hover:bg-rosewood/90 transition-colors"
+        >
+          <Edit2 size={14} />
+          {t('adminMatrimony:plans.editPlan')}
+        </button>
       </div>
     </motion.div>
   );

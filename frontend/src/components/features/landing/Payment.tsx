@@ -81,7 +81,7 @@ const bannerBase =
 
 const BannerDecorations: React.FC = () => (
   <>
-    <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.03] scale-125 pointer-events-none" />
+    <div className="absolute inset-0 bg-kolam-pattern opacity-[0.03] scale-125 pointer-events-none" />
     <div className="absolute right-0 top-0 w-1/3 h-full bg-linear-to-l from-gold/10 to-transparent pointer-events-none" />
   </>
 );

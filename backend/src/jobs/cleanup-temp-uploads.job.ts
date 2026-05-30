@@ -16,7 +16,7 @@ async function run() {
       const uploads = await prisma.upload.findMany({
         where: {
           status: 'TEMP',
-          createdAt: { lt: cutoff },
+          updatedAt: { lt: cutoff },
         },
         take: BATCH,
       });

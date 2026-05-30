@@ -356,9 +356,25 @@ interface BrowseProfileFiltersProps {
     filters: any;
     setFilters: (filters: any) => void;
     onApply: () => void;
+    searchLevel?: string;
 }
 
-export const BrowseProfileFilters: React.FC<BrowseProfileFiltersProps> = ({ isOpen, onClose, filters, setFilters, onApply }) => {
+const LockedOverlay: React.FC<{ message: string; messageTa: string }> = ({ message, messageTa }) => {
+    const { i18n } = useTranslation();
+    const isTamil = i18n.language === 'ta';
+    return (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-ivory/80 backdrop-blur-[2px] rounded-xl">
+            <div className="w-14 h-14 rounded-full bg-rosewood/5 flex items-center justify-center mb-4 border border-rosewood/10">
+                <span className="material-symbols-outlined text-3xl text-rosewood/40">lock</span>
+            </div>
+            <p className="text-xs font-bold text-rosewood/50 text-center max-w-[200px] leading-relaxed">
+                {isTamil ? messageTa : message}
+            </p>
+        </div>
+    );
+};
+
+export const BrowseProfileFilters: React.FC<BrowseProfileFiltersProps> = ({ isOpen, onClose, filters, setFilters, onApply, searchLevel = 'BASIC' }) => {
     const { t, i18n } = useTranslation(['dashboard', 'common', 'browse']);
     const [localFilters, setLocalFilters] = useState<any>({});
 
@@ -383,6 +399,13 @@ export const BrowseProfileFilters: React.FC<BrowseProfileFiltersProps> = ({ isOp
     const handleApply = () => { setFilters(localFilters); onApply(); };
     const handleClearAll = () => { setLocalFilters({}); };
     const handleReset = () => { setLocalFilters({}); setFilters({}); onApply(); };
+
+    // Search level gating
+    const levels = ['BASIC', 'EXTENDED', 'ADVANCED', 'FULL'];
+    const isAtLeast = (min: string) => levels.indexOf(searchLevel) >= levels.indexOf(min);
+    const astrologyLocked = !isAtLeast('ADVANCED');
+    const educationLocked = !isAtLeast('EXTENDED');
+    const residenceLocked = !isAtLeast('FULL');
 
     const activeCount = Object.keys(localFilters).filter(k => {
         const v = localFilters[k];
@@ -417,12 +440,15 @@ export const BrowseProfileFilters: React.FC<BrowseProfileFiltersProps> = ({ isOp
     }));
 
     const SectionCard = ({
-        icon, title, titleTa, children, isHighlight = false, columns = 2, spanClassName = ''
+        icon, title, titleTa, children, isHighlight = false, columns = 2, spanClassName = '', locked = false, lockedMessage = '', lockedMessageTa = ''
     }: {
         icon: string; title: string; titleTa: string;
         children: React.ReactNode; isHighlight?: boolean;
         columns?: 1 | 2 | 3;
         spanClassName?: string;
+        locked?: boolean;
+        lockedMessage?: string;
+        lockedMessageTa?: string;
     }) => {
         return (
             <div className={`transition-all duration-300 rounded-xl h-full flex flex-col relative group/section ${spanClassName} ${
@@ -449,6 +475,7 @@ export const BrowseProfileFilters: React.FC<BrowseProfileFiltersProps> = ({ isOp
                     'grid grid-cols-1 md:grid-cols-3'
                 }`}>
                     {children}
+                    {locked && <LockedOverlay message={lockedMessage} messageTa={lockedMessageTa} />}
                 </div>
             </div>
         );
@@ -510,7 +537,11 @@ export const BrowseProfileFilters: React.FC<BrowseProfileFiltersProps> = ({ isOp
 
                         <div className="flex-1 overflow-y-auto filter-scroll-container custom-scrollbar relative z-10 bg-slate-50/30">
                             <div className="max-w-7xl mx-auto px-6 lg:px-12 py-12 grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-                                <SectionCard icon="auto_awesome" title={t('browse:section_astrology')} titleTa="ஜோதிடம்" isHighlight columns={1} spanClassName="">
+                                <SectionCard icon="auto_awesome" title={t('browse:section_astrology')} titleTa="ஜோதிடம்" isHighlight columns={1} spanClassName=""
+                                    locked={astrologyLocked}
+                                    lockedMessage={t('browse:filters.locked.astrology', 'Upgrade to Gold to access horoscope filters')}
+                                    lockedMessageTa="ஜாதக வடிப்பான்களை அணுக தங்கத் திட்டத்திற்கு மேம்படுத்தவும்"
+                                >
                                     <FilterDropdown label={t('browse:rasi')} bilingual options={rasiOpts} value={localFilters.rasi || ''} onChange={v => handleChange('rasi', v)} />
                                     <FilterDropdown label={t('browse:nakshatra')} bilingual options={nakshatraOpts} value={localFilters.nakshatra || ''} onChange={v => handleChange('nakshatra', v)} />
                                     <FilterDropdown label={t('browse:laganam')} bilingual options={rasiOpts} value={localFilters.laganam || ''} onChange={v => handleChange('laganam', v)} />
@@ -520,7 +551,19 @@ export const BrowseProfileFilters: React.FC<BrowseProfileFiltersProps> = ({ isOp
                                 <SectionCard icon="location_on" title={t('browse:section_location')} titleTa="இருப்பிடம்" columns={1} spanClassName="">
                                     <FilterDropdown label={t('browse:current_district')} options={districtOptions} value={localFilters.currentDistrict || ''} onChange={v => { handleChange('currentDistrict', v); handleChange('currentCity', ''); }} />
                                     <FilterDropdown label={t('browse:city_taluk')} options={localFilters.currentDistrict ? getTalukOptions(localFilters.currentDistrict) : []} value={localFilters.currentCity || ''} onChange={v => handleChange('currentCity', v)} placeholder={t('browse:select_taluk', 'Select Taluk')} />
-                                    <FilterDropdown label={t('browse:residence')} options={residenceOpts} value={localFilters.residence || ''} onChange={v => handleChange('residence', v)} />
+                                    <div className="relative">
+                                        {residenceLocked && (
+                                            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px] rounded-lg">
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <span className="material-symbols-outlined text-xl text-rosewood/30">lock</span>
+                                                    <span className="text-[9px] font-bold text-rosewood/40 text-center">
+                                                        {i18n.language === 'ta' ? 'பிளாட்டினத்தில் மட்டும்' : 'Available in Platinum'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <FilterDropdown label={t('browse:residence')} options={residenceOpts} value={localFilters.residence || ''} onChange={v => handleChange('residence', v)} />
+                                    </div>
                                     <div className="">
                                         <RangeSlider min={-15} max={15} value={[localFilters.minAgeDiff !== undefined && localFilters.minAgeDiff !== '' ? Number(localFilters.minAgeDiff) : -5, localFilters.maxAgeDiff !== undefined && localFilters.maxAgeDiff !== '' ? Number(localFilters.maxAgeDiff) : 5]} onChange={(val: number[]) => { handleChange('minAgeDiff', val[0]); handleChange('maxAgeDiff', val[1]); }} label={t('browse:age_diff')} />
                                     </div>
@@ -549,7 +592,11 @@ export const BrowseProfileFilters: React.FC<BrowseProfileFiltersProps> = ({ isOp
                                     <FilterDropdown label={t('browse:diet')} options={dietOpts} value={localFilters.diet || ''} onChange={v => handleChange('diet', v)} />
                                 </SectionCard>
 
-                                <SectionCard icon="school" title={t('browse:section_education')} titleTa="கல்வி மற்றும் பணி" columns={2} spanClassName="md:col-span-2">
+                                <SectionCard icon="school" title={t('browse:section_education')} titleTa="கல்வி மற்றும் பணி" columns={2} spanClassName="md:col-span-2"
+                                    locked={educationLocked}
+                                    lockedMessage={t('browse:filters.locked.education', 'Upgrade to Silver to access education & career filters')}
+                                    lockedMessageTa="கல்வி மற்றும் பணி வடிப்பான்களை அணுக வெள்ளித் திட்டத்திற்கு மேம்படுத்தவும்"
+                                >
                                     <Input label={t('browse:education')} icon="school" name="education" placeholder={t('browse:education_placeholder')} value={localFilters.education || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('education', e.target.value)} className="h-14" />
                                     <Input label={t('browse:job_title')} icon="badge" name="jobTitle" placeholder={t('browse:job_title_placeholder')} value={localFilters.jobTitle || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('jobTitle', e.target.value)} className="h-14" />
                                     <Input label={t('browse:job_location')} icon="location_on" name="jobLocation" placeholder={t('browse:job_location_placeholder')} value={localFilters.jobLocation || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('jobLocation', e.target.value)} className="h-14" />

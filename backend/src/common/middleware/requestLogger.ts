@@ -1,4 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
+import { logger } from '../utils/logger.js';
+import { appConfig } from '../../config/app.config.js';
 
 const SENSITIVE_KEYS = new Set(['password', 'token', 'accessToken', 'refreshToken', 'currentPassword', 'newPassword', 'otp', 'secret', 'authorization']);
 
@@ -7,6 +9,13 @@ const B = '\x1b[1m';
 
 function out(s: string): void {
   try { process.stdout.write(s + '\n'); } catch { /* silent */ }
+}
+
+function logPino(req: Request, res: Response, dur: number, capturedBody: unknown): void {
+  const statusCode = res.statusCode;
+  const level = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
+  const user = req.account?.sub;
+  logger[level]({ reqId: req.id, method: req.method, url: req.originalUrl || req.url, statusCode, durationMs: dur, user }, 'request');
 }
 
 const C = {
@@ -39,10 +48,11 @@ const METHOD: Record<string, { badge: string; bg: string; fg: string }> = {
   POST:   { badge: ' POST ', bg: BG.cyn, fg: C.cyn },
   PUT:    { badge: ' PUT ', bg: BG.blu, fg: C.blu },
   PATCH:  { badge: 'PATCH', bg: BG.mag, fg: C.mag },
-  DELETE: { badge: 'DELTE', bg: BG.red, fg: C.red },
+  DELETE: { badge: 'DELETE', bg: BG.red, fg: C.red },
 };
 
-function shortId(id: string): string {
+function shortId(id: string | undefined): string {
+  if (!id) return '--------';
   return (id.split('-').pop() || id).slice(0, 8);
 }
 
@@ -60,30 +70,39 @@ function strip(s: string): string {
   return s.replace(/\x1b\[[0-9;]*m/g, '');
 }
 
+const boxLines: string[] = [];
+
 function header(content: string, color: string): void {
   const raw = strip(content);
   const gap = W - raw.length - 2;
   const L = Math.floor(gap / 2);
   const R_ = gap - L;
-  out(`  ${C.wht}┌${R}${color}${'─'.repeat(L)}${R} ${content} ${color}${'─'.repeat(R_)}${R}${C.wht}┐${R}`);
+  boxLines.push(`  ${C.wht}┌${R}${color}${'─'.repeat(L)}${R} ${content} ${color}${'─'.repeat(R_)}${R}${C.wht}┐${R}`);
 }
 
 function ln(content: string): void {
   const raw = strip(content);
   const pad = W - 2 - raw.length;
   if (pad <= 0) {
-    out(`  ${C.wht}│${R}  ${raw.slice(0, W - 2)}${C.wht}│${R}`);
+    boxLines.push(`  ${C.wht}│${R}  ${raw.slice(0, W - 2)}${C.wht}│${R}`);
   } else {
-    out(`  ${C.wht}│${R}  ${content}${' '.repeat(pad)}${C.wht}│${R}`);
+    boxLines.push(`  ${C.wht}│${R}  ${content}${' '.repeat(pad)}${C.wht}│${R}`);
   }
 }
 
 function footer(color: string): void {
-  out(`  ${C.wht}└${R}${color}${'─'.repeat(W)}${R}${C.wht}┘${R}`);
+  boxLines.push(`  ${C.wht}└${R}${color}${'─'.repeat(W)}${R}${C.wht}┘${R}`);
 }
 
 function blank(): void {
   ln('');
+}
+
+function flushBox(): void {
+  if (boxLines.length > 0) {
+    try { process.stdout.write(boxLines.join('\n') + '\n'); } catch { /* silent */ }
+    boxLines.length = 0;
+  }
 }
 
 function methodMeta(code: number): { bg: string; fg: string; icon: string; text: string } {
@@ -155,11 +174,19 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
     const m = METHOD[req.method] || { badge: ' ??? ', bg: BG.wht, fg: C.wht };
 
     const originalJson = res.json.bind(res);
+    const originalSend = res.send.bind(res);
     let capturedBody: unknown = null;
 
     res.json = function (body: unknown): Response {
       capturedBody = body;
       return originalJson(body);
+    };
+
+    res.send = function (body?: unknown): Response {
+      if (capturedBody === null) {
+        capturedBody = body;
+      }
+      return originalSend(body);
     };
 
     const maskedBody = req.body && typeof req.body === 'object' && Object.keys(req.body).length
@@ -169,9 +196,6 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
     const queryParams = collectQueryParams(req.originalUrl || req.url || '');
 
     const ts = new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const userTag = req.account
-      ? ` ${C.grn}${req.account.sub.slice(0, 8)}${R}`
-      : '';
 
     const rawUrl = req.originalUrl || req.url || '';
     const qIdx = rawUrl.indexOf('?');
@@ -179,9 +203,10 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
     const methodBadge = `${m.bg}${B}${C.wht}${m.badge}${R}`;
 
     out('');
+    boxLines.length = 0;
     header(`▶  ${B}${C.wht}REQUEST${R}`, C.cyn);
     ln(`${methodBadge}  ${B}${C.wht}${pathOnly}${R}`);
-    ln(`${C.mut}${ts}${R}  ${C.mut}│${R}  ${C.gry}${rid}${R}  ${C.mut}│${R}  ${C.gry}${req.ip || req.socket.remoteAddress}${R}${userTag}`);
+    ln(`${C.mut}${ts}${R}  ${C.mut}│${R}  ${C.gry}${rid}${R}  ${C.mut}│${R}  ${C.gry}${req.ip || req.socket.remoteAddress}${R}`);
 
     if (queryParams) {
       blank();
@@ -198,17 +223,27 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
     }
 
     footer(C.cyn);
+    flushBox();
 
-    res.on('finish', () => {
+    let responded = false;
+
+    function tryRespond(): void {
+      if (responded) return;
+      responded = true;
       try {
         const dur = Date.now() - start;
         const st = methodMeta(res.statusCode);
         const tb = timeBar(dur);
         const cl = res.getHeader('content-length');
         const clStr = cl ? `${C.mut}│${R}  ${C.gry}${cl} B${R}` : '';
+        const userTag = req.account
+          ? `  ${C.mut}│${R}  ${C.grn}${req.account.sub.slice(0, 8)}${R}`
+          : '';
+
+        if (!appConfig.isDev) { logPino(req, res, dur, capturedBody); }
 
         header(`${st.icon}  ${B}${C.wht}${res.statusCode}  ${st.text}${R}`, st.fg);
-        ln(`${B}${tb.c}${dur}ms${R}  ${gauge(tb.pct, tb.c)}  ${C.gry}${tb.label}${R}  ${clStr}`);
+        ln(`${B}${tb.c}${dur}ms${R}  ${gauge(tb.pct, tb.c)}  ${C.gry}${tb.label}${R}  ${clStr}${userTag}`);
 
         if (capturedBody) {
           blank();
@@ -219,9 +254,15 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
         }
 
         footer(st.fg);
+        flushBox();
         out('');
-      } catch { /* silent */ }
-    });
+      } catch (e) {
+        console.error('[requestLogger] response error:', e);
+      }
+    }
+
+    res.on('finish', tryRespond);
+    res.on('close', tryRespond);
 
     next();
   } catch (e) {

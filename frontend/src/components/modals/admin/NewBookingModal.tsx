@@ -1,30 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Calendar, CheckCircle2, ChevronRight, ChevronLeft, Package as PackageIcon, Info, User, Clock, Wallet, Check, AlertCircle } from 'lucide-react';
+import { Loader2, Calendar, CheckCircle2, ChevronRight, ChevronLeft, Package as PackageIcon, Info, User, Clock, Wallet, Check, AlertCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { TransliteratedInputPreview } from '@/components/ui/forms/TransliteratedInputPreview';
 import { Input } from '@/components/ui/forms/Input';
 import { EmailField } from '@/components/ui/forms/EmailField';
 import { PhoneInput } from '@/components/ui/forms/PhoneInput';
-import { stubCreateBooking, stubFetchPackages } from '@/utils/stubs';
-import type { MandapamPackage as Package } from '@/types/admin-types';
+import { adminCreateBooking, adminGetAllPackages } from '@/api/mandapam.api';
+import type { MandapamPackage } from '@/types/mandapam';
 import { useLanguage } from '@/context/LanguageContext';
 import { TFunction } from 'i18next';
+import { formatCurrency } from '@/utils/format';
 
 interface NewBookingModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess?: () => void;
     t: TFunction;
-    initialDate?: string;
+    initialDates?: string[];
 }
 
-export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSuccess, t, initialDate }) => {
+export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClose, onSuccess, t, initialDates }) => {
     const { language } = useLanguage();
     const isTamil = language === 'ta';
     const [step, setStep] = useState(1);
-    const [packages, setPackages] = useState<Package[]>([]);
+    const [packages, setPackages] = useState<MandapamPackage[]>([]);
     const [loadingPackages, setLoadingPackages] = useState(false);
     const [paymentType, setPaymentType] = useState<'FULL' | 'ADVANCE' | 'NOT_PAID'>('FULL');
     const [isCreating, setIsCreating] = useState(false);
@@ -36,6 +37,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
         address: '',
         eventTitle: '',
         date: '',
+        endDate: '',
         session: 'FULL_DAY' as 'FULL_DAY' | 'MORNING' | 'EVENING',
         packageId: '',
         paymentMode: 'CASH' as 'CASH' | 'UPI' | 'BANK_TRANSFER',
@@ -50,15 +52,19 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
     useEffect(() => {
         if (isOpen) {
             fetchPackages();
-            if (initialDate) {
-                setFormData(prev => ({ ...prev, date: initialDate }));
+            if (initialDates?.length) {
+                setFormData(prev => ({
+                    ...prev,
+                    date: initialDates[0],
+                    endDate: initialDates[1] || initialDates[0]
+                }));
             }
         }
-    }, [isOpen, initialDate]);
+    }, [isOpen, initialDates]);
 
     const fetchPackages = async () => {
         setLoadingPackages(true);
-        stubFetchPackages().then(setPackages).finally(() => setLoadingPackages(false));
+        adminGetAllPackages().then(res => setPackages(res.packages)).finally(() => setLoadingPackages(false));
     };
 
     const updateForm = (field: string, value: any) => {
@@ -70,25 +76,26 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
     };
 
     const handleConfirmBooking = () => {
-        const paidAmount = paymentType === 'ADVANCE'
-            ? Number(formData.advance.replace(/,/g, ''))
-            : (paymentType === 'FULL' ? (packages.find(p => p.id === formData.packageId)?.price || 0) : 0);
+        const pkg = packages.find(p => p.id === formData.packageId);
+        const packageCode = pkg?.code || 'STANDARD';
         setIsCreating(true);
-        stubCreateBooking({
-            contactNameEn: isTamil ? transliteratedData.name : formData.name,
-            contactNameTa: isTamil ? formData.name : transliteratedData.name,
-            phone: formData.phone,
-            eventTitleEn: isTamil ? transliteratedData.eventTitle : formData.eventTitle,
-            eventTitleTa: isTamil ? formData.eventTitle : transliteratedData.eventTitle,
-            email: formData.email,
-            addressEn: formData.address,
-            addressTa: formData.address,
-            date: formData.date,
-            session: formData.session,
-            packageId: formData.packageId,
-            paymentStatus: paymentType === 'FULL' ? 'FULLY_PAID' : (paymentType === 'ADVANCE' ? 'ADVANCE' : 'NOT_PAID'),
-            paymentMode: paymentType === 'NOT_PAID' ? 'CASH' : formData.paymentMode,
-            paidAmount,
+        const startDate = formData.date;
+        const endDate = formData.endDate || formData.date;
+        adminCreateBooking({
+            customerName: { en: isTamil ? transliteratedData.name : formData.name, ta: isTamil ? formData.name : transliteratedData.name },
+            customerPhone: formData.phone,
+            customerEmail: formData.email || undefined,
+            eventTitle: { en: isTamil ? transliteratedData.eventTitle : formData.eventTitle, ta: isTamil ? formData.eventTitle : transliteratedData.eventTitle },
+            eventAddress: formData.address ? { en: formData.address, ta: formData.address } : undefined,
+            packageCode: packageCode as 'STANDARD' | 'ROYAL' | 'GRAND',
+            bookingMethod: 'NORMAL_BOOKING',
+            bookingConfig: {
+                startDate,
+                endDate,
+                startTime: formData.session === 'MORNING' ? '06:00' : formData.session === 'EVENING' ? '17:00' : undefined,
+                endTime: formData.session === 'MORNING' ? '12:00' : formData.session === 'EVENING' ? '22:00' : undefined,
+            },
+            notes: '',
         }).then(() => {
             toast.success(t('adminMandapam.bookings.createSuccess') || 'Booking created successfully');
             onSuccess?.();
@@ -111,19 +118,20 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
     if (!isOpen) return null;
 
     const modalContent = (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div 
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 1 }} 
                 exit={{ opacity: 0 }}
                 onClick={onClose}
-                className="absolute inset-0 bg-rosewood/40 backdrop-blur-md"
+                className="absolute inset-0 bg-gold-soft/10 backdrop-blur-md"
             />
             
             <motion.div 
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="relative w-full max-w-5xl bg-white rounded-3xl md:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-[640px]"
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative w-full max-w-5xl bg-gold-soft/5 backdrop-blur-3xl border-2 border-gold/30 rounded-xl shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-[640px] overflow-hidden"
             >
                 {/* Left Sidebar - Step Indicator */}
                 <div className="w-full md:w-80 bg-rosewood p-8 text-white hidden md:flex flex-col justify-between">
@@ -171,7 +179,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
                             {formData.date && (
                                 <div className="flex justify-between text-[11px]">
                                     <span className="text-white/40 font-bold">{t('adminMandapam.bookings.date') || 'Date'}</span>
-                                    <span className="font-black text-white">{formData.date}</span>
+                                    <span className="font-black text-white">{formData.date}{formData.endDate && formData.endDate !== formData.date ? ` – ${formData.endDate}` : ''}</span>
                                 </div>
                             )}
                         </div>
@@ -181,13 +189,13 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
                 {/* Main Content Area */}
                 <div className="flex-1 flex flex-col bg-ivory/20">
                     {/* Header */}
-                    <div className="px-8 py-6 border-b border-rosewood/5 flex justify-between items-center bg-white/50 backdrop-blur-xl">
+                    <div className="px-8 py-6 border-b border-gold/10 flex justify-between items-center bg-gold-soft/5 backdrop-blur-xl">
                         <div>
                             <h2 className="text-xl font-black text-rosewood tracking-tighter">{steps[step-1].name}</h2>
                             <p className="text-[10px] font-bold text-rosewood/40 uppercase tracking-[0.2em]">{t(`adminMandapam.bookings.step`) || 'Step'} {step} / 5</p>
                         </div>
-                        <button onClick={onClose} className="p-3 hover:bg-rosewood/5 rounded-full transition-colors text-rosewood/40 hover:text-rosewood">
-                            <span className="material-symbols-outlined">close</span>
+                        <button onClick={onClose} className="p-2 hover:bg-ivory rounded-full transition-all text-rosewood/40 hover:text-rosewood hover:rotate-90 duration-300">
+                            <X size={20} />
                         </button>
                     </div>
 
@@ -261,14 +269,48 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
                                                 onPreviewChange={(value) => updateTransliteratedData('eventTitle', value)}
                                             />
                                         </div>
-                                        <Input 
-                                            label={t('adminMandapam.bookings.eventDateLabel') || 'Event Date'}
-                                            name="date"
-                                            type="date" 
-                                            value={formData.date} 
-                                            onChange={(e) => updateForm('date', e.target.value)} 
-                                            icon="event"
-                                        />
+                                        {initialDates?.length ? (
+                                            <div className="space-y-2">
+                                                <label className="text-[11px] font-black text-rosewood/30 uppercase tracking-[0.2em] block ml-1">
+                                                    {formData.endDate && formData.endDate !== formData.date
+                                                        ? (t('adminMandapam.bookings.eventDatesLabel') || 'Event Dates')
+                                                        : (t('adminMandapam.bookings.eventDateLabel') || 'Event Date')}
+                                                </label>
+                                                {formData.endDate && formData.endDate !== formData.date ? (
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex-1 flex items-center gap-3 p-4 bg-ivory rounded-xl border border-gold/20 shadow-sm">
+                                                            <Calendar size={20} className="text-rosewood/40 shrink-0" />
+                                                            <div>
+                                                                <span className="text-[9px] font-black text-rosewood/40 uppercase tracking-widest block">{t('adminMandapam.bookings.startDate') || 'Start'}</span>
+                                                                <span className="text-rosewood font-bold">{formData.date}</span>
+                                                            </div>
+                                                        </div>
+                                                        <ChevronRight size={16} className="text-rosewood/20 shrink-0" />
+                                                        <div className="flex-1 flex items-center gap-3 p-4 bg-ivory rounded-xl border border-gold/20 shadow-sm">
+                                                            <Calendar size={20} className="text-rosewood/40 shrink-0" />
+                                                            <div>
+                                                                <span className="text-[9px] font-black text-rosewood/40 uppercase tracking-widest block">{t('adminMandapam.bookings.endDate') || 'End'}</span>
+                                                                <span className="text-rosewood font-bold">{formData.endDate}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-3 p-4 bg-ivory rounded-xl border border-gold/20 shadow-sm">
+                                                        <Calendar size={20} className="text-rosewood/40 shrink-0" />
+                                                        <span className="text-rosewood font-bold">{formData.date}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <Input 
+                                                label={t('adminMandapam.bookings.eventDateLabel') || 'Event Date'}
+                                                name="date"
+                                                type="date" 
+                                                value={formData.date} 
+                                                onChange={(e) => updateForm('date', e.target.value)} 
+                                                icon="event"
+                                            />
+                                        )}
                                         <div className="space-y-4">
                                             <label className="text-[11px] font-black text-rosewood/30 uppercase tracking-[0.2em] block ml-1">{t('adminMandapam.bookings.sessionLabel') || 'Session'}</label>
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -323,22 +365,22 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
                                                             <div className="flex items-center gap-2">
                                                                 <span className={`text-[10px] font-black tracking-[0.2em] uppercase ${formData.packageId === pkg.id ? 'text-gold' : 'text-rosewood/40'}`}>CURATED PLAN</span>
                                                             </div>
-                                                            <h3 className="text-xl font-black tracking-tight">{isTamil ? pkg.nameTa : pkg.nameEn}</h3>
+                                                            <h3 className="text-xl font-black tracking-tight">{isTamil ? (pkg.translations?.find(t => t.language === 'TA')?.displayName || pkg.code) : (pkg.translations?.find(t => t.language === 'EN')?.displayName || pkg.code)}</h3>
                                                         </div>
                                                         <div className="text-right">
                                                             <div className="flex items-baseline justify-end gap-1">
                                                                 <span className={`text-xs font-bold ${formData.packageId === pkg.id ? 'text-gold/60' : 'text-rosewood/30'}`}>₹</span>
-                                                                <span className="text-2xl font-black tracking-tighter">{pkg.price.toLocaleString('en-IN')}</span>
+                                                                <span className="text-2xl font-black tracking-tighter">{formatCurrency(pkg.pricings?.find(p => p.isActive)?.amount || 0)}</span>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <div className={`mt-4 pt-4 border-t ${formData.packageId === pkg.id ? 'border-white/10' : 'border-rosewood/5'} flex flex-wrap gap-2`}>
-                                                        {(isTamil ? pkg.featuresTa : pkg.featuresEn).slice(0, 3).map((f: any, i: number) => (
+                                                        {pkg.functions?.filter(f => f.status).slice(0, 3).map((f: any, i: number) => (
                                                             <span key={i} className={`text-[9px] px-2.5 py-1 rounded-full font-bold uppercase tracking-widest ${formData.packageId === pkg.id ? 'bg-white/10 text-white/70' : 'bg-rosewood/5 text-rosewood/40'}`}>
-                                                                {f}
+                                                                {isTamil ? (f.translations?.find((t: any) => t.language === 'TA')?.name || '') : (f.translations?.find((t: any) => t.language === 'EN')?.name || '')}
                                                             </span>
                                                         ))}
-                                                        {(pkg.featuresEn?.length ?? 0) > 3 && <span className="text-[9px] font-black text-gold/60 self-center">+{(pkg.featuresEn?.length ?? 0) - 3} MORE</span>}
+                                                        {(pkg.functions?.filter(f => f.status).length ?? 0) > 3 && <span className="text-[9px] font-black text-gold/60 self-center">+{(pkg.functions?.filter(f => f.status).length ?? 0) - 3} MORE</span>}
                                                     </div>
                                                 </button>
                                             ))}
@@ -416,7 +458,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
                                                     <div>
                                                         <span className="text-[10px] font-black text-amber-800/40 tracking-wider block mb-0.5 uppercase">{t('adminMandapam.bookings.depositToSecure') || 'DEPOSIT TO SECURE'}</span>
                                                         <span className="text-xl font-black text-amber-900">
-                                                            ₹ {Number(formData.advance.replace(/,/g, '')).toLocaleString('en-IN')}
+                                                            {formatCurrency(Number(formData.advance.replace(/,/g, '')))}
                                                         </span>
                                                     </div>
                                                     <CheckCircle2 className="text-amber-400" size={24} />
@@ -432,8 +474,8 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {[
                                             { title: t('adminMandapam.bookings.userIdentity') || 'User Identity', items: [[t('adminMandapam.bookings.fullName') || 'Full Name', formData.name], [t('adminMandapam.bookings.phoneNumber') || 'Phone', formData.phone], [t('adminMandapam.bookings.emailAddress') || 'Email', formData.email || '—']] },
-                                            { title: t('adminMandapam.bookings.eventContext') || 'Event Context', items: [[t('adminMandapam.bookings.eventTitle') || 'Title', formData.eventTitle], [t('adminMandapam.bookings.eventDateLabel') || 'Date', formData.date], [t('adminMandapam.bookings.sessionLabel') || 'Session', t(`adminMandapam.bookings.${formData.session.toLowerCase()}`) || formData.session]] },
-                                            { title: t('adminMandapam.bookings.serviceDetails') || 'Service Details', items: [[t('adminMandapam.bookings.package') || 'Package', isTamil ? (packages.find(p => p.id === formData.packageId)?.nameTa || '—') : (packages.find(p => p.id === formData.packageId)?.nameEn || '—')]] },
+                                            { title: t('adminMandapam.bookings.eventContext') || 'Event Context', items: [[t('adminMandapam.bookings.eventTitle') || 'Title', formData.eventTitle], [t('adminMandapam.bookings.eventDateLabel') || 'Date', formData.endDate && formData.endDate !== formData.date ? `${formData.date} – ${formData.endDate}` : formData.date], [t('adminMandapam.bookings.sessionLabel') || 'Session', t(`adminMandapam.bookings.${formData.session.toLowerCase()}`) || formData.session]] },
+                                            { title: t('adminMandapam.bookings.serviceDetails') || 'Service Details', items: [[t('adminMandapam.bookings.package') || 'Package', (() => { const p = packages.find(p => p.id === formData.packageId); return p ? (isTamil ? (p.translations?.find(t => t.language === 'TA')?.displayName || p.code) : (p.translations?.find(t => t.language === 'EN')?.displayName || p.code)) : '—'; })()]] },
                                             { title: t('adminMandapam.bookings.settlement') || 'Settlement', items: [[t('adminMandapam.bookings.status') || 'Status', t(`adminMandapam.bookings.${paymentType === 'FULL' ? 'fullyPaid' : (paymentType === 'ADVANCE' ? 'advance' : 'notPaid')}`)], ...(paymentType === 'ADVANCE' ? [[t('adminMandapam.bookings.advanceAmount') || 'Amount', `₹${formData.advance}`]] : [])] },
                                         ].map(({ title, items }) => (
                                             <div key={title} className="p-4 rounded-3xl bg-ivory/30 border border-gold/10 shadow-sm">
@@ -464,7 +506,7 @@ export const NewBookingModal: React.FC<NewBookingModalProps> = ({ isOpen, onClos
                     </div>
 
                     {/* Footer Controls */}
-                    <div className="px-8 py-6 border-t border-rosewood/5 flex justify-between bg-white/50 backdrop-blur-xl">
+                    <div className="px-8 py-6 border-t border-gold/10 flex justify-between bg-gold-soft/5 backdrop-blur-xl">
                         <button
                             onClick={prevStep}
                             disabled={step === 1}

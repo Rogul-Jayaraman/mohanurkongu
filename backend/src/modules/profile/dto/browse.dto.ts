@@ -11,6 +11,8 @@ export const browseSchema = z.object({
   currentDistrict: z.string().optional(),
   currentTaluk: z.string().optional(),
   nativeDistrict: z.string().optional(),
+  minAgeDiff: z.coerce.number().int().min(-50).max(50).optional(),
+  maxAgeDiff: z.coerce.number().int().min(-50).max(50).optional(),
 
   // Physical
   ageMin: z.coerce.number().int().min(18).max(100).optional(),
@@ -33,6 +35,7 @@ export const browseSchema = z.object({
   rasi: z.string().optional(),
   nakshatra: z.string().optional(),
   laganam: z.string().optional(),
+  dosham: z.string().optional(),
 
 
   // Professional

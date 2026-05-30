@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { XCircle, AlertCircle, ChevronDown, Search, X } from 'lucide-react';
+import { XCircle, AlertCircle, ChevronDown, Search } from 'lucide-react';
+import { ModalShell } from '@/components/ui/modals/ModalShell';
 import { TransliteratingTextarea } from '@/components/ui/forms/TransliteratingTextarea';
 import { useLanguage } from '@/context/LanguageContext';
 import { PROFILE_ACTION_REASONS } from '@/constants/options';
-import { scrollToTop } from '@/components/ui/layout/ScrollToTop';
 
 interface ReasonDropdownProps {
     value: string;
@@ -165,7 +165,7 @@ const ReasonDropdown: React.FC<ReasonDropdownProps> = ({ value, onChange, isTami
             <button
                 type="button"
                 onClick={handleToggle}
-                className={`w-full flex items-center justify-between px-5 py-4 bg-linear-to-br from-ivory/80 to-white border-2 rounded-xl text-sm transition-all shadow-sm
+                className={`w-full flex items-center justify-between px-5 py-4 bg-ivory/80 border-2 rounded-xl text-sm transition-all shadow-sm
                     ${isOpen
                         ? 'border-rosewood ring-8 ring-rosewood/5 shadow-md'
                         : 'border-gold/20 hover:border-gold/40 hover:shadow-md'}`}
@@ -214,15 +214,11 @@ export const RejectionModal: React.FC<RejectionModalProps> = ({
     const { language, t } = useLanguage();
     const isTamil = language === 'ta';
 
-    const defaultTitle = isTamil ? "நிராகரிப்பு முடிவு" : "Reject Decision";
-    const defaultDescription = isTamil
-        ? "தயவுசெய்து இந்த நிராகரிப்பிற்கான தெளிவான காரணத்தை வழங்கவும். இது பயனருக்கு சிக்கலை சரிசெய்ய உதவும்."
-        : "Please provide a clear reason for this rejection. This will be shared with the user to help them correct the issue.";
-    const defaultPlaceholder = isTamil
-        ? "எ.கா., புகைப்படங்கள் மங்கலான, தவறான அடையாள விவரங்கள் போன்றவை..."
-        : "e.g., Photos are blurred, Invalid ID details, etc...";
-    const defaultConfirm = isTamil ? "உறுதிப்படுத்து" : "Confirm";
-    const defaultCancel = isTamil ? "ரத்து செய்" : "Cancel";
+    const defaultTitle = t('adminMatrimony.common.rejectDecision') || 'Reject Decision';
+    const defaultDescription = t('adminMatrimony.common.rejectDescription') || 'Please provide a clear reason for this rejection. This will be shared with the user to help them correct the issue.';
+    const defaultPlaceholder = t('adminMatrimony.common.rejectPlaceholder') || 'e.g., Photos are blurred, Invalid ID details, etc...';
+    const defaultConfirm = t('common.confirm');
+    const defaultCancel = t('common.cancel');
 
     const displayTitle = title || defaultTitle;
     const displayDescription = description || defaultDescription;
@@ -235,26 +231,11 @@ export const RejectionModal: React.FC<RejectionModalProps> = ({
 
     useEffect(() => {
         if (isOpen) {
-            document.body.style.overflow = 'hidden';
             setReason('');
             setReasonTa('');
             setSelectedOption('');
-        } else {
-            document.body.style.overflow = 'unset';
-            scrollToTop();
         }
-        return () => { document.body.style.overflow = 'unset'; };
     }, [isOpen]);
-
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        if (isOpen) {
-            window.addEventListener('keydown', handleEscape);
-        }
-        return () => window.removeEventListener('keydown', handleEscape);
-    }, [isOpen, onClose]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -285,123 +266,78 @@ export const RejectionModal: React.FC<RejectionModalProps> = ({
         }
     };
 
-    const modalContent = (
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => onClose()}
-                        className="absolute inset-0 bg-linear-to-br from-ivory/40 via-gold-soft/20 to-ivory/40 backdrop-blur-md"
-                    />
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="relative w-full max-w-xl bg-white/10 backdrop-blur-2xl border-2 border-gold/30 rounded-xl shadow-2xl flex flex-col max-h-[95vh] overflow-hidden"
+    return (
+        <ModalShell
+            isOpen={isOpen}
+            onClose={onClose}
+            icon={
+                <div className="p-2 bg-rosewood/10 rounded-xl">
+                    <XCircle className="text-rose-600" size={20} />
+                </div>
+            }
+            title={displayTitle}
+            size="xl"
+            footer={
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 px-4 py-3 border border-gold/10 text-rosewood font-bold rounded-xl hover:bg-ivory transition-all text-sm"
                     >
-                        <div className="absolute inset-0 bg-linear-to-br from-white/40 to-white/5 rounded-xl overflow-hidden pointer-events-none" />
-                        <div className="absolute top-0 right-0 w-40 h-40 bg-gold/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
-                        <div className="absolute bottom-0 left-0 w-32 h-32 bg-gold/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
-                        <div className="relative z-10 flex-1 flex flex-col min-w-0 overflow-hidden">
-                            <div className="px-6 py-4 bg-linear-to-r from-ivory/80 via-gold-soft/10 to-ivory/80 backdrop-blur-xl border-b border-gold/10 flex items-center justify-between shrink-0">
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="shrink-0">
-                                        <div className="p-2 bg-linear-to-br from-rosewood/10 to-rosewood/5 rounded-xl">
-                                            <XCircle className="text-rose-600" size={20} />
-                                        </div>
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h3 className="text-base font-black text-rosewood tracking-tight truncate leading-tight">
-                                            {displayTitle}
-                                        </h3>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={onClose}
-                                    className="p-1.5 bg-rosewood-gradient text-white rounded-full transition-all hover:brightness-110 hover:rotate-90 duration-300 ml-2 shrink-0 shadow-md"
-                                    aria-label="Close modal"
-                                >
-                                    <X size={16} />
-                                </button>
+                        {displayCancel}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }}
+                        disabled={!selectedOption || (selectedOption === 'OTHER' && !reason.trim())}
+                        className="flex-1 px-4 py-3 bg-rosewood text-ivory font-bold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                        {displayConfirm}
+                    </button>
+                </div>
+            }
+        >
+            <div className="space-y-6">
+                <p className="text-sm text-rosewood/60 font-medium leading-relaxed">
+                    {displayDescription}
+                </p>
+                <div className="space-y-2">
+                    <label className="text-[9px] text-rosewood/50 font-black uppercase tracking-widest ml-1">
+                        {t('adminMatrimony.common.rejectionReason')}
+                    </label>
+                    <ReasonDropdown
+                        value={selectedOption}
+                        onChange={handleReasonChange}
+                        isTamil={isTamil}
+                    />
+                </div>
+                {selectedOption === 'OTHER' && (
+                    <div className="space-y-4 overflow-hidden pt-2">
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="text-[9px] text-rosewood/50 font-black uppercase tracking-widest ml-1">
+                                    {t('adminMatrimony.common.rejectionReason')}
+                                </label>
                             </div>
-                            <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
-                                <div className="space-y-6">
-                                    <p className="text-sm text-rosewood/60 font-medium leading-relaxed">
-                                        {displayDescription}
-                                    </p>
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] text-rosewood/50 font-black uppercase tracking-widest ml-1">
-                                            {isTamil ? 'காரணத்தைத் தேர்ந்தெடுக்கவும்' : 'Select Reason'}
-                                        </label>
-                                        <ReasonDropdown
-                                            value={selectedOption}
-                                            onChange={handleReasonChange}
-                                            isTamil={isTamil}
-                                        />
-                                    </div>
-                                    <AnimatePresence mode="wait">
-                                        {selectedOption === 'OTHER' && (
-                                            <motion.div
-                                                initial={{ opacity: 0, height: 0 }}
-                                                animate={{ opacity: 1, height: 'auto' }}
-                                                exit={{ opacity: 0, height: 0 }}
-                                                className="space-y-4 overflow-hidden pt-2"
-                                            >
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <label className="text-[9px] text-rosewood/50 font-black uppercase tracking-widest ml-1">
-                                                            {isTamil ? 'காரணம்' : 'Reason'}
-                                                        </label>
-                                                    </div>
-                                                    <TransliteratingTextarea
-                                                        value={reason}
-                                                        onValueChange={setReason}
-                                                        placeholder={displayPlaceholder}
-                                                        targetLanguage={isTamil ? 'ta' : 'en'}
-                                                        className="w-full bg-linear-to-br from-ivory/80 to-white border-2 border-gold/20 focus:border-gold/40 hover:border-gold/30 rounded-xl p-5 text-sm text-slate-800 outline-none transition-all shadow-sm focus:shadow-lg resize-none leading-relaxed font-medium"
-                                                    />
-                                                </div>
-                                                <div className="p-4 bg-linear-to-br from-ivory/50 to-white border border-gold/10 rounded-xl space-y-2">
-                                                    <label className="text-[9px] text-rosewood/50 font-black uppercase tracking-widest">
-                                                        {isTamil ? 'விளக்கம்' : 'Preview'}
-                                                    </label>
-                                                    <div className="min-h-6 text-sm text-rosewood font-medium leading-relaxed">
-                                                        {reasonTa || <span className="opacity-20 italic">...</span>}
-                                                    </div>
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            </div>
-                            <div className="px-6 py-5 backdrop-blur-xl border-t border-gold/10 shrink-0">
-                                <div className="flex flex-col sm:flex-row gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={onClose}
-                                        className="flex-1 px-4 py-3 rounded-xl bg-rosewood-gradient border-2 border-gold/20 text-rosewood font-bold text-sm hover:shadow-md hover:border-gold/40 transition-all shadow-sm"
-                                    >
-                                        {displayCancel}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }}
-                                        disabled={!selectedOption || (selectedOption === 'OTHER' && !reason.trim())}
-                                        className="flex-1 px-4 py-3 rounded-xl bg-linear-to-br from-gold/30 via-ivory to-gold/30 text-rosewood font-bold text-sm hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                                    >
-                                        {displayConfirm}
-                                    </button>
-                                </div>
+                            <TransliteratingTextarea
+                                value={reason}
+                                onValueChange={setReason}
+                                placeholder={displayPlaceholder}
+                                targetLanguage={isTamil ? 'ta' : 'en'}
+                                className="w-full bg-ivory/80 border-2 border-gold/20 focus:border-gold/40 hover:border-gold/30 rounded-xl p-5 text-sm text-slate-800 outline-none transition-all shadow-sm focus:shadow-lg resize-none leading-relaxed font-medium"
+                            />
+                        </div>
+                        <div className="p-4 bg-ivory/50 border border-gold/10 rounded-xl space-y-2">
+                            <label className="text-[9px] text-rosewood/50 font-black uppercase tracking-widest">
+                                {t('adminMatrimony.common.preview') || 'Preview'}
+                            </label>
+                            <div className="min-h-6 text-sm text-rosewood font-medium leading-relaxed">
+                                {reasonTa || <span className="opacity-20 italic">...</span>}
                             </div>
                         </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
+                    </div>
+                )}
+            </div>
+        </ModalShell>
     );
-
-    return createPortal(modalContent, document.body);
 };

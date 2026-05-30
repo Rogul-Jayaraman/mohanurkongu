@@ -10,8 +10,7 @@ export interface MembershipPlan {
   openLimit: number;
   shortlistLimit: number;
   profileSlotLimit: number;
-  contactAccess: boolean;
-  fullHoroscopeAccess: boolean;
+  viewDetails: string;
   printProfile: boolean;
   printHoroscope: boolean;
   searchLevel: string;
@@ -23,6 +22,7 @@ export interface SubscriptionInfo {
   status: string;
   startedAt: string;
   expiresAt: string | null;
+  paymentMethod?: string;
   snapshotPlanCode: string;
   snapshotPlanName: string;
   snapshotDisplayPrice: number;
@@ -30,8 +30,7 @@ export interface SubscriptionInfo {
   snapshotOpenLimit: number;
   snapshotShortlistLimit: number;
   snapshotProfileSlotLimit: number;
-  snapshotContactAccess: boolean;
-  snapshotFullHoroscopeAccess: boolean;
+  snapshotViewDetails: string;
   snapshotPrintProfile: boolean;
   snapshotPrintHoroscope: boolean;
   snapshotSearchLevel: string;
@@ -41,11 +40,44 @@ export interface MembershipCapabilities {
   openLimit: number;
   shortlistLimit: number;
   profileSlotLimit: number;
-  contactAccess: boolean;
-  fullHoroscopeAccess: boolean;
+  viewDetails: string;
   printProfile: boolean;
   printHoroscope: boolean;
   searchLevel: string;
+}
+
+export interface BillingOverview {
+  currentPlan: {
+    name: string;
+    expiresAt: string | null;
+    planCode: string;
+  } | null;
+  capabilities: {
+    searchLevel: string;
+    profileSlotLimit: number;
+    shortlistLimit: number;
+    printProfile: boolean;
+  } | null;
+  plans: Array<{
+    code: string;
+    displayName: string;
+    displayPrice: number;
+    durationDays: number;
+    openLimit: number;
+    shortlistLimit: number;
+    profileSlotLimit: number;
+    viewDetails: string;
+    printProfile: boolean;
+    printHoroscope: boolean;
+    searchLevel: string;
+  }>;
+  history: Array<{
+    planName: string;
+    amount: number;
+    startedAt: string;
+    expiresAt: string;
+    status: string;
+  }>;
 }
 
 export function listPlans(): Promise<{ plans: MembershipPlan[] }> {
@@ -58,4 +90,8 @@ export function getMySubscription(): Promise<{ subscription: SubscriptionInfo | 
 
 export function getMyCapabilities(): Promise<{ capabilities: MembershipCapabilities }> {
   return api.get('/membership/my-capabilities');
+}
+
+export function getBillingOverview(): Promise<BillingOverview> {
+  return api.get('/membership/billing-overview');
 }

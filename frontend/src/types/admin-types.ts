@@ -42,16 +42,6 @@ export interface AdminManagedProfile {
   [key: string]: any;
 }
 
-export interface MandapamPackage {
-  id: string;
-  [key: string]: any;
-}
-
-export interface MandapamBooking {
-  id: string;
-  [key: string]: any;
-}
-
 export interface AnalyticsData {
   [key: string]: any;
 }

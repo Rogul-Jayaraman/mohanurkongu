@@ -88,8 +88,7 @@ export class AccountRepository {
             snapshotOpenLimit: freePlan.openLimit,
             snapshotShortlistLimit: freePlan.shortlistLimit,
             snapshotProfileSlotLimit: freePlan.profileSlotLimit,
-            snapshotContactAccess: freePlan.contactAccess,
-            snapshotFullHoroscopeAccess: freePlan.fullHoroscopeAccess,
+            snapshotViewDetails: freePlan.viewDetails,
             snapshotPrintProfile: freePlan.printProfile,
             snapshotPrintHoroscope: freePlan.printHoroscope,
             snapshotSearchLevel: freePlan.searchLevel,
@@ -208,7 +207,9 @@ export class AccountRepository {
   }
 
   async listAccounts(page: number, limit: number, search?: string) {
-    const where: any = {};
+    const where: any = {
+      roles: { none: { role: { code: 'ADMIN' } } },
+    };
     if (search) {
       where.OR = [
         { accountNo: { contains: search, mode: 'insensitive' } },

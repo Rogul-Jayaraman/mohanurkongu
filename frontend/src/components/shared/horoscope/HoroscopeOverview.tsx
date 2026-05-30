@@ -1,6 +1,7 @@
 import React from 'react';
 import type { HoroscopeResult } from '@/types/horoscope';
 import { SIGNS, SIGNS_TAMIL, NAKSHATRAS, NAKSHATRAS_TAMIL } from '@/types/horoscope';
+import './horoscope-overview.css';
 
 interface HoroscopeOverviewProps {
   result: HoroscopeResult;

@@ -30,6 +30,18 @@ export class AdminProfilesController {
     }
   };
 
+  update = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const profileId = req.params.id as string;
+      const adminId = req.account.sub;
+      const ipAddress = req.ip;
+      const result = await this.adminProfilesService.updateProfile(adminId, profileId, req.body, ipAddress);
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   archive = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const profileId = req.params.id as string;
@@ -38,7 +50,7 @@ export class AdminProfilesController {
       const { reasonEn, reasonTa } = req.body;
 
       if (!reasonEn || reasonEn.trim().length === 0) {
-        throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'ARCHIVE_REASON_REQUIRED');
+        throw new AppError(400, ErrorCodes.ARCHIVE_REASON_REQUIRED, ErrorCodes.ARCHIVE_REASON_REQUIRED);
       }
 
       const result = await this.adminProfilesService.archiveProfile(

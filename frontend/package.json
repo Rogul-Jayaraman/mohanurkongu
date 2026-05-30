@@ -9,7 +9,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@amraneze/osm-autocomplete": "^0.0.7-beta",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^9.0.1",
@@ -22,11 +21,9 @@
     "i18next": "^24.2.0",
     "lottie-web": "^5.13.0",
     "lucide-react": "^0.468.0",
-    "luxon": "^3.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^15.1.3",
-    "react-is": "^19.2.5",
     "react-router-dom": "^7.0.2",
     "recharts": "^3.8.1",
     "sonner": "^2.0.7",
@@ -42,7 +39,8 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.2",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "vite-plugin-compression": "^0.5.1"
   },
   "overrides": {
     "react": "$react",

@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import lottie, { AnimationItem } from "lottie-web";
 import heroBg from "@/assets/images/hero.jpg";
-import { LazyBackground } from '@/components/ui/LazyBackground';
+import heroBgWebp from "@/assets/images/hero.webp";
 import { useLanguage } from '@/context/LanguageContext';
 import { SmoothText } from '@/components/animations/SmoothText';
 import logo from "@/assets/images/logo.png";
@@ -30,11 +30,14 @@ interface HeroSectionProps {
 export const Hero: React.FC = () => {
   const { language: lang } = useLanguage();
   const { t, i18n } = useTranslation('landing');
+  const prefersReducedMotion = typeof window !== 'undefined'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false;
   const { scrollY } = useScroll();
-  const bgY = useTransform(scrollY, [0, 500], [0, 150]);
-  const orb1Y = useTransform(scrollY, [0, 500], [0, -100]);
-  const orb2Y = useTransform(scrollY, [0, 500], [0, -150]);
-  const contentY = useTransform(scrollY, [0, 500], [0, 50]);
+  const bgY = useTransform(scrollY, [0, 500], [0, prefersReducedMotion ? 0 : 150]);
+  const orb1Y = useTransform(scrollY, [0, 500], [0, prefersReducedMotion ? 0 : -100]);
+  const orb2Y = useTransform(scrollY, [0, 500], [0, prefersReducedMotion ? 0 : -150]);
+  const contentY = useTransform(scrollY, [0, 500], [0, prefersReducedMotion ? 0 : 50]);
 
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -64,7 +67,10 @@ export const Hero: React.FC = () => {
         style={{ y: bgY }}
         className="absolute inset-0 z-0 pointer-events-none overflow-hidden"
       >
-        <LazyBackground src={heroBg} priority={true} className="absolute inset-0 w-full h-full object-cover opacity-100 mix-blend-multiply -translate-y-30" />
+        <picture className="absolute inset-0 w-full h-full">
+          <source srcSet={heroBgWebp} type="image/webp" />
+          <img src={heroBg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-100 mix-blend-multiply -translate-y-30" fetchPriority="high" />
+        </picture>
         <div className="absolute inset-0 bg-linear-to-t from-ivory via-ivory/60 to-transparent"></div>
         <div className="absolute inset-x-0 bottom-0 h-64 bg-linear-to-t from-ivory to-transparent z-1"></div>
         <div className="absolute inset-0 bg-linear-to-r from-ivory/90 via-transparent to-ivory/90"></div>

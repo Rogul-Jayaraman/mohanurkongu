@@ -17,7 +17,7 @@ export const AdminLayout: React.FC = () => {
 
     if (path.includes("/admin/matrimony/verification"))
       return "adminLayout.nav.profileVerification";
-    if (path.includes("/admin/matrimony/users"))
+    if (path.includes("/admin/matrimony/account"))
       return "adminLayout.nav.userAccounts";
     if (path.includes("/admin/matrimony/profiles/")) return "adminLayout.nav.profile_details";
     if (path.includes("/admin/matrimony/profiles")) return "adminLayout.nav.profiles";
@@ -42,7 +42,7 @@ export const AdminLayout: React.FC = () => {
 
         <ScrollToTop dependencies={[location.pathname]} />
 
-        <div className="main-content-scroll flex-1 overflow-x-hidden overflow-y-auto flex flex-col min-h-0">
+        <div id="main-content" className="main-content-scroll flex-1 overflow-x-hidden overflow-y-auto flex flex-col min-h-0">
           <div className="flex-1 flex flex-col min-h-0 relative">
             <div className="kolam-watermark absolute inset-0 opacity-[0.05] pointer-events-none" />
 

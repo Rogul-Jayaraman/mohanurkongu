@@ -38,18 +38,12 @@ function generatePlainTextFallback(template: EmailTemplate, data: Record<string,
   switch (template) {
     case 'welcome':
       return `Welcome ${data.name || 'Guest'}! Your account has been created successfully. Complete your profile to get started.`;
-    case 'email-verification':
-      return `Verify your email by visiting: ${data.verifyUrl || 'the verification page'}. This link expires in 15 minutes.`;
-    case 'login-otp':
-      return `Your login code is: ${data.otpCode || '------'}. It expires in 5 minutes. Never share this code.`;
     case 'password-reset':
       return `Reset your password by visiting: ${data.resetUrl || 'the reset page'}. This link expires in 15 minutes.`;
     case 'password-reset-otp':
       return `Your password reset code is: ${data.otpCode || '------'}. It expires in 5 minutes. Never share this code.`;
     case 'registration-otp':
       return `Your registration code is: ${data.otpCode || '------'}. It expires in 5 minutes. Never share this code.`;
-    case 'security-alert':
-      return `A new login was detected on your account. Device: ${data.deviceName || 'Unknown'}, Location: ${data.deviceLocation || 'Unknown'}, Time: ${data.deviceTime || 'Unknown'}.`;
     default:
       return 'Please view this email in an HTML-compatible client.';
   }

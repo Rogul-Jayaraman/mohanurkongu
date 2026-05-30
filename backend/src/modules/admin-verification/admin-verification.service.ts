@@ -24,15 +24,15 @@ export class AdminVerificationService {
     }
 
     if (profile.accountId === adminId) {
-      throw new AppError(403, ErrorCodes.AUTH_FORBIDDEN, 'SELF_APPROVAL_NOT_ALLOWED');
+      throw new AppError(403, ErrorCodes.VERIFICATION_SELF_APPROVAL_NOT_ALLOWED, ErrorCodes.VERIFICATION_SELF_APPROVAL_NOT_ALLOWED);
     }
 
     const queueEntry = await prisma.verificationQueue.findUnique({ where: { profileId } });
     if (!queueEntry) {
-      throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'VERIFICATION_QUEUE_ENTRY_MISSING');
+      throw new AppError(400, ErrorCodes.VERIFICATION_QUEUE_ENTRY_MISSING, ErrorCodes.VERIFICATION_QUEUE_ENTRY_MISSING);
     }
     if (queueEntry.completedAt) {
-      throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'VERIFICATION_ALREADY_COMPLETED');
+      throw new AppError(400, ErrorCodes.VERIFICATION_ALREADY_COMPLETED, ErrorCodes.VERIFICATION_ALREADY_COMPLETED);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -118,10 +118,10 @@ export class AdminVerificationService {
 
     const queueEntry = await prisma.verificationQueue.findUnique({ where: { profileId } });
     if (!queueEntry) {
-      throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'VERIFICATION_QUEUE_ENTRY_MISSING');
+      throw new AppError(400, ErrorCodes.VERIFICATION_QUEUE_ENTRY_MISSING, ErrorCodes.VERIFICATION_QUEUE_ENTRY_MISSING);
     }
     if (queueEntry.completedAt) {
-      throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'VERIFICATION_ALREADY_COMPLETED');
+      throw new AppError(400, ErrorCodes.VERIFICATION_ALREADY_COMPLETED, ErrorCodes.VERIFICATION_ALREADY_COMPLETED);
     }
 
     return prisma.$transaction(async (tx) => {

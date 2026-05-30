@@ -63,7 +63,7 @@ export function verifyRegistrationOtp(dto: VerifyRegistrationOtpDto): Promise<{ 
   return api.post('/auth/registration/otp/verify', dto);
 }
 
-export function register(dto: SignupDto): Promise<LoginResponse> {
+export function register(dto: SignupDto): Promise<{ accountId: string; email: string }> {
   return api.post('/auth/register', dto);
 }
 

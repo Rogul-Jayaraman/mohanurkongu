@@ -1,4 +1,5 @@
 import { MembershipService, type CapabilitySnapshot } from './membership.service.js';
+import type { ViewDetails } from '@prisma/client';
 import { prisma } from '../../database/prisma.js';
 
 export class MembershipGuard {
@@ -44,14 +45,11 @@ export class MembershipGuard {
     });
   }
 
-  async checkContactAccess(accountId: string): Promise<boolean> {
+  async checkViewDetails(accountId: string, minLevel: ViewDetails): Promise<boolean> {
     const caps = await this.resolveCapabilities(accountId);
-    return caps?.contactAccess ?? false;
-  }
-
-  async checkFullHoroscopeAccess(accountId: string): Promise<boolean> {
-    const caps = await this.resolveCapabilities(accountId);
-    return caps?.fullHoroscopeAccess ?? false;
+    if (!caps) return false;
+    const levels: ViewDetails[] = ['BASIC', 'EXTENDED', 'ADVANCED', 'FULL'];
+    return levels.indexOf(caps.viewDetails) >= levels.indexOf(minLevel);
   }
 
   async checkPrintAccess(accountId: string, type: 'profile' | 'horoscope'): Promise<boolean> {

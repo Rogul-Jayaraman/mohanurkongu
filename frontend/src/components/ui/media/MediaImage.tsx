@@ -13,22 +13,17 @@ interface MediaImageProps {
   className?: string;
   fallback?: React.ReactNode;
   onClick?: React.MouseEventHandler<HTMLImageElement>;
+  priority?: 'auto' | 'high' | 'low';
 }
 
-const resolveUrl = (url: string): string => {
-  if (/^(https?:\/\/)/.test(url)) return url;
-  if (url.startsWith('/media/')) {
-    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-    return `${API_BASE}${url}`;
-  }
-  return url;
-};
-
-const getMediaUrl = (uploadId: string): string => {
-  if (/^(https?:\/\/)/.test(uploadId)) return uploadId;
-  if (uploadId.startsWith('/media/')) return resolveUrl(uploadId);
+const getMediaSrc = (urlOrId: string): string => {
+  if (/^(https?:\/\/)/.test(urlOrId)) return urlOrId;
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-  return `${API_BASE}/media/${uploadId}.webp`;
+  if (urlOrId.startsWith('/media/')) return `${API_BASE}${urlOrId}`;
+  if (/^upl_[0-9a-f]{12}$/i.test(urlOrId)) {
+    return `${API_BASE}/media/by-token/${urlOrId}`;
+  }
+  return `${API_BASE}/media/${urlOrId}.webp`;
 };
 
 export const MediaImage: React.FC<MediaImageProps> = ({
@@ -38,9 +33,9 @@ export const MediaImage: React.FC<MediaImageProps> = ({
   className = '',
   fallback,
   onClick,
+  priority,
 }) => {
-  const rawSrc = image?.url || (uploadId ? getMediaUrl(uploadId) : null);
-  const src = rawSrc ? resolveUrl(rawSrc) : null;
+  const src = image?.url ? getMediaSrc(image.url) : (uploadId ? getMediaSrc(uploadId) : null);
 
   if (!src) {
     return fallback ? <>{fallback}</> : null;
@@ -55,6 +50,7 @@ export const MediaImage: React.FC<MediaImageProps> = ({
       className={className}
       loading="lazy"
       decoding="async"
+      fetchPriority={priority}
       onClick={onClick}
     />
   );

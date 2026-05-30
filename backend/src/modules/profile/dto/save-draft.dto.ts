@@ -90,7 +90,7 @@ export const saveDraftSchema = z.object({
   assets: z.object({
     landEn: z.string().nullable().optional(),
     landTa: z.string().nullable().optional(),
-    residenceType: z.string().nullable().optional(),
+    residenceType: z.enum(['OWNED', 'RENTED']).nullable().optional(),
     otherAssetsEn: z.string().nullable().optional(),
     otherAssetsTa: z.string().nullable().optional(),
     vehicle: z.string().nullable().optional(),

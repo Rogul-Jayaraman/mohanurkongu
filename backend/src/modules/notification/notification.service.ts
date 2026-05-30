@@ -26,23 +26,4 @@ export class NotificationService {
       unsubscribeUrl: '',
     });
   }
-
-  async sendSecurityAlert(
-    to: string,
-    deviceTime: string,
-    deviceName: string,
-    deviceLocation: string,
-    reviewUrl: string,
-    secureUrl: string,
-  ): Promise<void> {
-    await enqueueTemplateEmail('security-alert', {
-      to,
-      deviceTime,
-      deviceName,
-      deviceLocation,
-      reviewUrl,
-      secureUrl,
-      unsubscribeUrl: '',
-    });
-  }
 }

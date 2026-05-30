@@ -23,15 +23,14 @@ import type { AdminManagedProfile } from '@/types/admin-types';
 // AdminWelcomeHeader
 // ═══════════════════════════════════════════════════════════
 const AdminWelcomeHeader: React.FC = () => {
-    const { language } = useLanguage();
+    const { t } = useLanguage();
     const { formatDate } = useDateFormatter();
-    const isTamil = language === 'ta';
 
     const getGreeting = () => {
         const hour = new Date().getHours();
-        if (hour < 12) return isTamil ? 'இனிய காலை வணக்கம்' : 'Good Morning';
-        if (hour < 17) return isTamil ? 'இனிய மதிய வணக்கம்' : 'Good Afternoon';
-        return isTamil ? 'இனிய மாலை வணக்கம்' : 'Good Evening';
+        if (hour < 12) return t('adminMatrimony.dashboard.greeting.morning');
+        if (hour < 17) return t('adminMatrimony.dashboard.greeting.afternoon');
+        return t('adminMatrimony.dashboard.greeting.evening');
     };
 
     return (
@@ -39,7 +38,7 @@ const AdminWelcomeHeader: React.FC = () => {
             <div className="flex flex-col gap-0.5">
                 <span className="text-[12px] font-serif font-black text-gold tracking-[0.15em]">{getGreeting()}</span>
                 <div className="flex flex-col md:flex-row md:justify-between gap-x-6">
-                    <h1 className="text-2xl font-serif font-black text-rosewood tracking-tight">{isTamil ? 'வரவேற்கிறோம், நிர்வாகி' : 'Welcome, Admin'}</h1>
+                    <h1 className="text-2xl font-serif font-black text-rosewood tracking-tight">{t('adminMatrimony.dashboard.welcomeAdmin')}</h1>
                     <div className="flex items-center gap-2 text-rosewood translate-y-[-2px]">
                         <div className="w-1 h-1 rounded-full bg-gold" />
                         <span className="text-xs font-serif font-bold italic tracking-wide">{formatDate(new Date())}</span>
@@ -54,13 +53,12 @@ const AdminWelcomeHeader: React.FC = () => {
 // GlobalKPIs
 // ═══════════════════════════════════════════════════════════
 const GlobalKPIs: React.FC<{ stats: any; isLoading: boolean }> = ({ stats, isLoading }) => {
-    const { language } = useLanguage();
-    const isTamil = language === 'ta';
+    const { t } = useLanguage();
 
     const kpis = [
-        { label: isTamil ? 'மொத்த பயனர்கள்' : 'Total Users', value: stats ? (stats.totalUsers ?? 0).toLocaleString() : '', icon: Users, color: 'text-rosewood bg-ivory-dark' },
-        { label: isTamil ? 'சரிபார்ப்பு காத்திருப்பு' : 'Pending Verification', value: stats ? (stats.pendingVerifications ?? 0).toString() : '', icon: CheckCircle, color: 'text-gold bg-ivory-dark' },
-        { label: isTamil ? 'இன்றைய முன்பதிவுகள்' : "Today's Bookings", value: stats ? (stats.bookingsToday ?? 0).toString() : '', icon: CalendarDays, color: 'text-dark-brown bg-ivory-dark' }
+        { label: t('adminMatrimony.dashboard.totalUsers'), value: stats ? (stats.totalUsers ?? 0).toLocaleString() : '', icon: Users, color: 'text-rosewood bg-ivory-dark' },
+        { label: t('adminMatrimony.dashboard.pendingVerifications'), value: stats ? (stats.pendingVerifications ?? 0).toString() : '', icon: CheckCircle, color: 'text-gold bg-ivory-dark' },
+        { label: t('adminMatrimony.dashboard.todaysBookings'), value: stats ? (stats.bookingsToday ?? 0).toString() : '', icon: CalendarDays, color: 'text-dark-brown bg-ivory-dark' }
     ];
 
     return (
@@ -105,7 +103,7 @@ const TodaysBookings: React.FC<{ recentBookings: MandapamEvent[]; isLoading: boo
 
     return (
         <div className="w-full space-y-6">
-            <SectionHeader title={isTamil ? 'இன்றைய நிகழ்வுகள்' : "Today's Schedule"} icon={CalendarClock} />
+            <SectionHeader title={t('adminMatrimony.dashboard.todaysSchedule')} icon={CalendarClock} />
             <div className="space-y-4">
                 {isLoading ? (
                     [1, 2, 3].map((_, i) => (
@@ -149,7 +147,7 @@ const TodaysBookings: React.FC<{ recentBookings: MandapamEvent[]; isLoading: boo
                         </motion.div>
                     ))
                 ) : (
-                    <EmptyState message={isTamil ? 'இன்று எந்த நிகழ்வுகளும் இல்லை' : 'The registry is clear for today.'} />
+                    <EmptyState message={t('adminMatrimony.dashboard.noEventsToday')} />
                 )}
             </div>
         </div>
@@ -160,20 +158,16 @@ const TodaysBookings: React.FC<{ recentBookings: MandapamEvent[]; isLoading: boo
 // VerificationQueuePreview
 // ═══════════════════════════════════════════════════════════
 const VerificationQueuePreview: React.FC = () => {
-    const { language } = useLanguage();
-    const isTamil = language === 'ta';
+    const { t } = useLanguage();
     const navigate = useNavigate();
     const [data, setData] = useState<{ profiles: any[] }>({ profiles: [] });
     const [isLoading, setIsLoading] = useState(true);
-    useEffect(() => { fetchVerificationQueue().then((res: any) => setData({ profiles: res.profiles || [] })).finally(() => setIsLoading(false)); }, []);
+    useEffect(() => { fetchVerificationQueue({ limit: 4 }).then((res: any) => setData({ profiles: res.profiles || [] })).finally(() => setIsLoading(false)); }, []);
     const profiles = (data as any)?.profiles || [];
-
-    const handleAccept = (id: string) => console.log('Accepted:', id);
-    const handleReject = (id: any) => console.log('Rejected:', id);
 
     return (
         <div className="w-full space-y-6">
-            <SectionHeader title={isTamil ? 'சரிபார்ப்பு வரிசை' : 'Verification Queue'} icon={ShieldCheck} />
+            <SectionHeader title={t('adminMatrimony.dashboard.verificationQueue')} icon={ShieldCheck} />
             {isLoading ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {[1, 2, 3, 4].map((i) => <AdminProfileCardSkeleton key={i} />)}
@@ -182,12 +176,12 @@ const VerificationQueuePreview: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {profiles.map((profile: any, i: number) => (
                         <motion.div key={profile.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="w-full">
-                            <AdminProfileCard profile={profile} adminActions={{ onAccept: handleAccept, onReject: handleReject, onView: (id) => navigate(`/admin/matrimony/profiles/${id}`) }} />
+                            <AdminProfileCard profile={profile} adminActions={{ onView: (id) => navigate(`/admin/matrimony/profiles/${id}`) }} />
                         </motion.div>
                     ))}
                 </div>
             ) : (
-                <EmptyState message={isTamil ? 'சரிபார்ப்பு வரிசை காலியாக உள்ளது' : 'All profiles are verified. Queue cleared.'} icon={ShieldCheck} />
+                <EmptyState message={t('adminMatrimony.dashboard.queueCleared')} icon={ShieldCheck} />
             )}
         </div>
     );
@@ -197,20 +191,19 @@ const VerificationQueuePreview: React.FC = () => {
 // QuickActions
 // ═══════════════════════════════════════════════════════════
 const QuickActions: React.FC = () => {
-    const { language } = useLanguage();
-    const isTamil = language === 'ta';
+    const { t } = useLanguage();
     const navigate = useNavigate();
 
     const actions = [
-        { id: '1', title: 'New Booking', titleTa: 'புதிய முன்பதிவு', description: 'Create a new hall booking for a client.', descriptionTa: 'ஒரு வாடிக்கையாளருக்கு புதிய முன்பதிவை உருவாக்கவும்.', icon: CalendarPlus, route: '/admin/mandapam/bookings/new' },
-        { id: '2', title: 'Hall Availability', titleTa: 'அரங்கு காலியிடம்', description: 'Check available dates for events.', descriptionTa: 'நிகழ்ச்சிகளுக்கான கிடைக்கும் தேதிகளைச் சரிபார்க்கவும்.', icon: CalendarDays, route: '/admin/mandapam/availability' },
-        { id: '3', title: 'Package Management', titleTa: 'தொகுப்பு மேலாண்மை', description: 'Manage pricing and event packages.', descriptionTa: 'விலை மற்றும் நிகழ்வு தொகுப்புகளை நிர்வகிக்கவும்.', icon: Package, route: '/admin/mandapam/packages' }
+        { id: '1', title: t('adminMatrimony.dashboard.newBooking.title'), description: t('adminMatrimony.dashboard.newBooking.desc'), icon: CalendarPlus, route: '/admin/mandapam/bookings/new' },
+        { id: '2', title: t('adminMatrimony.dashboard.hallAvailability.title'), description: t('adminMatrimony.dashboard.hallAvailability.desc'), icon: CalendarDays, route: '/admin/mandapam/availability' },
+        { id: '3', title: t('adminMatrimony.dashboard.packageManagement.title'), description: t('adminMatrimony.dashboard.packageManagement.desc'), icon: Package, route: '/admin/mandapam/packages' }
     ];
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {actions.map((action, i) => (
-                <ActionCard key={action.id} title={isTamil ? action.titleTa : action.title} description={isTamil ? action.descriptionTa : action.description} icon={action.icon} onClick={() => navigate(action.route)} delay={i * 0.1} />
+                <ActionCard key={action.id} title={action.title} description={action.description} icon={action.icon} onClick={() => navigate(action.route)} delay={i * 0.1} />
             ))}
         </div>
     );
@@ -220,8 +213,7 @@ const QuickActions: React.FC = () => {
 // AdminDashboard (Main Orchestrator)
 // ═══════════════════════════════════════════════════════════
 const AdminDashboard: React.FC = () => {
-    const { language } = useLanguage();
-    const isTamil = language === 'ta';
+    const { t } = useLanguage();
     const [statsData, setStatsData] = useState<any>({ stats: { totalUsers: 0, totalProfiles: 0, totalBookings: 0, totalRevenue: 0, newUsers: 0, pendingVerifications: 0 }, recentBookings: [] });
     const [loading, setLoading] = useState(true);
     const [isError, setIsError] = useState(false);
@@ -233,9 +225,9 @@ const AdminDashboard: React.FC = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
                 <AlertCircle className="w-16 h-16 text-red-500/50" />
-                <h3 className="text-2xl font-serif font-bold text-rosewood">{isTamil ? 'சிஸ்டம் ஆஃப்லைனில் உள்ளது' : 'System Offline'}</h3>
-                <p className="text-gray-500 max-w-md text-center">{(error as any)?.message || (isTamil ? 'டாஷ்போர்டு தரவை ஏற்ற முடியவில்லை' : 'Failed to load dashboard statistics')}</p>
-                <button onClick={() => refetch()} className="mt-4 px-8 py-3 bg-rosewood text-white font-bold rounded-xl hover:shadow-lg transition-all">{isTamil ? 'மீண்டும் இணைக்கவும்' : 'Re-establish Connection'}</button>
+                <h3 className="text-2xl font-serif font-bold text-rosewood">{t('adminMatrimony.dashboard.systemOffline')}</h3>
+                <p className="text-gray-500 max-w-md text-center">{(error as any)?.message || t('adminMatrimony.dashboard.loadError')}</p>
+                <button onClick={() => refetch()} className="mt-4 px-8 py-3 bg-rosewood text-white font-bold rounded-xl hover:shadow-lg transition-all">{t('adminMatrimony.dashboard.retryConnection')}</button>
             </div>
         );
     }
@@ -248,7 +240,7 @@ const AdminDashboard: React.FC = () => {
             <section><VerificationQueuePreview /></section>
             <section className="space-y-6">
                 <div className="flex items-center gap-4">
-                    <h3 className="text-xs font-bold text-gold">{isTamil ? 'செயல்பாடுகள் மையம்' : 'Action Center'}</h3>
+                    <h3 className="text-xs font-bold text-gold">{t('adminMatrimony.dashboard.actionCenter')}</h3>
                     <div className="h-px grow bg-gold/10" />
                 </div>
                 <QuickActions />

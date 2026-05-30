@@ -41,7 +41,7 @@ export const UserLayout: React.FC = () => {
 
         <ScrollToTop dependencies={[location.pathname]} />
 
-        <div className="main-content-scroll flex-1 overflow-x-hidden overflow-y-auto flex flex-col min-h-0">
+        <div id="main-content" className="main-content-scroll flex-1 overflow-x-hidden overflow-y-auto flex flex-col min-h-0">
           <div className="flex-1 flex flex-col min-h-0 relative">
             <div className="kolam-watermark absolute inset-0 opacity-[0.05] pointer-events-none" />
 

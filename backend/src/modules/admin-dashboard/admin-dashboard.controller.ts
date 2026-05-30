@@ -12,6 +12,7 @@ export class AdminDashboardController {
         stats: {
           totalUsers: stats.totalUsers,
           totalProfiles: stats.totalProfiles,
+          activeProfiles: stats.activeProfiles,
           totalBookings: 0,
           totalRevenue: 0,
           newUsers: stats.newUsers,

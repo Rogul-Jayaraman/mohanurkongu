@@ -38,8 +38,12 @@ export const useInputFormatting = () => {
             let mainPart = parts[0];
             let decimalPart = parts.length > 1 ? parts[1].slice(0, 2) : '';
             
-            // Add comma separators for Indian numbering system style (or standard)
-            mainPart = mainPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            // Add comma separators for Indian numbering system (last 3, then groups of 2)
+            if (mainPart.length > 3) {
+                const last3 = mainPart.slice(-3);
+                const rest = mainPart.slice(0, -3);
+                mainPart = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + ',' + last3;
+            }
             
             return parts.length > 1 ? `${mainPart}.${decimalPart}` : mainPart;
         }

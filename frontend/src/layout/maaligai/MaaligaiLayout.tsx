@@ -15,7 +15,7 @@ export const MaaligaiLayout: React.FC = () => {
       <ScrollToTop dependencies={[location.pathname]} />
       <Header />
 
-      <main className="overflow-x-hidden pt-[64px] md:pt-[80px]">
+      <main id="main-content" className="overflow-x-hidden pt-[64px] md:pt-[80px]">
         <Outlet />
       </main>
 

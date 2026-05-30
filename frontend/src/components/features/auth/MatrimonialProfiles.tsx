@@ -69,7 +69,10 @@ export const MatrimonialProfiles: React.FC = () => {
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(fetchProfiles, [fetchProfiles]);
+  useEffect(() => {
+    const cleanup = fetchProfiles();
+    return cleanup;
+  }, [fetchProfiles]);
 
   const profiles = React.useMemo(() => interleave(brides, grooms), [brides, grooms]);
 
@@ -78,10 +81,14 @@ export const MatrimonialProfiles: React.FC = () => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isPaused = useRef(false);
   const isLocked = useRef(false);
+  const shouldAnimate = useRef(true);
+  const currentIndexRef = useRef(0);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
   const [perView, setPerView] = useState(2);
+
+  currentIndexRef.current = currentIndex;
 
   const computeDimensions = useCallback(() => {
     const w = measureRef.current?.clientWidth;
@@ -93,45 +100,61 @@ export const MatrimonialProfiles: React.FC = () => {
   }, []);
 
   useLayoutEffect(() => {
+    if (loading || profiles.length === 0) return;
     computeDimensions();
     const ro = new ResizeObserver(computeDimensions);
     if (measureRef.current) ro.observe(measureRef.current);
     return () => ro.disconnect();
-  }, [computeDimensions]);
+  }, [computeDimensions, loading, profiles.length]);
 
   useEffect(() => {
     setCurrentIndex(0);
     isLocked.current = false;
   }, [profiles.length, cardWidth]);
 
-  const maxIndex = Math.max(0, profiles.length - perView);
+  const effectiveLength = profiles.length;
+  const adjustedMaxIndex = effectiveLength;
 
   useEffect(() => {
-    if (currentIndex > maxIndex) setCurrentIndex(maxIndex);
-  }, [currentIndex, maxIndex]);
+    if (currentIndex > adjustedMaxIndex) setCurrentIndex(adjustedMaxIndex);
+  }, [currentIndex, adjustedMaxIndex]);
 
   const scrollTo = useCallback((index: number) => {
     if (isLocked.current) return;
     let clamped = index;
-    if (clamped > maxIndex) clamped = 0;
-    if (clamped < 0) clamped = maxIndex;
-    if (clamped === currentIndex) return;
+    if (clamped > adjustedMaxIndex) clamped = 0;
+    if (clamped < 0) clamped = adjustedMaxIndex;
+    if (clamped === currentIndexRef.current) return;
     isLocked.current = true;
+    shouldAnimate.current = true;
     setCurrentIndex(clamped);
-    setTimeout(() => { isLocked.current = false; }, 400);
-  }, [currentIndex, maxIndex]);
+  }, [adjustedMaxIndex]);
+
+  const animationComplete = useCallback(() => {
+    if (!shouldAnimate.current) {
+      shouldAnimate.current = true;
+      isLocked.current = false;
+      return;
+    }
+    if (currentIndexRef.current >= effectiveLength) {
+      shouldAnimate.current = false;
+      setCurrentIndex(currentIndexRef.current - effectiveLength);
+      return;
+    }
+    isLocked.current = false;
+  }, [effectiveLength]);
 
   useEffect(() => {
     if (profiles.length <= perView) return;
     const tick = () => {
       if (isPaused.current || isLocked.current) return;
-      scrollTo(currentIndex + 1);
+      scrollTo(currentIndexRef.current + 1);
     };
     timerRef.current = setInterval(tick, AUTO_INTERVAL);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [currentIndex, maxIndex, perView, profiles.length, scrollTo]);
+  }, [perView, profiles.length, scrollTo]);
 
   const pauseAutoplay = () => { isPaused.current = true; };
   const resumeAutoplay = () => { isPaused.current = false; };
@@ -143,8 +166,8 @@ export const MatrimonialProfiles: React.FC = () => {
   const handleDragEnd = (_: any, info: any) => {
     const offset = info.offset.x;
     if (Math.abs(offset) > DRAG_THRESHOLD) {
-      if (offset < 0) scrollTo(currentIndex + 1);
-      else scrollTo(currentIndex - 1);
+      if (offset < 0) scrollTo(currentIndexRef.current + 1);
+      else scrollTo(currentIndexRef.current - 1);
     }
     resumeAutoplay();
   };
@@ -154,6 +177,11 @@ export const MatrimonialProfiles: React.FC = () => {
   const showSkeleton = loading;
 
   const step = cardWidth > 0 ? cardWidth + GAP : 0;
+
+  const displayProfiles = React.useMemo(
+    () => [...profiles, ...profiles],
+    [profiles],
+  );
 
   return (
     <motion.section
@@ -176,7 +204,7 @@ export const MatrimonialProfiles: React.FC = () => {
 
       {showSkeleton && (
         <div className="flex gap-3 overflow-hidden rounded-xl min-h-[200px] sm:min-h-[240px]">
-          {Array.from({ length: 4 }).map((_, i) => (
+          {Array.from({ length: perView || 2 }).map((_, i) => (
             <div key={i} className="flex-1 min-w-0">
               <SkeletonCard />
             </div>
@@ -215,7 +243,7 @@ export const MatrimonialProfiles: React.FC = () => {
         <div
           onMouseEnter={pauseAutoplay}
           onMouseLeave={resumeAutoplay}
-          className="touch-pan-y"
+          className="touch-pan-x"
         >
           <div
             ref={measureRef}
@@ -226,22 +254,21 @@ export const MatrimonialProfiles: React.FC = () => {
               className="flex py-1 cursor-grab active:cursor-grabbing"
               style={{ gap: `${GAP}px` }}
               animate={{ x: -currentIndex * step }}
-              transition={{
-                type: 'tween',
-                duration: 0.45,
-                ease: [0.25, 0.1, 0.25, 1],
-              }}
-              onAnimationComplete={() => { isLocked.current = false; }}
+              transition={shouldAnimate.current
+                ? { type: 'tween', duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }
+                : { duration: 0 }
+              }
+              onAnimationComplete={animationComplete}
               drag="x"
-              dragConstraints={{ left: -maxIndex * step, right: 0 }}
+              dragConstraints={{ left: -adjustedMaxIndex * step, right: 0 }}
               dragElastic={0.05}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
               whileTap={{ cursor: 'grabbing' }}
             >
-              {profiles.map((profile) => (
+              {displayProfiles.map((profile, idx) => (
                 <div
-                  key={profile.id}
+                  key={`${profile.id}-${idx}`}
                   style={{
                     width: cardWidth || '100%',
                     flex: '0 0 auto',

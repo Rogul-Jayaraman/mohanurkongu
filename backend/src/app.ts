@@ -3,13 +3,13 @@ import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
+import path from 'node:path';
 import { appConfig } from './config/app.config.js';
 import { authConfig } from './config/auth.config.js';
 import { requestId } from './common/middleware/requestId.js';
 import { language } from './common/middleware/language.js';
 import { requestLogger } from './common/middleware/requestLogger.js';
 import { errorHandler } from './common/middleware/errorHandler.js';
-import { requireSession } from './common/middleware/requireAuth.js';
 import { translate } from './common/utils/translation.js';
 import { ErrorCodes } from './common/errors/ErrorCodes.js';
 import { sendSuccess } from './common/responses/ApiResponse.js';
@@ -31,8 +31,6 @@ import { ProfileRepository } from './modules/profile/profile.repository.js';
 import { VerificationService } from './modules/verification/verification.service.js';
 import { SessionService } from './modules/session/session.service.js';
 import { AccountService } from './modules/account/account.service.js';
-import { AuthService } from './modules/auth/auth.service.js';
-import { AdminAuthService } from './modules/admin-auth/admin-auth.service.js';
 import { NotificationService } from './modules/notification/notification.service.js';
 import { StorageService } from './modules/storage/storage.service.js';
 import { LocalStorageService } from './modules/storage/providers/local-storage.service.js';
@@ -53,7 +51,7 @@ import { MembershipService } from './modules/membership/membership.service.js';
 import { MembershipGuard } from './modules/membership/membership.guard.js';
 import { MembershipController } from './modules/membership/membership.controller.js';
 
-// Controllers
+  // Controllers
 import { AuthController } from './modules/auth/auth.controller.js';
 import { VerificationController } from './modules/verification/verification.controller.js';
 import { AccountController } from './modules/account/account.controller.js';
@@ -61,6 +59,7 @@ import { AdminAuthController } from './modules/admin-auth/admin-auth.controller.
 import { AdminAccountController } from './modules/admin-auth/admin-account.controller.js';
 import { UploadController } from './modules/upload/upload.controller.js';
 import { ProfileController } from './modules/profile/profile.controller.js';
+import { OtpPipeline } from './common/auth/pipelines/otp.pipeline.js';
 
 // Routes
 import { createAuthRoutes } from './modules/auth/auth.routes.js';
@@ -75,6 +74,17 @@ import { createAdminProfilesRoutes } from './modules/admin-profiles/admin-profil
 import { createAdminDashboardRoutes } from './modules/admin-dashboard/admin-dashboard.routes.js';
 import horoscopeRouter from './modules/horoscope/index.js';
 import { createMembershipRoutes } from './modules/membership/membership.routes.js';
+import { MandapamService } from './modules/mandapam/mandapam.service.js';
+import { MandapamController } from './modules/mandapam/mandapam.controller.js';
+import { createMandapamRoutes } from './modules/mandapam/mandapam.routes.js';
+import { BookingRepository } from './modules/booking/booking.repository.js';
+import { BookingService } from './modules/booking/booking.service.js';
+import { BookingController } from './modules/booking/booking.controller.js';
+import { createBookingRoutes, createPublicBookingRoutes } from './modules/booking/booking.routes.js';
+import { AnalyticsRepository } from './modules/analytics/analytics.repository.js';
+import { AnalyticsService } from './modules/analytics/analytics.service.js';
+import { AnalyticsController } from './modules/analytics/analytics.controller.js';
+import { createAnalyticsRoutes } from './modules/analytics/analytics.routes.js';
 
 export function createApp() {
   const app = express();
@@ -198,22 +208,30 @@ export function createApp() {
   const accountService = new AccountService(accountRepo);
   const sessionService = new SessionService(sessionRepo, accountRepo);
 
-  // AuthModule
-  const authService = new AuthService(sessionService, accountRepo, accountService, notificationService);
-  const authController = new AuthController(authService);
+  // MembershipModule
+  const membershipService = new MembershipService();
+  const membershipGuard = new MembershipGuard(membershipService);
+  const membershipController = new MembershipController(membershipService, membershipGuard);
+
+  // AuthModule — pipeline-based
+  const otpPipeline = new OtpPipeline(accountRepo, notificationService);
+  const authController = new AuthController(
+    sessionService,
+    accountRepo,
+    accountService,
+    membershipService,
+    notificationService,
+    otpPipeline,
+  );
+
+  // AdminAuthModule
+  const adminAuthController = new AdminAuthController(authController, accountService);
 
   // VerificationModule
   const verificationController = new VerificationController(verificationService, notificationService);
 
   // AccountModule
   const accountController = new AccountController(accountService);
-
-  // AdminAuthModule
-  const adminAuthService = new AdminAuthService(accountRepo, sessionService, accountService);
-  const adminAuthController = new AdminAuthController(adminAuthService);
-
-  // AdminAccountModule
-  const adminAccountController = new AdminAccountController(accountRepo);
 
   // StorageModule
   const storageRepo = new StorageRepository();
@@ -227,10 +245,8 @@ export function createApp() {
   const uploadService = new UploadService(storageService, imagePipelineService);
   const uploadController = new UploadController(uploadService);
 
-  // MembershipModule
-  const membershipService = new MembershipService();
-  const membershipGuard = new MembershipGuard(membershipService);
-  const membershipController = new MembershipController(membershipService, membershipGuard);
+  // AdminAccountModule
+  const adminAccountController = new AdminAccountController(accountRepo, membershipService);
 
   // ProfileModule
   const profileRepo = new ProfileRepository();
@@ -252,6 +268,20 @@ export function createApp() {
   const adminDashboardService = new AdminDashboardService(adminDashboardRepo);
   const adminDashboardController = new AdminDashboardController(adminDashboardService);
 
+  // MandapamModule
+  const mandapamService = new MandapamService();
+  const mandapamController = new MandapamController(mandapamService);
+
+  // BookingModule
+  const bookingRepo = new BookingRepository();
+  const bookingService = new BookingService(bookingRepo);
+  const bookingController = new BookingController(bookingService);
+
+  // AnalyticsModule
+  const analyticsRepo = new AnalyticsRepository();
+  const analyticsService = new AnalyticsService(analyticsRepo);
+  const analyticsController = new AnalyticsController(analyticsService);
+
   // --- Bull Board ---
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath('/admin/queues');
@@ -261,49 +291,37 @@ export function createApp() {
   });
   app.use('/admin/queues', serverAdapter.getRouter());
 
-  // Serve uploaded media (local dev) — with access control
-  app.use('/media', requireSession, (req, res, next) => {
-    // Block direct access to TEMP uploads
-    const { MembershipGuard } = require('./modules/membership/membership.guard.js');
-    const { prisma } = require('./database/prisma.js');
-    const path = require('path');
-    const objectKey = req.path.replace(/^\//, '');
-    if (!objectKey) return next();
-    prisma.upload.findFirst({ where: { objectKey } }).then((upload: any) => {
-      if (upload && upload.status === 'TEMP') {
-        return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied' } });
+  // Public media — for showcase/public profile photos
+  app.use('/media/public', express.static(appConfig.storageDir, { maxAge: '1y' }));
+  // Fallback: generate a simple placeholder image when no file exists on disk
+  app.use('/media/public', (req, res) => {
+    const svg = `<svg width="400" height="500" viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="400" height="500" fill="#F5EFE1"/><circle cx="200" cy="180" r="60" fill="#D4AF37" opacity="0.2"/><rect x="120" y="310" width="160" height="10" rx="5" fill="#D4AF37" opacity="0.3"/><rect x="140" y="330" width="120" height="8" rx="4" fill="#D4AF37" opacity="0.15"/><rect x="100" y="370" width="200" height="1" rx="0.5" fill="#D4AF37" opacity="0.1"/><rect x="120" y="390" width="160" height="6" rx="3" fill="#D4AF37" opacity="0.1"/></svg>`;
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.status(200).send(svg);
+  });
+
+  // Resolve uploadToken (upl_xxx) to objectKey and serve the file
+  // No auth on GET — images are public by design. Auth protects upload/delete only.
+  app.use('/media/by-token/:uploadToken', async (req, res) => {
+    const { uploadToken } = req.params;
+    try {
+      const upload = await prisma.upload.findUnique({ where: { uploadToken } });
+      if (!upload) {
+        return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Upload not found' } });
       }
-      next();
-    }).catch(() => next());
-  }, express.static(appConfig.storageDir));
-  // Horoscope chart images require membership with fullHoroscopeAccess
-  app.use('/media/horoscope', requireSession, async (req, res, next) => {
-    const { MembershipGuard } = require('./modules/membership/membership.guard.js');
-    const guard = new MembershipGuard();
-    const caps = await guard.resolveCapabilities(req.account.sub);
-    if (!caps?.fullHoroscopeAccess) {
-      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Membership required' } });
+      const filePath = path.join(appConfig.storageDir, upload.objectKey);
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.sendFile(filePath);
+    } catch {
+      res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Internal error' } });
     }
-    next();
-  }, express.static(appConfig.storageDir));
-  // Private profile photos require contactAccess or ownership
-  app.use('/media/photos', requireSession, async (req, res, next) => {
-    const { prisma } = require('./database/prisma.js');
-    const objectKey = req.path.replace(/^\//, '');
-    if (!objectKey) return next();
-    const upload = await prisma.upload.findFirst({ where: { objectKey } });
-    if (!upload) return next();
-    const profilePhoto = await prisma.profilePhoto.findFirst({ where: { primaryUploadId: upload.id }, include: { profile: true } });
-    if (!profilePhoto) return next();
-    if (profilePhoto.profile.accountId === req.account.sub) return next();
-    const { MembershipGuard } = require('./modules/membership/membership.guard.js');
-    const guard = new MembershipGuard();
-    const caps = await guard.resolveCapabilities(req.account.sub);
-    if (!caps?.contactAccess) {
-      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Contact access required' } });
-    }
-    next();
-  }, express.static(appConfig.storageDir));
+  });
+
+  // Serve uploaded media files (local dev) — no auth on GET.
+  // Membership gating is enforced at the API layer (profile/browse endpoints),
+  // not at the media serving layer.
+  app.use('/media', express.static(appConfig.storageDir, { maxAge: '1y' }));
 
   // --- Routes ---
   app.use('/', createAuthRoutes(authController));
@@ -318,6 +336,10 @@ export function createApp() {
   app.use('/admin', createAdminProfilesRoutes(adminProfilesController));
   app.use('/admin', createAdminDashboardRoutes(adminDashboardController));
   app.use('/', createMembershipRoutes(membershipController));
+  app.use('/', createMandapamRoutes(mandapamController));
+  app.use('/', createBookingRoutes(bookingController));
+  app.use('/', createPublicBookingRoutes(bookingController));
+  app.use('/admin', createAnalyticsRoutes(analyticsController));
 
   // 404
   app.use((_req, res) => {

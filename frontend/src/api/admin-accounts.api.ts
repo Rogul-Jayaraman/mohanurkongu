@@ -1,5 +1,60 @@
 import api from '../lib/api';
 
+export interface AdminAccountDetail {
+  id: string;
+  accountNo: string;
+  firstNameEn: string | null;
+  lastNameEn: string | null;
+  firstNameTa: string | null;
+  lastNameTa: string | null;
+  email: string;
+  phone: string | null;
+  currentState: string;
+  createdAt: string;
+  roles: { role: { code: string } }[];
+  credential: {
+    email: string;
+    phone: string | null;
+    emailVerified: boolean;
+    phoneVerified: boolean;
+    lastLoginAt: string | null;
+  };
+}
+
+export interface AdminAccountProfile {
+  id: string;
+  regNo: string;
+  firstNameEn: string | null;
+  lastNameEn: string | null;
+  currentStatus: string;
+  gender: string;
+  createdAt: string;
+  photo: { url: string; width: number | null; height: number | null } | null;
+}
+
+export interface AdminShortlistedProfile {
+  id: string;
+  regNo: string;
+  firstNameEn: string | null;
+  lastNameEn: string | null;
+  currentStatus: string;
+  shortlistedAt: string;
+  photo: { url: string; width: number | null; height: number | null } | null;
+}
+
+export interface AdminAccountDetailResponse {
+  account: AdminAccountDetail;
+  subscription: any | null;
+  capabilities: any | null;
+  history: any[];
+  revertableSubscription: any | null;
+  availablePlans: any[];
+  profiles: AdminAccountProfile[];
+  shortlistedProfiles: AdminShortlistedProfile[];
+}
+
+export type PaymentMethodType = 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE' | 'OTHER';
+
 export async function fetchAdminAccounts(params: { page: number; search?: string }): Promise<{ accounts: any[]; meta: any }> {
   const raw: any = await api.get('/admin/accounts', { params });
   const accounts = (raw.accounts || []).map((a: any) => ({
@@ -23,10 +78,14 @@ export async function fetchAdminAccounts(params: { page: number; search?: string
   return { accounts, meta: raw.meta };
 }
 
+export async function fetchAdminAccountDetail(accountId: string): Promise<AdminAccountDetailResponse> {
+  return api.get(`/admin/accounts/${accountId}`);
+}
+
 export function suspendAccount(id: string, reasonEn: string, reasonTa?: string): Promise<any> {
   return api.post(`/admin/accounts/${id}/suspend`, { reasonEn, reasonTa });
 }
 
-export function revokeAccount(id: string): Promise<any> {
+export function restoreAccount(id: string): Promise<any> {
   return api.post(`/admin/accounts/${id}/restore`);
 }

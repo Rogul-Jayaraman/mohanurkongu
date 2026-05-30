@@ -63,11 +63,21 @@ export class MembershipController {
     } catch (err) { next(err); }
   };
 
+  adminCancelSubscription = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const adminId = req.account.sub;
+      const accountId = req.params.accountId as string;
+      const { action } = req.body;
+      const sub = await this.membershipService.cancelSubscription(adminId, accountId, action);
+      sendSuccess(res, { subscription: sub });
+    } catch (err) { next(err); }
+  };
+
   adminAssignSubscription = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const adminId = req.account.sub;
-      const { accountId, planId, notes } = req.body;
-      const sub = await this.membershipService.assignSubscription(adminId, accountId, planId, notes);
+      const { accountId, planId, paymentMethod, notes } = req.body;
+      const sub = await this.membershipService.assignSubscription(adminId, accountId, planId, { paymentMethod, notes });
       sendSuccess(res, { subscription: sub });
     } catch (err) { next(err); }
   };
@@ -88,6 +98,52 @@ export class MembershipController {
     try {
       const history = await this.membershipService.getSubscriptionHistory(req.params.accountId as string);
       sendSuccess(res, { history });
+    } catch (err) { next(err); }
+  };
+
+  getBillingOverview = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const accountId = req.account.sub;
+      const [plans, caps, sub, history] = await Promise.all([
+        this.membershipService.getActivePlans(),
+        this.membershipGuard.resolveCapabilities(accountId),
+        this.membershipService.getUserSubscription(accountId),
+        this.membershipService.getSubscriptionHistory(accountId),
+      ]);
+
+      sendSuccess(res, {
+        currentPlan: sub
+          ? { name: sub.snapshotPlanName, expiresAt: sub.expiresAt, planCode: sub.snapshotPlanCode }
+          : null,
+        capabilities: caps
+          ? {
+              searchLevel: caps.searchLevel,
+              profileSlotLimit: caps.profileSlotLimit,
+              shortlistLimit: caps.shortlistLimit,
+              printProfile: caps.printProfile,
+            }
+          : null,
+        plans: plans.map((p: any) => ({
+          code: p.code,
+          displayName: p.displayName,
+          displayPrice: p.displayPrice,
+          durationDays: p.durationDays,
+          openLimit: p.openLimit,
+          shortlistLimit: p.shortlistLimit,
+          profileSlotLimit: p.profileSlotLimit,
+          viewDetails: p.viewDetails,
+          printProfile: p.printProfile,
+          printHoroscope: p.printHoroscope,
+          searchLevel: p.searchLevel,
+        })),
+        history: history.map((h: any) => ({
+          planName: h.snapshotPlanName,
+          amount: h.snapshotDisplayPrice,
+          startedAt: h.startedAt,
+          expiresAt: h.expiresAt,
+          status: h.status,
+        })),
+      });
     } catch (err) { next(err); }
   };
 }

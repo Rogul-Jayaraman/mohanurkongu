@@ -1,11 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import './assets/styles/fonts.css'
 import './assets/styles/manamaalai.css'
 import './assets/styles/index.css'
-import './components/shared/horoscope/horoscope-grid.css';
-import './components/shared/horoscope/horoscope-table.css';
-import './components/shared/horoscope/horoscope-overview.css';
 import i18n from './i18n'
 import { I18nextProvider } from 'react-i18next'
 

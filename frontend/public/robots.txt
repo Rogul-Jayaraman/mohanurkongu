@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Allow: /manamaalai/login$
+Allow: /manamaalai/signup$
+Allow: /manamaalai/forgot-password$
+Disallow: /admin/
+Disallow: /manamaalai/dashboard
+Disallow: /manamaalai/browse-profiles
+Disallow: /manamaalai/shortlist
+Disallow: /manamaalai/my-profiles
+Disallow: /manamaalai/my-account
+Disallow: /manamaalai/new-profile
+Disallow: /manamaalai/view-profile/
+Disallow: /manamaalai/plan-upgrade
+Disallow: /api/
+
+Sitemap: https://mohanurkongu.com/sitemap.xml

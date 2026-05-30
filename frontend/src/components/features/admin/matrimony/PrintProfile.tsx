@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/context/LanguageContext';
 import { useProfileUtils } from '@/hooks/useProfileUtils';
 import { SouthIndianChart } from '@/components/shared/horoscope';
 import type { PlanetData, HoroscopeResult } from '@/types/horoscope';
@@ -9,8 +9,8 @@ import {
     COMPLEXION_OPTIONS, BLOOD_GROUP_OPTIONS,
     HEIGHT_OPTIONS, KULAM_OPTIONS, RESIDENCE_OPTIONS, DOSHAM_OPTIONS
 } from '@/constants/index';
+import { getImageUrl } from '@/utils/getImageUrl';
 import logo from '@/assets/images/logo.png';
-const getImageUrl = (url: string | null | undefined): string | null => { if (!url || typeof url !== 'string') return null; if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url; if (url.startsWith('/media/')) { const b = import.meta.env.VITE_API_URL || 'http://localhost:4000'; return `${b}${url}`; } return null; };
 
 /* ---------- Shared helpers ---------- */
 
@@ -38,14 +38,16 @@ const JDataRow: React.FC<{ label: string; value: string }> = ({ label, value }) 
 
 /* ---------- Admin section components ---------- */
 
-const PrintHeader: React.FC<{ name: string; regNo: string; location: string; isTamil: boolean }> = ({ name, regNo, location, isTamil }) => (
+const PrintHeader: React.FC<{ name: string; regNo: string; location: string; isTamil: boolean }> = ({ name, regNo, location, isTamil }) => {
+    const { t } = useLanguage();
+    return (
     <header className="pb-3 mb-4 border-b border-gray-400">
         <div className="flex justify-between items-end">
             <div className="flex items-end gap-3">
                 <img src={logo} alt="MK" className="w-[40px] h-[40px] object-contain shrink-0" />
                 <div>
                     <h1 className="font-heading text-lg font-semibold text-gray-900">
-                    {isTamil ? 'மோகனூர் கொங்கு சமுதாய நல அறக்கட்டளை' : 'Mohanur Kongu Samudhaya Nala Arakattalai'}
+                    {t('adminMatrimony.profileView.foundationName')}
                 </h1>
                 </div>
             </div>
@@ -54,21 +56,24 @@ const PrintHeader: React.FC<{ name: string; regNo: string; location: string; isT
             </div>
         </div>
     </header>
-);
+    );
+};
 
-const PrintBasicDetail: React.FC<{ profile: any; isTamil: boolean; age: string; profilePhotoUrl: string; name: string; maritalStatus: string; height: string; weight: string; bloodGroup: string; currentLocation: string; gender: string; dob: string }> = ({ isTamil, age, profilePhotoUrl, name, maritalStatus, height, weight, bloodGroup, currentLocation, gender, dob }) => (
+const PrintBasicDetail: React.FC<{ profile: any; isTamil: boolean; age: string; profilePhotoUrl: string; name: string; maritalStatus: string; height: string; weight: string; bloodGroup: string; currentLocation: string; gender: string; dob: string }> = ({ isTamil, age, profilePhotoUrl, name, maritalStatus, height, weight, bloodGroup, currentLocation, gender, dob }) => {
+    const { t } = useLanguage();
+    return (
     <div className="col-span-12 grid grid-cols-12 gap-4 p-4 border border-gray-200">
         <div className="col-span-8 flex flex-col justify-center">
-            <SectionTitle title={isTamil ? 'அடிப்படை விவரங்கள்' : 'Basic Detail'} />
+            <SectionTitle title={t('adminMatrimony.profileView.basicDetail')} />
             <div>
-                <DataRow label={isTamil ? 'பிறந்த தேதி' : 'DOB'} value={dob} />
-                <DataRow label={isTamil ? 'வயது' : 'Age'} value={`${age} ${isTamil ? 'வயது' : 'Years'}`} />
-                <DataRow label={isTamil ? 'பாலினம்' : 'Gender'} value={gender} />
-                <DataRow label={isTamil ? 'திருமண நிலை' : 'Marital Status'} value={maritalStatus} />
-                <DataRow label={isTamil ? 'உயரம்' : 'Height'} value={height} />
-                <DataRow label={isTamil ? 'எடை' : 'Weight'} value={weight} />
-                <DataRow label={isTamil ? 'இரத்த வகை' : 'Blood Group'} value={bloodGroup} />
-                <DataRow label={isTamil ? 'தற்போதைய இடம்' : 'Current Location'} value={currentLocation} />
+                <DataRow label={t('DOB')} value={dob} />
+                <DataRow label={t('Age')} value={`${age} ${t('adminMatrimony.profileView.yearsLabel')}`} />
+                <DataRow label={t('Gender')} value={gender} />
+                <DataRow label={t('Marital Status')} value={maritalStatus} />
+                <DataRow label={t('Height')} value={height} />
+                <DataRow label={t('Weight')} value={weight} />
+                <DataRow label={t('Blood Group')} value={bloodGroup} />
+                <DataRow label={t('adminMatrimony.profileView.currentLocation')} value={currentLocation} />
             </div>
         </div>
         <div className="col-span-4 flex justify-end items-start">
@@ -83,7 +88,8 @@ const PrintBasicDetail: React.FC<{ profile: any; isTamil: boolean; age: string; 
             </div>
         </div>
     </div>
-);
+    );
+};
 
 const PrintPersonalInfo: React.FC<{
     isTamil: boolean;
@@ -91,69 +97,79 @@ const PrintPersonalInfo: React.FC<{
     fatherName: string; fatherJob: string; brothers: number;
     occupation: string; jobLocation: string; residence: string;
     motherName: string; motherJob: string; sisters: number;
-}> = ({ isTamil, education, monthlyIncome, nativeLocation, fatherName, fatherJob, brothers, occupation, jobLocation, residence, motherName, motherJob, sisters }) => (
+}> = ({ isTamil, education, monthlyIncome, nativeLocation, fatherName, fatherJob, brothers, occupation, jobLocation, residence, motherName, motherJob, sisters }) => {
+    const { t } = useLanguage();
+    return (
     <div className="col-span-12 p-4 border border-gray-200">
-        <SectionTitle title={isTamil ? 'தனிப்பட்ட தகவல்கள்' : 'Personal Information'} />
+        <SectionTitle title={t('common:personal_info')} />
         <div className="grid grid-cols-2 gap-x-6">
             <div>
-                <DataRow label={isTamil ? 'கல்வி' : 'Education'} value={education} />
-                <DataRow label={isTamil ? 'மாத வருமானம்' : 'Monthly Income'} value={monthlyIncome} />
-                <DataRow label={isTamil ? 'சொந்த ஊர்' : 'Native Location'} value={nativeLocation} />
-                <DataRow label={isTamil ? 'தந்தை பெயர்' : 'Father Name'} value={fatherName} />
-                <DataRow label={isTamil ? 'தந்தை தொழில்' : 'Father Job'} value={fatherJob} />
-                <DataRow label={isTamil ? 'சகோதரர்கள்' : 'Brothers'} value={brothers.toString()} />
+                <DataRow label={t('Education')} value={education} />
+                <DataRow label={t('adminMatrimony.profileView.monthlyIncome')} value={monthlyIncome} />
+                <DataRow label={t('Native Location')} value={nativeLocation} />
+                <DataRow label={t('Father Name')} value={fatherName} />
+                <DataRow label={t('adminMatrimony.profileView.fatherJob')} value={fatherJob} />
+                <DataRow label={t('adminMatrimony.profileView.brothersLabel')} value={brothers.toString()} />
             </div>
             <div>
-                <DataRow label={isTamil ? 'தொழில்' : 'Occupation'} value={occupation} />
-                <DataRow label={isTamil ? 'பணிபுரியும் இடம்' : 'Job Location'} value={jobLocation} />
-                <DataRow label={isTamil ? 'இருப்பிட வகை' : 'Residence Type'} value={residence} />
-                <DataRow label={isTamil ? 'தாய் பெயர்' : 'Mother Name'} value={motherName} />
-                <DataRow label={isTamil ? 'தாய் தொழில்' : 'Mother Job'} value={motherJob} />
-                <DataRow label={isTamil ? 'சகோதரிகள்' : 'Sisters'} value={sisters.toString()} />
+                <DataRow label={t('adminMatrimony.profileView.occupation')} value={occupation} />
+                <DataRow label={t('adminMatrimony.profileView.jobLocation')} value={jobLocation} />
+                <DataRow label={t('adminMatrimony.profileView.residenceType')} value={residence} />
+                <DataRow label={t('Mother Name')} value={motherName} />
+                <DataRow label={t('adminMatrimony.profileView.motherJob')} value={motherJob} />
+                <DataRow label={t('adminMatrimony.profileView.sistersLabel')} value={sisters.toString()} />
             </div>
         </div>
     </div>
-);
+    );
+};
 
 const PrintCommunityDetails: React.FC<{
     isTamil: boolean;
     caste: string; kulam: string;
     community: string; kuladeivam: string;
-}> = ({ isTamil, caste, kulam, community, kuladeivam }) => (
+}> = ({ isTamil, caste, kulam, community, kuladeivam }) => {
+    const { t } = useLanguage();
+    return (
     <div className="col-span-12 p-4 border border-gray-200">
-        <SectionTitle title={isTamil ? 'சமுதாய விவரங்கள்' : 'Community Details'} />
+        <SectionTitle title={t('adminMatrimony.profileView.communityDetails')} />
         <div className="grid grid-cols-2 gap-x-6">
             <div>
-                <DataRow label={isTamil ? 'சாதி' : 'Caste'} value={caste} />
-                <DataRow label={isTamil ? 'குலம்' : 'Kulam'} value={kulam} />
+                <DataRow label={t('Caste')} value={caste} />
+                <DataRow label={t('Kulam')} value={kulam} />
             </div>
             <div>
-                <DataRow label={isTamil ? 'சமூகம்' : 'Community'} value={community} />
-                <DataRow label={isTamil ? 'குலதெய்வம்' : 'Kula Deivam'} value={kuladeivam} />
+                <DataRow label={t('Community')} value={community} />
+                <DataRow label={t('Kuladeivam')} value={kuladeivam} />
             </div>
         </div>
     </div>
-);
+    );
+};
 
-const PrintJathagamBrief: React.FC<{ isTamil: boolean; star: string; rasi: string; lagna: string; dosham: string }> = ({ isTamil, star, rasi, lagna, dosham }) => (
+const PrintJathagamBrief: React.FC<{ isTamil: boolean; star: string; rasi: string; lagna: string; dosham: string }> = ({ isTamil, star, rasi, lagna, dosham }) => {
+    const { t } = useLanguage();
+    return (
     <div className="col-span-12 p-4 border border-gray-200 mb-1">
-        <SectionTitle title={isTamil ? 'ஜாதக விவரங்கள்' : 'Jathagam Details'} />
+        <SectionTitle title={t('adminMatrimony.profileView.jathagamDetails')} />
         <div className="grid grid-cols-2 gap-2">
-            <DataRow label={isTamil ? 'நட்சத்திரம்' : 'Star'} value={star} />
-            <DataRow label={isTamil ? 'ராசி' : 'Rasi'} value={rasi} />
-            <DataRow label={isTamil ? 'லக்னம்' : 'Lagnam'} value={lagna} />
-            <DataRow label={isTamil ? 'தோஷம்' : 'Dhosam'} value={dosham} />
+            <DataRow label={t('Star (Nakshatra)')} value={star} />
+            <DataRow label={t('Moon Sign (Rasi)')} value={rasi} />
+            <DataRow label={t('Laganam')} value={lagna} />
+            <DataRow label={t('adminMatrimony.profileView.dosham')} value={dosham} />
         </div>
     </div>
-);
+    );
+};
 
 const PrintHoroscopeCharts: React.FC<{ profile: any; isTamil: boolean }> = ({ profile, isTamil }) => {
+    const { t } = useLanguage();
     const hasCharts = profile?.horoscope && (profile.horoscope.rasi || profile.horoscope.navamsa);
 
     if (!hasCharts) {
         return (
             <div className="col-span-12 p-4 border border-gray-200">
-                <p className="text-sm text-gray-400 italic text-center py-6">{isTamil ? 'ஜாதக கட்டங்கள் வழங்கப்படவில்லை' : 'Horoscope charts not provided'}</p>
+                <p className="text-sm text-gray-400 italic text-center py-6">{t('adminMatrimony.profileView.noCharts')}</p>
             </div>
         );
     }
@@ -162,8 +178,8 @@ const PrintHoroscopeCharts: React.FC<{ profile: any; isTamil: boolean }> = ({ pr
         const data = profile.horoscope[type];
         if (!data) return null;
         const label = type === 'rasi'
-            ? (isTamil ? 'ராசி' : 'RASI')
-            : (isTamil ? 'நவாம்சம்' : 'NAVAMSA');
+            ? t('adminMatrimony.profileView.rasiLabel')
+            : t('adminMatrimony.profileView.navamsaLabel');
         const hJson = profile.horoscope?.horoscopeJson;
         if (profile.horoscope?.mode === 'GENERATED' && hJson) {
             const parsed = typeof hJson === 'string' ? JSON.parse(hJson) : hJson as HoroscopeResult;
@@ -200,49 +216,58 @@ const PrintHoroscopeCharts: React.FC<{ profile: any; isTamil: boolean }> = ({ pr
     );
 };
 
-const PrintAssets: React.FC<{ isTamil: boolean; residence: string; vehicle: string; land: string; otherAssets: string }> = ({ isTamil, residence, vehicle, land, otherAssets }) => (
+const PrintAssets: React.FC<{ isTamil: boolean; residence: string; vehicle: string; land: string; otherAssets: string }> = ({ isTamil, residence, vehicle, land, otherAssets }) => {
+    const { t } = useLanguage();
+    return (
     <div className="col-span-6 p-4 border border-gray-200">
-        <SectionTitle title={isTamil ? 'சொத்துக்கள்' : 'Assets'} />
-        <DataRow label={isTamil ? 'இருப்பிடம்' : 'Residence'} value={residence} />
-        <DataRow label={isTamil ? 'வாகனம்' : 'Vehicle'} value={vehicle || '-'} />
+        <SectionTitle title={t('adminMatrimony.profileView.assets')} />
+        <DataRow label={t('Residence')} value={residence} />
+        <DataRow label={t('adminMatrimony.profileView.vehicle')} value={vehicle || '-'} />
         <div className="mt-2 pt-2 border-t border-gray-100">
-            <p className="text-[9px] uppercase font-semibold tracking-wider text-gray-500 mb-1">{isTamil ? 'நிலம்/சொத்து' : 'Land / Other Assets'}</p>
-            <p className="text-[11px] leading-relaxed text-gray-700">{(land || otherAssets) ? [land, otherAssets].filter(Boolean).join(', ') : (isTamil ? 'குறிப்பிடப்படவில்லை' : 'Not specified')}</p>
+            <p className="text-[9px] uppercase font-semibold tracking-wider text-gray-500 mb-1">{t('adminMatrimony.profileView.landAndAssets')}</p>
+            <p className="text-[11px] leading-relaxed text-gray-700">{(land || otherAssets) ? [land, otherAssets].filter(Boolean).join(', ') : t('adminMatrimony.profileView.notSpecified')}</p>
         </div>
     </div>
-);
+    );
+};
 
-const PrintExpectations: React.FC<{ isTamil: boolean; expectations: string }> = ({ isTamil, expectations }) => (
+const PrintExpectations: React.FC<{ isTamil: boolean; expectations: string }> = ({ isTamil, expectations }) => {
+    const { t } = useLanguage();
+    return (
     <div className="col-span-6 p-4 border border-gray-200">
-        <SectionTitle title={isTamil ? 'எதிர்பார்ப்புகள்' : 'Expectations'} />
+        <SectionTitle title={t('Expectations')} />
         <p className="text-[11px] font-medium leading-relaxed text-gray-700">
-            {expectations || (isTamil ? 'குறிப்பிடப்படவில்லை' : 'Not specified')}
+            {expectations || t('adminMatrimony.profileView.notSpecified')}
         </p>
     </div>
-);
+    );
+};
 
-const PrintFooter: React.FC<{ regNo: string; isTamil: boolean }> = ({ regNo, isTamil }) => (
+const PrintFooter: React.FC<{ regNo: string; isTamil: boolean }> = ({ regNo, isTamil }) => {
+    const { t } = useLanguage();
+    return (
     <footer className="mt-4 pt-3 border-t border-gray-300">
         <div className="flex justify-between items-center text-gray-500">
             <div>
-                <p className="text-[8px] uppercase tracking-[0.2em] font-bold">{isTamil ? 'மோகனூர் கொங்கு மணமாலை' : 'MOHANUR KONGU MANAMAALAI'}</p>
-                <p className="text-[7px] mt-0.5">{isTamil ? 'திருமண நோக்கத்திற்காக மட்டுமே' : 'For private matrimonial purposes only'}</p>
+                <p className="text-[8px] uppercase tracking-[0.2em] font-bold">{t('adminMatrimony.profileView.manamaalai')}</p>
+                <p className="text-[7px] mt-0.5">{t('adminMatrimony.profileView.matrimonialPurpose')}</p>
             </div>
             <div className="text-right">
-                <p className="text-[8px] font-semibold uppercase tracking-wider">Printed: {new Date().toLocaleDateString(isTamil ? 'ta-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                <p className="text-[8px] font-semibold uppercase tracking-wider">{t('adminMatrimony.profileView.printedLabel')}: {new Date().toLocaleDateString(isTamil ? 'ta-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                 <p className="text-[7px] mt-0.5">Ref: {regNo || 'PENDING'}</p>
             </div>
         </div>
     </footer>
-);
+    );
+};
 
 /* ---------- Main Component ---------- */
 
 const PrintProfile: React.FC<{ profile: any }> = ({ profile }) => {
-    const { t, i18n } = useTranslation(['profile_new', 'common']);
+    const { t, language } = useLanguage();
     const { getEnumLabel, getLocationLabel, formatSalary } = useProfileUtils();
 
-    const isTamil = i18n.language === 'ta';
+    const isTamil = language === 'ta';
 
     const name = isTamil ? ([profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' ') || [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ')) : ([profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ') || [profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' '));
     const age = profile.dob ? new Date().getFullYear() - new Date(profile.dob).getFullYear() : '';
@@ -266,7 +291,7 @@ const PrintProfile: React.FC<{ profile: any }> = ({ profile }) => {
     const kuladeivam = (isTamil ? (profile.kuladeivamTa || profile.kuladeivamEn) : profile.kuladeivamEn) || '-';
     const nativeLocation = getLocationLabel(profile.nativeDistrictEn || profile.nativeDistrict, profile.nativeTaluk || undefined, profile.nativeDistrictTa, profile.nativeTalukTa) || '-';
 
-    const lateSuffix = isTamil ? ` (${t('common:is_late', { defaultValue: 'மறைவு' })})` : ' (Is Late)';
+    const lateSuffix = t('adminMatrimony.profileView.lateSuffix');
     const fatherNameRaw = (isTamil ? (profile.fatherNameTa || profile.fatherNameEn) : profile.fatherNameEn) || '-';
     const fatherName = profile.fatherIsLate ? `${fatherNameRaw}${lateSuffix}` : fatherNameRaw;
     const fatherJob = (isTamil ? (profile.fatherJobTa || profile.fatherJob) : profile.fatherJob) || '-';
@@ -276,7 +301,7 @@ const PrintProfile: React.FC<{ profile: any }> = ({ profile }) => {
     const brothers = profile.noOfBrothers ?? 0;
     const sisters = profile.noOfSisters ?? 0;
 
-    const lang = i18n.language as 'en' | 'ta';
+    const lang = language as 'en' | 'ta';
     const star = profile.star ? getBilingualValue(NAKSHATRA_OPTIONS, profile.star, lang) : '-';
     const rasi = profile.rasi ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang) : '-';
     const lagna = profile.lagnam ? getBilingualValue(RASI_OPTIONS, profile.lagnam, lang) : '-';
@@ -385,16 +410,16 @@ export default PrintProfile;
 /* ---------- JathagamPrintView ---------- */
 
 export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
-    const { t, i18n } = useTranslation(['profile_new', 'common']);
+    const { t, language } = useLanguage();
     const { getEnumLabel, getLocationLabel } = useProfileUtils();
 
-    const isTamil = i18n.language === 'ta';
+    const isTamil = language === 'ta';
 
     const name = isTamil ? ([profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' ') || [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ')) : ([profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ') || [profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' '));
     const regNo = profile.regNo || 'PENDING';
 
     const dob = profile.dob ? new Date(profile.dob).toLocaleDateString(isTamil ? 'ta-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-    const age = profile.dob ? `${new Date().getFullYear() - new Date(profile.dob).getFullYear()} ${isTamil ? 'வயது' : 'Yrs'}` : '-';
+    const age = profile.dob ? `${new Date().getFullYear() - new Date(profile.dob).getFullYear()} ${t('adminMatrimony.profileView.yearsLabel')}` : '-';
     const gender = profile.gender ? (isTamil ? (profile.gender === 'MALE' ? 'ஆண்' : 'பெண்') : (profile.gender === 'MALE' ? 'Male' : 'Female')) : '-';
     const maritalStatus = profile.maritalStatus ? getEnumLabel(profile.maritalStatus, MARITAL_STATUS_OPTIONS) : '-';
     const height = profile.height ? getEnumLabel(profile.height.toString(), HEIGHT_OPTIONS) : '-';
@@ -402,7 +427,7 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
     const complexion = profile.complexion ? getEnumLabel(profile.complexion, COMPLEXION_OPTIONS) : '-';
     const bloodGroup = profile.bloodGroup ? getEnumLabel(profile.bloodGroup, BLOOD_GROUP_OPTIONS) : '-';
 
-    const lang = i18n.language as 'en' | 'ta';
+    const lang = language as 'en' | 'ta';
     const star = profile.star ? getBilingualValue(NAKSHATRA_OPTIONS, profile.star, lang) : '-';
     const rasi = profile.rasi ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang) : '-';
     const lagna = profile.lagnam ? getBilingualValue(RASI_OPTIONS, profile.lagnam, lang) : '-';
@@ -423,7 +448,7 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
                 <img src={logo} alt="MK" className="w-[40px] h-[40px] object-contain shrink-0" />
                 <div>
                     <h1 className="font-heading text-lg font-semibold text-gray-900">
-                    {isTamil ? 'மோகனூர் கொங்கு சமுதாய நல அறக்கட்டளை' : 'Mohanur Kongu Samudhaya Nala Arakattalai'}
+                    {t('adminMatrimony.profileView.foundationName')}
                 </h1>
                 </div>
             </div>
@@ -436,36 +461,36 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
                 <div className="grid grid-cols-2 gap-3 mb-3">
                     <div className="border border-gray-200 p-3">
                         <h2 className="text-[10px] font-bold uppercase tracking-wider text-gray-700 mb-2 pb-1.5 border-b border-gray-200">
-                            {isTamil ? 'தனிப்பட்ட விவரங்கள்' : 'Personal Details'}
+                            {t('common:personal_info')}
                         </h2>
-                        <JDataRow label={isTamil ? 'பிறந்த தேதி' : 'DOB'} value={dob} />
-                        <JDataRow label={isTamil ? 'வயது' : 'Age'} value={age} />
-                        <JDataRow label={isTamil ? 'பாலினம்' : 'Gender'} value={gender} />
-                        <JDataRow label={isTamil ? 'திருமண நிலை' : 'Marital'} value={maritalStatus} />
-                        <JDataRow label={isTamil ? 'உயரம்' : 'Height'} value={height} />
-                        <JDataRow label={isTamil ? 'உணவு' : 'Diet'} value={diet} />
-                        <JDataRow label={isTamil ? 'நிறம்' : 'Complexion'} value={complexion} />
-                        <JDataRow label={isTamil ? 'இரத்தம்' : 'Blood'} value={bloodGroup} />
+                        <JDataRow label={t('DOB')} value={dob} />
+                        <JDataRow label={t('Age')} value={age} />
+                        <JDataRow label={t('Gender')} value={gender} />
+                        <JDataRow label={t('adminMatrimony.profileView.marital')} value={maritalStatus} />
+                        <JDataRow label={t('Height')} value={height} />
+                        <JDataRow label={t('adminMatrimony.profileView.diet')} value={diet} />
+                        <JDataRow label={t('Complexion')} value={complexion} />
+                        <JDataRow label={t('adminMatrimony.profileView.blood')} value={bloodGroup} />
                     </div>
 
                     <div className="border border-gray-200 p-3 bg-gray-50/30">
                         <h2 className="text-[10px] font-bold uppercase tracking-wider text-gray-700 mb-2 pb-1.5 border-b border-gray-200">
-                            {isTamil ? 'ஜாதக விவரங்கள்' : 'Horoscope Details'}
+                            {t('adminMatrimony.profileView.horoscopeDetails')}
                         </h2>
-                        <JDataRow label={isTamil ? 'நட்சத்திரம்' : 'Star'} value={star} />
-                        <JDataRow label={isTamil ? 'ராசி' : 'Rasi'} value={rasi} />
-                        <JDataRow label={isTamil ? 'லக்னம்' : 'Lagna'} value={lagna} />
-                        <JDataRow label={isTamil ? 'பிறந்த நேரம்' : 'Time'} value={birthTime} />
-                        <JDataRow label={isTamil ? 'தோஷம்' : 'Dosham'} value={dosham} />
-                        <JDataRow label={isTamil ? 'குலதெய்வம்' : 'Deity'} value={kuladeivam} />
-                        <JDataRow label={isTamil ? 'பிறந்த இடம்' : 'Birth'} value={birthPlace} />
-                        <JDataRow label={isTamil ? 'சொந்த ஊர்' : 'Native'} value={nativeLocation} />
+                        <JDataRow label={t('Star (Nakshatra)')} value={star} />
+                        <JDataRow label={t('Moon Sign (Rasi)')} value={rasi} />
+                        <JDataRow label={t('Laganam')} value={lagna} />
+                        <JDataRow label={t('adminMatrimony.profileView.birthTime')} value={birthTime} />
+                        <JDataRow label={t('adminMatrimony.profileView.dosham')} value={dosham} />
+                        <JDataRow label={t('adminMatrimony.profileView.deity')} value={kuladeivam} />
+                        <JDataRow label={t('adminMatrimony.profileView.birth')} value={birthPlace} />
+                        <JDataRow label={t('adminMatrimony.profileView.native')} value={nativeLocation} />
                     </div>
                 </div>
 
                 <div className="border border-gray-200 p-3 mb-3">
                     <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-700 mb-4 text-center pb-2 border-b border-gray-200">
-                        {isTamil ? 'ஜாதக கட்டங்கள்' : 'Horoscope Charts'}
+                        {t('adminMatrimony.profileView.horoscopeCharts')}
                     </h2>
                     {(() => {
                         const hJson = profile.horoscope?.horoscopeJson;
@@ -475,13 +500,13 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
                             return (
                                 <div className="flex justify-center items-start gap-6">
                                     <div className="flex flex-col items-center">
-                                        <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'ராசி' : 'RASI'}</span>
+                                        <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{t('adminMatrimony.profileView.rasiLabel')}</span>
                                         <div className="w-[260px] h-[260px] bg-white border border-gray-200 print-chart-box">
                                             <SouthIndianChart lagnaSignIndex={parsed.lagna.signIndex} planets={parsed.planets} rotateHouses={true} />
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-center">
-                                        <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'நவாம்சம்' : 'NAVAMSA'}</span>
+                                        <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{t('adminMatrimony.profileView.navamsaLabel')}</span>
                                         <div className="w-[260px] h-[260px] bg-white border border-gray-200 print-chart-box">
                                             <SouthIndianChart lagnaSignIndex={parsed.lagnaNavamsa.signIndex} planets={d9Planets} rotateHouses={false} />
                                         </div>
@@ -496,13 +521,13 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
                                 <div className="flex justify-center items-start gap-6">
                                     {hasRasi && (
                                         <div className="flex flex-col items-center">
-                                            <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'ராசி' : 'RASI'}</span>
+                                            <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{t('adminMatrimony.profileView.rasiLabel')}</span>
                                             <img src={getImageUrl(profile.horoscope.rasi.url) || ''} alt="Rasi" className="w-[260px] h-[260px] object-contain border border-gray-200 bg-white" />
                                         </div>
                                     )}
                                     {hasNavamsa && (
                                         <div className="flex flex-col items-center">
-                                            <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'நவாம்சம்' : 'NAVAMSA'}</span>
+                                            <span className="text-[8px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{t('adminMatrimony.profileView.navamsaLabel')}</span>
                                             <img src={getImageUrl(profile.horoscope.navamsa.url) || ''} alt="Navamsa" className="w-[260px] h-[260px] object-contain border border-gray-200 bg-white" />
                                         </div>
                                     )}
@@ -511,7 +536,7 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
                         }
                         return (
                             <div className="col-span-12 p-4 border border-gray-200">
-                                <p className="text-sm text-gray-400 italic text-center py-6">{isTamil ? 'ஜாதக கட்டங்கள் வழங்கப்படவில்லை' : 'Horoscope charts not provided'}</p>
+                <p className="text-sm text-gray-400 italic text-center py-6">{t('adminMatrimony.profileView.noCharts')}</p>
                             </div>
                         );
                     })()}
@@ -520,11 +545,11 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
                 <div className="pt-2 border-t border-gray-200">
                     <div className="flex justify-between items-center text-[8px] text-gray-500">
                         <div>
-                            <p className="uppercase tracking-[0.15em] font-bold">{isTamil ? 'மோகனூர் கொங்கு மணமாலை' : 'MOHANUR KONGU MANAMAALAI'}</p>
-                            <p className="mt-0.5">{isTamil ? 'திருமண நோக்கத்திற்காக மட்டுமே' : 'For matrimonial purposes only'}</p>
+                            <p className="uppercase tracking-[0.15em] font-bold">{t('adminMatrimony.profileView.manamaalai')}</p>
+                            <p className="mt-0.5">{t('adminMatrimony.profileView.matrimonialPurpose')}</p>
                         </div>
                         <div className="text-right">
-                            <p className="font-semibold uppercase tracking-wider">{isTamil ? 'அச்சிட்ட தேதி' : 'Printed'}: {new Date().toLocaleDateString(isTamil ? 'ta-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                            <p className="font-semibold uppercase tracking-wider">{t('adminMatrimony.profileView.printedLabel')}: {new Date().toLocaleDateString(isTamil ? 'ta-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                             <p className="font-semibold mt-0.5">Ref: {regNo}</p>
                         </div>
                     </div>

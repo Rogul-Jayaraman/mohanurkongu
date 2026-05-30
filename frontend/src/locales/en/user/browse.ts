@@ -86,5 +86,15 @@ export const browseEn = {
     select_taluk: "Select Taluk",
     premium_filter_only: "Advanced filters are available for Premium users only. Upgrade to easily find your perfect match!",
     upgrade_to_use_filter: "Upgrade your plan to use these advanced filters.",
-    premium_only: "Premium Feature"
+    premium_only: "Premium Feature",
+    refresh: "Refresh Search",
+    scrollMore: "Scroll for more profiles",
+    error_desc: "Failed to load profiles. Please try again later.",
+    error_loading_ta: "Something went wrong",
+    filters: {
+      locked: {
+        astrology: "Upgrade to Gold to access horoscope filters",
+        education: "Upgrade to Silver to access education & career filters",
+      },
+    },
   };

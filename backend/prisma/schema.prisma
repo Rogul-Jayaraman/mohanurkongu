@@ -41,10 +41,95 @@ enum SearchLevel {
   FULL
 }
 
+enum ViewDetails {
+  BASIC
+  EXTENDED
+  ADVANCED
+  FULL
+}
+
 enum MembershipStatus {
   ACTIVE
   EXPIRED
   CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  BANK_TRANSFER
+  CHEQUE
+  CARD
+  OTHER
+}
+
+enum BookingStatus {
+  CONFIRMED
+  EVENT_IN_PROGRESS
+  EVENT_COMPLETED
+  SETTLEMENT_PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingMethod {
+  NORMAL_BOOKING
+  TOKEN_BOOKING
+}
+
+enum CalendarEntryStatus {
+  AVAILABLE
+  PARTIALLY_BOOKED
+  FULLY_BOOKED
+  BLOCKED
+}
+
+enum LedgerSource {
+  PACKAGE
+  ADDON
+  SERVICE
+  DISCOUNT
+  DAMAGE
+  PENALTY
+  ADJUSTMENT
+}
+
+enum PaymentEntryType {
+  ADVANCE
+  INSTALLMENT
+  FINAL_PAYMENT
+}
+
+enum RefundType {
+  PARTIAL_REFUND
+  FULL_REFUND
+}
+
+enum TokenState {
+  CONSUMED
+  REVERSED
+}
+
+enum SettlementState {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum InvoiceState {
+  DRAFT
+  GENERATED
+  VOID
+}
+
+enum InvoiceLineType {
+  PACKAGE
+  ADDON
+  SERVICE
+  DAMAGE
+  PENALTY
+  ADJUSTMENT
+  DISCOUNT
 }
 
 enum VerificationType {
@@ -129,8 +214,26 @@ enum MaritalStatus {
 enum ResidenceType {
   OWNED
   RENTED
-  PARENTAL
-  LEASED
+}
+
+enum BookingType {
+  HOURLY
+  DAY_BASED
+}
+
+enum DurationType {
+  CUSTOM_HOURS
+  FIXED_DAY
+}
+
+enum PricingType {
+  HOURLY
+  FIXED
+}
+
+enum FacilityChargeType {
+  GENERAL
+  ADDITIONAL
 }
 
 enum HoroscopeMode {
@@ -239,8 +342,7 @@ model MembershipPlan {
   shortlistLimit    Int @default(0)
   profileSlotLimit  Int @default(1)
 
-  contactAccess      Boolean   @default(false)
-  fullHoroscopeAccess Boolean  @default(false)
+  viewDetails ViewDetails @default(BASIC)
 
   printProfile    Boolean @default(false)
   printHoroscope  Boolean @default(false)
@@ -258,13 +360,15 @@ model MembershipPlan {
 model Subscription {
   id        String           @id @default(uuid())
   accountId String           @db.Uuid
-  planId    String
+  planId    String           @db.Uuid
   status    MembershipStatus @default(ACTIVE)
 
   startedAt DateTime
   expiresAt DateTime?
 
   assignedByAdminId String? @db.Uuid
+
+  paymentMethod PaymentMethod?
 
   snapshotPlanCode        MembershipPlanCode
   snapshotPlanName        String         @db.VarChar(100)
@@ -275,8 +379,7 @@ model Subscription {
   snapshotShortlistLimit   Int @default(0)
   snapshotProfileSlotLimit Int @default(1)
 
-  snapshotContactAccess       Boolean @default(false)
-  snapshotFullHoroscopeAccess Boolean @default(false)
+  snapshotViewDetails ViewDetails @default(BASIC)
 
   snapshotPrintProfile   Boolean @default(false)
   snapshotPrintHoroscope Boolean @default(false)
@@ -690,6 +793,7 @@ model ProfileBasic {
   @@index([heightId])
   @@index([currentLocationId])
   @@index([nativeLocationId])
+  @@index([maritalStatus])
   @@map("profile_basic")
 }
 
@@ -953,4 +1057,384 @@ model AdminAuditEvent {
   @@index([actorId, createdAt])
   @@index([profileId, createdAt])
   @@map("admin_audit_events")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Mandapam — Bookings
+// ═══════════════════════════════════════════════════════════════
+
+model MandapamBooking {
+  id            String        @id @default(uuid()) @db.Uuid
+  bookingNo     String        @unique @db.VarChar(20)
+  customerId    String        @db.Uuid
+  customerName  Json          @db.JsonB
+  customerPhone String        @db.VarChar(20)
+  customerEmail String?       @db.VarChar(255)
+  eventTitle    Json          @db.JsonB
+  eventAddress  Json?         @db.JsonB
+  status        BookingStatus @default(CONFIRMED)
+  bookingMethod BookingMethod @default(NORMAL_BOOKING)
+  packageCode   String        @db.VarChar(50)
+  bookingConfig Json          @db.JsonB
+  notes         String?       @db.Text
+  createdBy     String        @db.Uuid
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  packageSnapshot MandapamBookingPackageSnapshot?
+  addonSnapshots  MandapamBookingAddonSnapshot[]
+  calendarEntries MandapamCalendarEntry[]
+  ledgerEntries   MandapamFinancialLedger[]
+  paymentEntries  MandapamPaymentLedger[]
+  refundEntries   MandapamRefundLedger[]
+  tokenEntries    MandapamTokenConsumption[]
+  settlement      MandapamSettlement?
+  timeline        MandapamBookingTimeline[]
+  invoice         MandapamInvoice?
+  auditLogs       MandapamAuditLog[]
+
+  @@index([status])
+  @@index([packageCode])
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([status, createdAt])
+  @@map("mandapam_bookings")
+}
+
+model MandapamBookingPackageSnapshot {
+  id             String    @id @default(uuid()) @db.Uuid
+  bookingId      String    @unique @db.Uuid
+  packageId      String    @db.Uuid
+  packageCode    String    @db.VarChar(50)
+  packageName    Json      @db.JsonB
+  packagePrice   Decimal   @db.Decimal(12, 2)
+  packageVersion Int       @default(1)
+  createdAt      DateTime  @default(now())
+
+  booking MandapamBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("mandapam_booking_package_snapshots")
+}
+
+model MandapamBookingAddonSnapshot {
+  id          String      @id @default(uuid()) @db.Uuid
+  bookingId   String      @db.Uuid
+  addonId     String      @db.Uuid
+  addonName   Json        @db.JsonB
+  pricingType PricingType @default(FIXED)
+  quantity    Int         @default(1)
+  amount      Decimal     @db.Decimal(12, 2)
+  createdAt   DateTime    @default(now())
+
+  booking MandapamBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@map("mandapam_booking_addon_snapshots")
+}
+
+model MandapamCalendarEntry {
+  id        String              @id @default(uuid()) @db.Uuid
+  date      DateTime            @unique
+  status    CalendarEntryStatus @default(AVAILABLE)
+  reasonEn  String?             @db.VarChar(500)
+  reasonTa  String?             @db.VarChar(500)
+  bookingId String?             @db.Uuid
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  booking MandapamBooking? @relation(fields: [bookingId], references: [id])
+
+  @@index([date])
+  @@index([status])
+  @@map("mandapam_calendar_entries")
+}
+
+model MandapamFinancialLedger {
+  id           String       @id @default(uuid()) @db.Uuid
+  bookingId    String       @db.Uuid
+  source       LedgerSource
+  description  Json?        @db.JsonB
+  amount       Decimal      @db.Decimal(12, 2)
+  currencyCode String       @db.VarChar(10) @default("INR")
+  createdAt    DateTime     @default(now())
+
+  booking MandapamBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([source])
+  @@map("mandapam_financial_ledgers")
+}
+
+model MandapamPaymentLedger {
+  id            String          @id @default(uuid()) @db.Uuid
+  bookingId     String          @db.Uuid
+  paymentType   PaymentEntryType
+  paymentMethod PaymentMethod
+  amount        Decimal         @db.Decimal(12, 2)
+  referenceNo   String?         @db.VarChar(100)
+  receivedAt    DateTime        @default(now())
+  createdAt     DateTime        @default(now())
+
+  booking MandapamBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([paymentType])
+  @@map("mandapam_payment_ledgers")
+}
+
+model MandapamRefundLedger {
+  id           String       @id @default(uuid()) @db.Uuid
+  bookingId    String       @db.Uuid
+  refundType   RefundType
+  refundMethod PaymentMethod?
+  amount       Decimal      @db.Decimal(12, 2)
+  reason       String?      @db.VarChar(500)
+  createdAt    DateTime     @default(now())
+
+  booking MandapamBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@map("mandapam_refund_ledgers")
+}
+
+model MandapamTokenConsumption {
+  id          String      @id @default(uuid()) @db.Uuid
+  bookingId   String      @db.Uuid
+  tokens      Int
+  state       TokenState  @default(CONSUMED)
+  consumedAt  DateTime    @default(now())
+  reversedAt  DateTime?
+
+  booking MandapamBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@map("mandapam_token_consumptions")
+}
+
+model MandapamSettlement {
+  id            String          @id @default(uuid()) @db.Uuid
+  bookingId     String          @unique @db.Uuid
+  state         SettlementState @default(PENDING)
+  damageCharges Json?           @db.JsonB
+  penaltyCharges Json?          @db.JsonB
+  extraCharges  Json?           @db.JsonB
+  finalAmount   Decimal?        @db.Decimal(12, 2)
+  settledAt     DateTime?
+  settledBy     String?         @db.Uuid
+  notes         String?         @db.Text
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  booking MandapamBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("mandapam_settlements")
+}
+
+model MandapamInvoice {
+  id          String       @id @default(uuid()) @db.Uuid
+  bookingId   String       @unique @db.Uuid
+  invoiceNo   String       @unique @db.VarChar(20)
+  state       InvoiceState @default(DRAFT)
+  issuedAt    DateTime?
+  cancelledAt DateTime?
+  voidReason  String?      @db.VarChar(500)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  booking MandapamBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  lines   MandapamInvoiceLine[]
+
+  @@index([invoiceNo])
+  @@map("mandapam_invoices")
+}
+
+model MandapamInvoiceLine {
+  id          String          @id @default(uuid()) @db.Uuid
+  invoiceId   String          @db.Uuid
+  lineType    InvoiceLineType
+  description Json?           @db.JsonB
+  amount      Decimal         @db.Decimal(12, 2)
+  quantity    Int             @default(1)
+  createdAt   DateTime        @default(now())
+
+  invoice MandapamInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("mandapam_invoice_lines")
+}
+
+model MandapamBookingTimeline {
+  id        String   @id @default(uuid()) @db.Uuid
+  bookingId String   @db.Uuid
+  event     String   @db.VarChar(50)
+  metadata  Json?    @db.JsonB
+  notes     String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  booking MandapamBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, createdAt])
+  @@map("mandapam_booking_timelines")
+}
+
+model MandapamAuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  bookingId    String   @db.Uuid
+  action       String   @db.VarChar(50)
+  performedBy  String   @db.Uuid
+  metadata     Json?    @db.JsonB
+  createdAt    DateTime @default(now())
+
+  booking MandapamBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId, createdAt])
+  @@index([performedBy])
+  @@map("mandapam_audit_logs")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Mandapam — Package Management
+// ═══════════════════════════════════════════════════════════════
+
+model MandapamPackage {
+  id            String       @id @default(uuid()) @db.Uuid
+  code          String       @unique @db.VarChar(50)
+  bookingType   BookingType
+  durationType  DurationType
+  durationValue Int?
+  status        Boolean      @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  translations MandapamPackageTranslation[]
+  functions    MandapamPackageFunction[]
+  pricings     MandapamPackagePricing[]
+
+  @@index([code])
+  @@map("mandapam_packages")
+}
+
+model MandapamPackageTranslation {
+  id          String       @id @default(uuid()) @db.Uuid
+  packageId   String       @db.Uuid
+  language    LanguageCode
+  displayName String       @db.VarChar(100)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  package MandapamPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, language])
+  @@map("mandapam_package_translations")
+}
+
+model MandapamPackageFunction {
+  id        String  @id @default(uuid()) @db.Uuid
+  packageId String  @db.Uuid
+  status    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  package      MandapamPackage                    @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  translations MandapamPackageFunctionTranslation[]
+
+  @@index([packageId])
+  @@map("mandapam_package_functions")
+}
+
+model MandapamPackageFunctionTranslation {
+  id         String       @id @default(uuid()) @db.Uuid
+  functionId String       @db.Uuid
+  language   LanguageCode
+  name       String       @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  function MandapamPackageFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+
+  @@unique([functionId, language])
+  @@map("mandapam_package_function_translations")
+}
+
+model MandapamPackagePricing {
+  id            String       @id @default(uuid()) @db.Uuid
+  packageId     String       @db.Uuid
+  pricingType   PricingType
+  amount        Decimal      @db.Decimal(12, 2)
+  currencyCode  String       @db.VarChar(10) @default("INR")
+  isActive      Boolean      @default(true)
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  package MandapamPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@index([packageId])
+  @@index([packageId, isActive])
+  @@map("mandapam_package_pricings")
+}
+
+model MandapamFacility {
+  id         String             @id @default(uuid()) @db.Uuid
+  iconName   String             @db.VarChar(100)
+  chargeType FacilityChargeType @default(GENERAL)
+  status     Boolean            @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  translations MandapamFacilityTranslation[]
+
+  @@map("mandapam_facilities")
+}
+
+model MandapamFacilityTranslation {
+  id         String       @id @default(uuid()) @db.Uuid
+  facilityId String       @db.Uuid
+  language   LanguageCode
+  name       String       @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  facility MandapamFacility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@unique([facilityId, language])
+  @@map("mandapam_facility_translations")
+}
+
+model MandapamAddonService {
+  id          String      @id @default(uuid()) @db.Uuid
+  iconName    String      @db.VarChar(100)
+  pricingType PricingType @default(FIXED)
+  amount      Decimal     @db.Decimal(12, 2) @default(0)
+  status      Boolean     @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  translations MandapamAddonServiceTranslation[]
+
+  @@map("mandapam_addon_services")
+}
+
+model MandapamAddonServiceTranslation {
+  id      String       @id @default(uuid()) @db.Uuid
+  addonId String       @db.Uuid
+  language LanguageCode
+  name     String       @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  addonService MandapamAddonService @relation(fields: [addonId], references: [id], onDelete: Cascade)
+
+  @@unique([addonId, language])
+  @@map("mandapam_addon_service_translations")
 }

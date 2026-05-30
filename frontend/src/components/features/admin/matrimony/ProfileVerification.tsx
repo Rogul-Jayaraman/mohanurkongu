@@ -4,11 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 import { SearchAndSort } from '@/components/ui/table/SearchAndSort';
 import { AdminProfileCard } from '@/components/features/admin/matrimony/ProfileCard';
-import { RejectionModal } from '@/modals/admin/RejectionModal';
-import { fetchVerificationQueue, approveProfile, rejectProfile } from '@/api/verification.api';
+import { fetchVerificationQueue } from '@/api/verification.api';
 import { toast } from 'sonner';
 import type { AdminManagedProfile } from '@/types/admin-types';
-import { Loader2, UserX, Shield } from 'lucide-react';
+import { UserX } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════
 // VerificationSkeleton
@@ -30,12 +29,12 @@ const VerificationSkeleton: React.FC = () => (
 // ═══════════════════════════════════════════════════════════
 // EmptyState
 // ═══════════════════════════════════════════════════════════
-const EmptyState: React.FC<{ isTamil: boolean; onReset: () => void }> = ({ isTamil, onReset }) => (
+const EmptyState: React.FC<{ t: (key: string, options?: any) => string; onReset: () => void }> = ({ t, onReset }) => (
     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white/40 backdrop-blur-xl border border-gold-soft/20 rounded-[3rem] p-24 text-center group">
         <div className="w-24 h-24 bg-gold-soft/10 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500"><UserX className="w-12 h-12 text-gold-soft/40" /></div>
-        <h3 className="text-2xl font-serif font-bold text-rosewood/60 mb-2">{isTamil ? 'சுயவிவரங்கள் இல்லை' : 'No Profiles'}</h3>
-        <p className="text-slate-400 font-medium max-w-xs mx-auto">{isTamil ? 'தற்போது சரிபார்க்க எந்த சுயவிவரங்களும் இல்லை. பின்னர் மீண்டும் சரிபார்க்கவும்.' : 'There are no profiles waiting for verification at the moment. Please check back later.'}</p>
-        <button onClick={onReset} className="mt-8 px-8 py-3 rounded-xl border border-gold-soft/30 text-rosewood font-black text-xs uppercase tracking-widest hover:bg-gold-soft/10 transition-all">{isTamil ? 'மீட்டமை' : 'Reset Filters'}</button>
+        <h3 className="text-2xl font-serif font-bold text-rosewood/60 mb-2">{t('adminMatrimony.verification.noProfiles') || 'No Profiles'}</h3>
+        <p className="text-slate-400 font-medium max-w-xs mx-auto">{t('adminMatrimony.verification.noProfilesDesc') || 'There are no profiles waiting for verification at the moment.'}</p>
+        <button onClick={onReset} className="mt-8 px-8 py-3 rounded-xl border border-gold-soft/30 text-rosewood font-black text-xs uppercase tracking-widest hover:bg-gold-soft/10 transition-all">{t('adminMatrimony.common.reset')}</button>
     </motion.div>
 );
 
@@ -53,7 +52,6 @@ const ProfileVerification: React.FC = () => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [dateSort, setDateSort] = React.useState<'asc' | 'desc' | null>('desc');
     const [nameSort, setNameSort] = React.useState<'asc' | 'desc' | null>(null);
-    const [rejectionModal, setRejectionModal] = React.useState<{ open: boolean; profileId: string | null }>({ open: false, profileId: null });
 
     const [qData, setQData] = React.useState<{ profiles: any[] }>({ profiles: [] });
     const [isLoading, setIsLoading] = React.useState(true);
@@ -65,46 +63,9 @@ const ProfileVerification: React.FC = () => {
         .finally(() => setIsLoading(false));
     }, [searchQuery]);
 
-    const handleAccept = (id: string) => {
-        approveProfile(id).then(
-            () => {
-                toast.success(t('adminMatrimony.users.verifySuccess'));
-                setQData((prev) => ({ profiles: prev.profiles.filter((p: any) => p.id !== id) }));
-            }
-        ).catch(
-            (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.verifyError'))
-        );
-    };
-
-    const handleRejectClick = (id: string) => setRejectionModal({ open: true, profileId: id });
-
-    const handleConfirmReject = (reasonEn: string, reasonTa: string) => {
-        if (!rejectionModal.profileId) return;
-        const profileId = rejectionModal.profileId;
-        rejectProfile(profileId, reasonEn, reasonTa).then(
-            () => {
-                toast.success(t('adminMatrimony.users.rejectSuccess'));
-                setRejectionModal({ open: false, profileId: null });
-                setQData((prev) => ({ profiles: prev.profiles.filter((p: any) => p.id !== profileId) }));
-            }
-        ).catch(
-            (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.rejectFailed'))
-        );
-    };
-
     const handleReset = () => { setDateSort('desc'); setNameSort(null); setSearchQuery(''); };
 
     const sortedAndFiltered: AdminManagedProfile[] = (qData?.profiles || [])
-        .filter((p: any) => {
-            const name = isTamil ? ([p.firstNameTa, p.lastNameTa].filter(Boolean).join(' ') || [p.firstNameEn, p.lastNameEn].filter(Boolean).join(' ')) : ([p.firstNameEn, p.lastNameEn].filter(Boolean).join(' '));
-            const searchLower = searchQuery.toLowerCase().trim();
-            if (!searchLower) return true;
-            
-            return (
-                name.toLowerCase().includes(searchLower) || 
-                p.regNo.toLowerCase().includes(searchLower)
-            );
-        })
         .sort((a: any, b: any) => {
             if (nameSort) {
                 const nameA = isTamil ? ([a.firstNameTa, a.lastNameTa].filter(Boolean).join(' ') || [a.firstNameEn, a.lastNameEn].filter(Boolean).join(' ')) : ([a.firstNameEn, a.lastNameEn].filter(Boolean).join(' '));
@@ -136,15 +97,14 @@ const ProfileVerification: React.FC = () => {
                     <AnimatePresence mode='popLayout'>
                         {sortedAndFiltered.map((profile) => (
                             <motion.div key={profile.id} layout variants={itemVariants}>
-                                <AdminProfileCard profile={{ ...profile, submittedAt: profile.createdAt } as any} adminActions={{ onAccept: handleAccept, onReject: (id) => handleRejectClick(id), onView: (id) => navigate(`/admin/matrimony/profiles/${id}`) }} />
+                                <AdminProfileCard profile={{ ...profile, submittedAt: profile.createdAt } as any} adminActions={{ onView: (id) => navigate(`/admin/matrimony/profiles/${id}`) }} />
                             </motion.div>
                         ))}
                     </AnimatePresence>
                 </motion.div>
             ) : (
-                <EmptyState isTamil={isTamil} onReset={handleReset} />
+                <EmptyState t={t} onReset={handleReset} />
             )}
-            <RejectionModal isOpen={rejectionModal.open} onClose={() => setRejectionModal({ open: false, profileId: null })} onConfirm={handleConfirmReject} title={t('adminMatrimony.common.rejectionReason')} placeholder={t('adminMatrimony.common.enterReason')} confirmLabel={t('adminMatrimony.common.reject')} cancelLabel={t('adminMatrimony.common.cancel')} />
         </motion.div>
     );
 };

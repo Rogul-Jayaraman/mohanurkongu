@@ -10,7 +10,7 @@ export const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }
             <ScrollToTop />
             <Header />
 
-            <main className="flex-1 flex flex-col items-center justify-center py-4 sm:py-5 lg:py-8 relative">
+            <main id="main-content" className="flex-1 flex flex-col items-center justify-center py-4 sm:py-5 lg:py-8 relative">
                 <div className="absolute inset-0 kolam-watermark opacity-[0.03] pointer-events-none -z-10" />
                 <div className="absolute top-0 right-0 ornament-corner rotate-90 scale-150 opacity-[0.05] pointer-events-none -z-10" />
                 <div className="absolute bottom-0 left-0 ornament-corner -rotate-90 scale-150 opacity-[0.05] pointer-events-none -z-10" />

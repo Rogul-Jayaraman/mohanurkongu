@@ -114,7 +114,7 @@ export const createProfileSchema = z.object({
   assets: z.object({
     landEn: z.string().max(2000).nullable().optional(),
     landTa: z.string().max(2000).nullable().optional(),
-    residenceType: z.string().nullable().optional(),
+    residenceType: z.enum(['OWNED', 'RENTED']).nullable().optional(),
     otherAssetsEn: z.string().max(2000).nullable().optional(),
     otherAssetsTa: z.string().max(2000).nullable().optional(),
     vehicle: z.string().max(255).nullable().optional(),

@@ -12,6 +12,10 @@ export const adminLayoutEn = {
         title: "Profile Details - Mohanur Kongu Admin",
         desc: "View profile details in admin",
       },
+      account_detail: {
+        title: "Account Detail - Mohanur Kongu Admin",
+        desc: "View account details and manage membership",
+      },
     },
     nav: {
       dashboard: "Dashboard",

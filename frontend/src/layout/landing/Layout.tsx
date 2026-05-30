@@ -14,7 +14,7 @@ export const LandingTemplate: React.FC<{hero: React.ReactNode; sections: React.R
       <ScrollToTop dependencies={[location.pathname]} />
       <Header />
       <SubNav />
-      <main>
+      <main id="main-content">
         {hero}
         {sections.map((s, i) => (<React.Fragment key={i}>{s}</React.Fragment>))}
       </main>

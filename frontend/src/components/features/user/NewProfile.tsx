@@ -25,6 +25,7 @@ import { uploadFile, deleteUpload, saveDraft, resumeDraft, createProfile } from 
 import { formToDraft, draftToForm } from '../../../adapters/profile.adapter';
 import { getErrorMessage } from '../../../lib/errors';
 import { getMinDobDate, getMaxDobDate, STEP_REQUIRED_FIELDS } from '../../../validation/profile-schema';
+import { formatCurrency } from '@/utils/format';
 
 import {
     PROFILE_FOR_OPTIONS, GENDER_OPTIONS, MARITAL_STATUS_OPTIONS, DIET_OPTIONS,
@@ -900,7 +901,7 @@ const Step2Combined: React.FC<StepProps> = ({ formData, updateField, onAction, f
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <TranslatableInput label={t('profile_new:job_location')} valueEn={formData.jobLocationEn || ''} valueTa={formData.jobLocationTa || ''} onChangeEn={(val) => updateField('jobLocationEn', val)} onChangeTa={(val) => updateField('jobLocationTa', val)} placeholder={t('profile_new:placeholders.job_location')} />
-                        <div><Input label={t('profile_new:salary_monthly')} icon="payments" name="salaryMonthly" type="text" value={formData.salaryMonthly ? formData.salaryMonthly.toLocaleString('en-IN') : ''} onChange={(e) => { const val = e.target.value.replace(/[^0-9]/g, ''); const numVal = val !== '' ? parseInt(val) : undefined; if (numVal !== undefined && numVal < 0) return; updateField('salaryMonthly', numVal); }} placeholder={t('profile_new:placeholders.salary')} inputMode="numeric" />{formData.salaryMonthly > 0 && (<div className="mt-2 px-4 py-3 bg-gold/5 border border-gold/10 rounded-xl animate-in fade-in slide-in-from-top-2 duration-500"><span className="text-[10px] font-black text-rosewood/40 tracking-wider block mb-0.5">{t('common:estimated_income')}</span><span className="text-sm font-black text-rosewood">₹ {formData.salaryMonthly.toLocaleString('en-IN')} / {t('common:month')}</span></div>)}</div>
+                        <div><Input label={t('profile_new:salary_monthly')} icon="payments" name="salaryMonthly" type="text" value={formData.salaryMonthly ? formData.salaryMonthly.toLocaleString('en-IN') : ''} onChange={(e) => { const val = e.target.value.replace(/[^0-9]/g, ''); const numVal = val !== '' ? parseInt(val) : undefined; if (numVal !== undefined && numVal < 0) return; updateField('salaryMonthly', numVal); }} placeholder={t('profile_new:placeholders.salary')} inputMode="numeric" />{formData.salaryMonthly > 0 && (<div className="mt-2 px-4 py-3 bg-gold/5 border border-gold/10 rounded-xl animate-in fade-in slide-in-from-top-2 duration-500"><span className="text-[10px] font-black text-rosewood/40 tracking-wider block mb-0.5">{t('common:estimated_income')}</span><span className="text-sm font-black text-rosewood">{formatCurrency(formData.salaryMonthly)} / {t('common:month')}</span></div>)}</div>
                     </div>
                 </div>
             </div>
@@ -930,7 +931,7 @@ const Step3Family: React.FC<StepProps> = ({ formData, updateField, onAction, fie
                         <Input label={t('profile_new:father_job')} icon="work" name="fatherJob" value={formData.fatherJob || ''} onChange={(e) => updateField('fatherJob', e.target.value)} placeholder={t('profile_new:placeholders.father_job')} />
                         <Input label={t('profile_new:father_salary')} icon="payments" name="fatherSalary" type="text" value={formData.fatherSalary ? formData.fatherSalary.toLocaleString('en-IN') : ''} onChange={(e) => { const val = e.target.value.replace(/[^0-9]/g, ''); const numVal = val !== '' ? parseInt(val) : undefined; if (numVal !== undefined && numVal < 0) return; updateField('fatherSalary', numVal); }} placeholder={t('profile_new:placeholders.salary')} inputMode="numeric" />
                     </div>
-                    {formData.fatherSalary > 0 && (<div className="px-4 py-3 bg-gold/5 border border-gold/10 rounded-xl animate-in fade-in slide-in-from-left-2 duration-500"><span className="text-[10px] font-black text-rosewood/40 tracking-wider block mb-0.5">{t('common:estimated_income')}</span><span className="text-sm font-black text-rosewood">₹ {formData.fatherSalary.toLocaleString('en-IN')} / {t('common:month')}</span></div>)}
+                    {formData.fatherSalary > 0 && (<div className="px-4 py-3 bg-gold/5 border border-gold/10 rounded-xl animate-in fade-in slide-in-from-left-2 duration-500"><span className="text-[10px] font-black text-rosewood/40 tracking-wider block mb-0.5">{t('common:estimated_income')}</span><span className="text-sm font-black text-rosewood">{formatCurrency(formData.fatherSalary)} / {t('common:month')}</span></div>)}
                 </div>
             </div>
             <div className="bg-ivory border border-gold/20 rounded-xl shadow-sm transition-all hover:shadow-md">
@@ -944,7 +945,7 @@ const Step3Family: React.FC<StepProps> = ({ formData, updateField, onAction, fie
                         <Input label={t('profile_new:mother_job')} icon="work" name="motherJob" value={formData.motherJob || ''} onChange={(e) => updateField('motherJob', e.target.value)} placeholder={t('profile_new:placeholders.mother_job')} />
                         <Input label={t('profile_new:mother_salary')} icon="payments" name="motherSalary" type="text" value={formData.motherSalary ? formData.motherSalary.toLocaleString('en-IN') : ''} onChange={(e) => { const val = e.target.value.replace(/[^0-9]/g, ''); const numVal = val !== '' ? parseInt(val) : undefined; if (numVal !== undefined && numVal < 0) return; updateField('motherSalary', numVal); }} placeholder={t('profile_new:placeholders.salary')} inputMode="numeric" />
                     </div>
-                    {formData.motherSalary > 0 && (<div className="px-4 py-3 bg-gold/5 border border-gold/10 rounded-xl animate-in fade-in slide-in-from-left-2 duration-500"><span className="text-[10px] font-black text-rosewood/40 tracking-wider block mb-0.5">{t('common:estimated_income')}</span><span className="text-sm font-black text-rosewood">₹ {formData.motherSalary.toLocaleString('en-IN')} / {t('common:month')}</span></div>)}
+                    {formData.motherSalary > 0 && (<div className="px-4 py-3 bg-gold/5 border border-gold/10 rounded-xl animate-in fade-in slide-in-from-left-2 duration-500"><span className="text-[10px] font-black text-rosewood/40 tracking-wider block mb-0.5">{t('common:estimated_income')}</span><span className="text-sm font-black text-rosewood">{formatCurrency(formData.motherSalary)} / {t('common:month')}</span></div>)}
                 </div>
             </div>
             <div className="bg-ivory border border-gold/20 rounded-xl shadow-sm transition-all hover:shadow-md">
@@ -1019,7 +1020,7 @@ const Step4Assets: React.FC<StepProps> = ({ formData, updateField, onAction, fie
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
                             <Input label={t('profile_new:monthly_salary')} icon="payments" name="monthlySalary" type="text" value={formData.monthlySalary ? formData.monthlySalary.toLocaleString('en-IN') : ''} onChange={(e) => { const val = e.target.value.replace(/[^0-9]/g, ''); const numVal = val !== '' ? parseInt(val) : null; if (numVal !== null && numVal < 0) return; updateField('monthlySalary', numVal); }} placeholder={t('profile_new:placeholders.salary')} inputMode="numeric" />
-                            {formData.monthlySalary && formData.monthlySalary > 0 && (<div className="mt-2 px-4 py-3 bg-gold/5 border border-gold/10 rounded-xl animate-in fade-in slide-in-from-top-2 duration-500"><span className="text-[10px] font-black text-rosewood/40 tracking-wider block mb-0.5">{t('common:estimated_income')}</span><span className="text-sm font-black text-rosewood">₹ {formData.monthlySalary.toLocaleString('en-IN')} / {t('common:month')}</span></div>)}
+                            {formData.monthlySalary && formData.monthlySalary > 0 && (<div className="mt-2 px-4 py-3 bg-gold/5 border border-gold/10 rounded-xl animate-in fade-in slide-in-from-top-2 duration-500"><span className="text-[10px] font-black text-rosewood/40 tracking-wider block mb-0.5">{t('common:estimated_income')}</span><span className="text-sm font-black text-rosewood">{formatCurrency(formData.monthlySalary)} / {t('common:month')}</span></div>)}
                         </div>
                         <TranslatableInput label={t('profile_new:preferred_location')} valueEn={formData.preferredLocationEn || ''} valueTa={formData.preferredLocationTa || ''} onChangeEn={(val) => updateField('preferredLocationEn', val)} onChangeTa={(val) => updateField('preferredLocationTa', val)} placeholder={t('profile_new:placeholders.preferred_location')} icon="location_on" />
                     </div>
@@ -1342,7 +1343,7 @@ const Step7Review: React.FC<StepProps> = ({ formData, updateField, onAction, fie
                     { label: t('profile_new:job_sector'), value: getOptionLabel(JOB_SECTOR_OPTIONS, formData.jobSector) },
                     { label: t('profile_new:job_detail'), value: formData.jobDetail },
                     { label: t('profile_new:company_name'), value: formData.companyName },
-                    { label: t('profile_new:salary_monthly'), value: formData.salaryMonthly ? `₹${formData.salaryMonthly.toLocaleString()}` : null },
+                    { label: t('profile_new:salary_monthly'), value: formData.salaryMonthly ? formatCurrency(formData.salaryMonthly) : null },
                     { label: t('profile_new:job_location'), value: isEn ? formData.jobLocationEn : (formData.jobLocationTa || formData.jobLocationEn) },
                 ])}
                 {renderSection(t('profile_new:sections.locations'), 'location_on', [
@@ -1364,14 +1365,14 @@ const Step7Review: React.FC<StepProps> = ({ formData, updateField, onAction, fie
                     { label: t('profile_new:mother_job'), value: formData.motherJob },
                     { label: t('profile_new:no_of_brothers'), value: formData.noOfBrothers ?? 0 },
                     { label: t('profile_new:no_of_sisters'), value: formData.noOfSisters ?? 0 },
-                    { label: t('profile_new:father_salary'), value: formData.fatherSalary ? `₹${formData.fatherSalary.toLocaleString()}` : null },
-                    { label: t('profile_new:mother_salary'), value: formData.motherSalary ? `₹${formData.motherSalary.toLocaleString()}` : null },
+                    { label: t('profile_new:father_salary'), value: formData.fatherSalary ? formatCurrency(formData.fatherSalary) : null },
+                    { label: t('profile_new:mother_salary'), value: formData.motherSalary ? formatCurrency(formData.motherSalary) : null },
                 ])}
                 {renderSection(t('profile_new:sections.partner_preferences'), 'favorite', [
                     { label: t('profile_new:age_range'), value: formData.ageMin && formData.ageMax ? `${formData.ageMin} - ${formData.ageMax} ${t('common:yrs')}` : (formData.ageMin ? `${formData.ageMin}+` : (formData.ageMax ? `Up to ${formData.ageMax}` : null)) },
                     { label: t('profile_new:height_min'), value: getOptionLabel(HEIGHT_OPTIONS, formData.heightMinId) },
                     { label: t('profile_new:height_max'), value: getOptionLabel(HEIGHT_OPTIONS, formData.heightMaxId) },
-                    { label: t('profile_new:monthly_salary'), value: formData.monthlySalary ? `₹${formData.monthlySalary.toLocaleString()}` : null },
+                    { label: t('profile_new:monthly_salary'), value: formData.monthlySalary ? formatCurrency(formData.monthlySalary) : null },
                     { label: t('profile_new:preferred_location'), value: isEn ? formData.preferredLocationEn : (formData.preferredLocationTa || formData.preferredLocationEn), fullWidth: true },
                     { label: t('profile_new:expectation'), value: formData.expectation, fullWidth: true },
                 ])}

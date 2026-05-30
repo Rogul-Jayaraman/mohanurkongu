@@ -1,58 +1,60 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
 import { ProtectedRoute } from './components/features/auth/ProtectedRoute';
 import { PublicRoute } from './components/features/auth/PublicRoute';
 import { MetadataManager } from '@/components/ui/layout/MetadataManager';
+import PageLoader from '@/components/ui/feedback/PageLoader';
 
 // Landing & Maaligai Pages
-import LandingPage from '@/pages/landing/LandingPage';
-import MaaligaiLayout from '@/layout/maaligai/MaaligaiLayout';
-import MaaligaiHome from '@/pages/maaligai/MaaligaiHome';
-import MaaligaiAbout from '@/pages/maaligai/MaaligaiAbout';
-import MaaligaiFacilities from '@/pages/maaligai/MaaligaiFacilities';
-import MaaligaiContact from '@/pages/maaligai/MaaligaiContact';
-import GalleryPage from '@/pages/maaligai/Gallery';
-import PackagesPage from '@/pages/maaligai/Packages';
-import MaaligaiHallAvailability from '@/pages/maaligai/MaaligaiHallAvailability';
+const LandingPage = React.lazy(() => import('@/pages/landing/LandingPage'));
+const MaaligaiLayout = React.lazy(() => import('@/layout/maaligai/MaaligaiLayout'));
+const MaaligaiHome = React.lazy(() => import('@/pages/maaligai/MaaligaiHome'));
+const MaaligaiAbout = React.lazy(() => import('@/pages/maaligai/MaaligaiAbout'));
+const MaaligaiFacilities = React.lazy(() => import('@/pages/maaligai/MaaligaiFacilities'));
+const MaaligaiContact = React.lazy(() => import('@/pages/maaligai/MaaligaiContact'));
+const GalleryPage = React.lazy(() => import('@/pages/maaligai/Gallery'));
+const PackagesPage = React.lazy(() => import('@/pages/maaligai/Packages'));
+const MaaligaiHallAvailability = React.lazy(() => import('@/pages/maaligai/MaaligaiHallAvailability'));
 
 // Layout & Pages
-import UserLayout from '@/layout/user/Layout';
-import Dashboard from '@/pages/user/Dashboard';
-import BrowseProfiles from '@/pages/user/BrowseProfiles';
-import ShortlistedProfiles from '@/pages/user/Shortlist';
-import MyProfiles from '@/pages/user/MyProfiles';
-import NewProfile from '@/pages/user/NewProfile';
-import ProfileView from '@/pages/user/ProfileView';
+const UserLayout = React.lazy(() => import('@/layout/user/Layout'));
+const Dashboard = React.lazy(() => import('@/pages/user/Dashboard'));
+const BrowseProfiles = React.lazy(() => import('@/pages/user/BrowseProfiles'));
+const ShortlistedProfiles = React.lazy(() => import('@/pages/user/Shortlist'));
+const MyProfiles = React.lazy(() => import('@/pages/user/MyProfiles'));
+const NewProfile = React.lazy(() => import('@/pages/user/NewProfile'));
+const ProfileView = React.lazy(() => import('@/pages/user/ProfileView'));
 
-import AdminLayout from '@/layout/admin/Layout';
-import AdminDashboard from '@/pages/admin/Dashboard';
-import Analytics from '@/pages/admin/Analytics';
-import MyAccount from '@/pages/user/MyAccount';
+const AdminLayout = React.lazy(() => import('@/layout/admin/Layout'));
+const AdminDashboard = React.lazy(() => import('@/pages/admin/Dashboard'));
+const Analytics = React.lazy(() => import('@/pages/admin/Analytics'));
+const MyAccount = React.lazy(() => import('@/pages/user/MyAccount'));
 
-import SystemSettings from '@/pages/admin/Settings';
-import NotFound from '@/pages/common/NotFound';
-import ComingSoonPage from '@/pages/common/ComingSoonPage';
-import PlanUpgrade from '@/pages/user/PlanUpgrade';
+const SystemSettings = React.lazy(() => import('@/pages/admin/Settings'));
+const NotFound = React.lazy(() => import('@/pages/common/NotFound'));
+const ComingSoonPage = React.lazy(() => import('@/pages/common/ComingSoonPage'));
+const PlanUpgrade = React.lazy(() => import('@/pages/user/PlanUpgrade'));
 
 // Matrimony Admin Pages
-import ProfileVerification from '@/pages/admin/matrimony/Verification';
-import UserAccounts from '@/pages/admin/matrimony/Users';
-import Profiles from '@/pages/admin/matrimony/Profiles';
-import ProfileDetails from '@/pages/admin/matrimony/ProfileDetails';
-import MembershipManagement from '@/pages/admin/matrimony/MembershipManagement';
+const ProfileVerification = React.lazy(() => import('@/pages/admin/matrimony/Verification'));
+const UserAccounts = React.lazy(() => import('@/pages/admin/matrimony/Users'));
+const Profiles = React.lazy(() => import('@/pages/admin/matrimony/Profiles'));
+const ProfileDetails = React.lazy(() => import('@/pages/admin/matrimony/ProfileDetails'));
+const MembershipManagement = React.lazy(() => import('@/pages/admin/matrimony/MembershipManagement'));
+const AccountDetail = React.lazy(() => import('@/pages/admin/matrimony/AccountDetail'));
 
 // Mandapam Admin Pages
-import HallAvailability from '@/pages/admin/mandapam/Availability';
-import Packages from '@/pages/admin/mandapam/Packages';
-import Bookings from '@/pages/admin/mandapam/Bookings';
+const HallAvailability = React.lazy(() => import('@/pages/admin/mandapam/Availability'));
+const Packages = React.lazy(() => import('@/pages/admin/mandapam/Packages'));
+const Bookings = React.lazy(() => import('@/pages/admin/mandapam/Bookings'));
 
 import { AuthProvider } from './hooks/useAuth';
 import { LanguageProvider } from './context/LanguageContext';
 import { CapsLockProvider } from './context/CapsLockContext';
-import Login from '@/pages/auth/Login';
-import AdminLogin from '@/pages/auth/AdminLogin';
-import Signup from '@/pages/auth/Signup';
-import ForgotPassword from '@/pages/auth/ForgotPassword';
+const Login = React.lazy(() => import('@/pages/auth/Login'));
+const AdminLogin = React.lazy(() => import('@/pages/auth/AdminLogin'));
+const Signup = React.lazy(() => import('@/pages/auth/Signup'));
+const ForgotPassword = React.lazy(() => import('@/pages/auth/ForgotPassword'));
 
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { Toaster } from 'sonner';
@@ -128,7 +130,8 @@ const router = createBrowserRouter([
               { path: "admin/dashboard", element: <AdminDashboard /> },
               { path: "admin/analytics", element: <Analytics /> },
               { path: "admin/matrimony/verification", element: <ProfileVerification /> },
-              { path: "admin/matrimony/users", element: <UserAccounts /> },
+              { path: "admin/matrimony/account", element: <UserAccounts /> },
+              { path: "admin/matrimony/account/:id", element: <AccountDetail /> },
               { path: "admin/matrimony/profiles", element: <Profiles /> },
               { path: "admin/matrimony/profiles/:id", element: <ProfileDetails /> },
               { path: "admin/matrimony/membership", element: <MembershipManagement /> },
@@ -160,7 +163,11 @@ function App() {
             duration={3000}
             richColors
           />
-          <ErrorBoundary><RouterProvider router={router} /></ErrorBoundary>
+          <ErrorBoundary>
+            <Suspense fallback={<PageLoader />}>
+              <RouterProvider router={router} />
+            </Suspense>
+          </ErrorBoundary>
         </AuthProvider>
         </CapsLockProvider>
       </LanguageProvider>

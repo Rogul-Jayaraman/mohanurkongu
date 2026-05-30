@@ -3,8 +3,11 @@ import type { AdminProfilesRepository } from './admin-profiles.repository.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
 import type { StorageService } from '../storage/storage.service.js';
+import { ProfileUpsertService } from '../profile/profile-upsert.service.js';
 
 export class AdminProfilesService {
+  private readonly upsertService = new ProfileUpsertService();
+
   constructor(
     private readonly repo: AdminProfilesRepository,
     private readonly storageService?: StorageService,
@@ -274,6 +277,48 @@ export class AdminProfilesService {
     };
   }
 
+  async updateProfile(adminId: string, profileId: string, dto: any, ipAddress?: string) {
+    const profile = await prisma.profile.findUnique({
+      where: { id: profileId },
+      select: { currentStatus: true, accountId: true },
+    });
+
+    if (!profile) {
+      throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
+    }
+    if (profile.currentStatus !== 'PENDING') {
+      throw new AppError(400, ErrorCodes.PROFILE_WRONG_STATUS, 'PROFILE_WRONG_STATUS');
+    }
+
+    const { translations, photos, ...sections } = dto;
+
+    await this.upsertService.resolveUploadTokensInDto(dto);
+
+    return prisma.$transaction(async (tx) => {
+      await this.upsertService.upsertSections(tx, profileId, sections, photos, translations);
+
+      await tx.profileStateHistory.create({
+        data: {
+          profileId,
+          changedByAccountId: adminId,
+          fromStatus: 'PENDING',
+          toStatus: 'PENDING',
+        },
+      });
+
+      await tx.adminAuditEvent.create({
+        data: {
+          actorId: adminId,
+          profileId,
+          action: 'PROFILE_EDITED',
+          ipAddress: ipAddress || null,
+        },
+      });
+
+      return { profileId, status: 'PENDING' };
+    });
+  }
+
   async archiveProfile(adminId: string, profileId: string, dto: { reasonEn: string; reasonTa?: string }, ipAddress?: string) {
     const profile = await prisma.profile.findUnique({ where: { id: profileId }, select: { currentStatus: true } });
 
@@ -284,7 +329,7 @@ export class AdminProfilesService {
       throw new AppError(400, ErrorCodes.PROFILE_WRONG_STATUS, 'PROFILE_WRONG_STATUS');
     }
     if (!dto.reasonEn || dto.reasonEn.trim().length === 0) {
-      throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'ARCHIVE_REASON_REQUIRED');
+      throw new AppError(400, ErrorCodes.ARCHIVE_REASON_REQUIRED, ErrorCodes.ARCHIVE_REASON_REQUIRED);
     }
 
     return prisma.$transaction(async (tx) => {

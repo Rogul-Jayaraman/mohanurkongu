@@ -14,7 +14,7 @@ export function requireRole(...roles: string[]) {
 
     const hasRole = req.account.roles?.some((r) => roles.includes(r));
     if (!hasRole) {
-      next(new AppError(403, ErrorCodes.AUTH_FORBIDDEN, translate(ErrorCodes.AUTH_FORBIDDEN, lang)));
+      next(new AppError(401, ErrorCodes.AUTH_PORTAL_MISMATCH, translate(ErrorCodes.AUTH_PORTAL_MISMATCH, lang)));
       return;
     }
 

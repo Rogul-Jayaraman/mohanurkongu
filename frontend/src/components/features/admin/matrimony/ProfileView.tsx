@@ -6,13 +6,14 @@ import { approveProfile, rejectProfile, fetchAdminProfileDetail, archiveProfile,
 import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
 import { RejectionModal } from '@/modals/admin/RejectionModal';
 import { ConfirmationModal } from '@/modals/admin/ConfirmationModal';
+import SectionEditModal, { type SectionKey } from '@/modals/admin/SectionEditModal';
 import { D1Chart, D9Chart } from '@/components/shared/horoscope';
 import type { PlanetData, HoroscopeResult } from '@/types/horoscope';
 import { getBilingualValue } from '@/utils/bilingual';
 import { toast } from 'sonner';
-import { ArrowLeft, Shield, ShieldBan, Check, X, Phone, Mail, Printer, FileText, Info, User, Users, Briefcase, Heart, Building2, Map, Camera, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { ArrowLeft, Shield, ShieldBan, Check, X, Phone, Mail, Printer, FileText, Info, User, Users, Briefcase, Heart, Building2, Map, Camera, Eye, EyeOff, Trash2, Pencil } from 'lucide-react';
 import { Profile } from '@/types/profile';
-const getImageUrl = (url: string | null | undefined): string | null => { if (!url || typeof url !== 'string') return null; if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url; if (url.startsWith('/media/')) { const b = import.meta.env.VITE_API_URL || 'http://localhost:4000'; return `${b}${url}`; } return null; };
+import { getImageUrl } from '@/utils/getImageUrl';
 import { useProfileUtils } from '@/hooks/useProfileUtils';
 import { useDateFormatter } from '@/hooks/useDateFormatter';
 import {
@@ -115,16 +116,17 @@ const AdminProfileHeader: React.FC<{
   isTamil: boolean;
   getEnumLabel: (value: string, options: any[]) => string;
   isLoading: boolean;
-}> = ({ profile, name, location, isTamil, getEnumLabel, isLoading }) => {
+  onEdit?: () => void;
+}> = ({ profile, name, location, isTamil, getEnumLabel, isLoading, onEdit }) => {
+  const { t } = useLanguage();
   const { formatDate } = useDateFormatter();
   const { calculateAge } = useProfileUtils();
 
-  const profilePhoto = profile?.profilePhoto;
+  const profilePhoto = profile?.profilePhoto || profile?.photo || (profile?.photos && profile.photos[0]);
   const photoUrl: string = (() => {
     if (!profilePhoto) return "";
-    if (typeof profilePhoto === 'string') return getImageUrl(profilePhoto) || "";
-    if (typeof profilePhoto === 'object' && 'url' in profilePhoto) return (profilePhoto as any).url || "";
-    return "";
+    const rawUrl = typeof profilePhoto === 'string' ? profilePhoto : (profilePhoto as any)?.url || "";
+    return getImageUrl(rawUrl) || "";
   })();
 
   if (isLoading) {
@@ -160,19 +162,24 @@ const AdminProfileHeader: React.FC<{
       <div className="md:col-span-8">
         <SectionCard3D>
           <SectionHeaderRedesigned
-            title={isTamil ? 'அடிப்படை தகவல்' : 'Basic Info'}
+            title={t('adminMatrimony.profileView.basicInfo')}
             icon={<Info size={16} />}
             gradient="bg-rosewood-gradient text-white"
             isTamil={isTamil}
           >
+            {onEdit && (
+              <button onClick={onEdit} className="p-1.5 rounded-lg bg-rosewood-gradient text-white hover:brightness-110 transition-all shadow-sm" title="Edit">
+                <Pencil size={13} />
+              </button>
+            )}
           </SectionHeaderRedesigned>
           <div className="space-y-0">
-            <DetailRow label={isTamil ? 'முழு பெயர்' : 'Full Name'} value={name} />
-            <DetailRow label={isTamil ? 'பதிவு எண்' : 'Registration No'} value={profile.regNo} />
-            <DetailRow label={isTamil ? 'பிறந்த தேதி' : 'Date of Birth'} value={profile.dob ? formatDate(profile.dob) : ''} />
-            <DetailRow label={isTamil ? 'வயது' : 'Age'} value={profile.dob ? `${calculateAge(profile.dob)} ${isTamil ? 'வயது' : 'yrs'}` : ''} />
-            <DetailRow label={isTamil ? 'பாலினம்' : 'Gender'} value={profile.gender ? getEnumLabel(profile.gender, GENDER_OPTIONS) : ''} />
-            <DetailRow label={isTamil ? 'தற்போதைய இடம்' : 'Current Location'} value={location} />
+            <DetailRow label={t('Full Name')} value={name} />
+            <DetailRow label={t('adminMatrimony.profileView.registrationNo')} value={profile.regNo} />
+            <DetailRow label={t('Date of Birth')} value={profile.dob ? formatDate(profile.dob) : ''} />
+            <DetailRow label={t('Age')} value={profile.dob ? `${calculateAge(profile.dob)} ${t('adminMatrimony.profileView.yrs')}` : ''} />
+            <DetailRow label={t('Gender')} value={profile.gender ? getEnumLabel(profile.gender, GENDER_OPTIONS) : ''} />
+            <DetailRow label={t('adminMatrimony.profileView.currentLocation')} value={location} />
           </div>
         </SectionCard3D>
       </div>
@@ -180,7 +187,7 @@ const AdminProfileHeader: React.FC<{
         <div className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gold/20 flex flex-col items-center">
           <div className="w-full max-w-56 sm:max-w-none aspect-square rounded-xl overflow-hidden border-4 border-ivory bg-ivory">
             {photoUrl ? (
-              <img src={photoUrl} alt={name} className="w-full h-full object-cover" />
+              <img src={photoUrl} alt={name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
             ) : (
               <div className="w-full h-full bg-ivory flex items-center justify-center">
                 <span className="text-rosewood/30 text-4xl font-serif font-bold">
@@ -199,6 +206,7 @@ const AdminProfileHeader: React.FC<{
 // AdminStatusReasons
 // ═══════════════════════════════════════════════════════════
 const AdminStatusReasons: React.FC<{ profile: Profile | undefined; isTamil: boolean }> = ({ profile, isTamil }) => {
+  const { t } = useLanguage();
   if (!profile) return null;
   const rejectionReason = (profile as any).rejectionReasonEn;
   const rejectionReasonTa = (profile as any).rejectionReasonTa;
@@ -212,7 +220,7 @@ const AdminStatusReasons: React.FC<{ profile: Profile | undefined; isTamil: bool
           <div className="flex items-center gap-2 mb-2">
             <span className="text-red-500 font-bold text-xs">!</span>
             <p className="text-[9px] text-red-400 font-bold uppercase tracking-wider">
-              {isTamil ? 'நிராகரிப்பு காரணம்' : 'Rejection Reason'}
+              {t('adminMatrimony.profileView.rejectionReason')}
             </p>
           </div>
           <p className="text-sm font-bold text-red-800 ml-5">
@@ -225,7 +233,7 @@ const AdminStatusReasons: React.FC<{ profile: Profile | undefined; isTamil: bool
           <div className="flex items-center gap-2 mb-2">
             <span className="text-amber-500 font-bold text-xs">!</span>
             <p className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">
-              {isTamil ? 'தடை காரணம்' : 'Block Reason'}
+              {t('adminMatrimony.profileView.blockReason')}
             </p>
           </div>
           <p className="text-sm font-bold text-amber-800 ml-5">
@@ -245,26 +253,36 @@ const AdminPersonalDetails: React.FC<{
   isTamil: boolean;
   getEnumLabel: (value: string, options: any[]) => string;
   isLoading: boolean;
-}> = ({ profile, isTamil, getEnumLabel, isLoading }) => (
+  onEdit?: () => void;
+}> = ({ profile, isTamil, getEnumLabel, isLoading, onEdit }) => {
+  const { t } = useLanguage();
+  return (
   <SectionCard3D isLoading={isLoading}>
     <SectionHeaderRedesigned
-      title={isTamil ? 'தனிப்பட்ட விவரங்கள்' : 'Personal Details'}
+      title={t('adminMatrimony.profileView.personalDetails')}
       icon={<User size={16} />}
       gradient="bg-ivory-gold-gradient text-rosewood"
       isLoading={isLoading}
       isTamil={isTamil}
-    />
+    >
+      {onEdit && (
+        <button onClick={onEdit} className="p-1.5 rounded-lg bg-rosewood-gradient text-white hover:brightness-110 transition-all shadow-sm" title="Edit">
+          <Pencil size={13} />
+        </button>
+      )}
+    </SectionHeaderRedesigned>
     <div className="space-y-0">
-      <DetailRow label={isTamil ? 'திட்டம்' : 'Profile For'} value={profile?.profileFor ? getEnumLabel(profile.profileFor, PROFILE_FOR_OPTIONS) : ''} isLoading={isLoading} />
-      <DetailRow label={isTamil ? 'திருமண நிலை' : 'Marital Status'} value={profile?.maritalStatus ? getEnumLabel(profile.maritalStatus, MARITAL_STATUS_OPTIONS) : ''} isLoading={isLoading} />
-      <DetailRow label={isTamil ? 'உணவு முறை' : 'Diet'} value={profile?.diet ? getEnumLabel(profile.diet, DIET_OPTIONS) : ''} isLoading={isLoading} />
-      <DetailRow label={isTamil ? 'உயரம்' : 'Height'} value={profile?.height ? getEnumLabel(profile.height.toString(), HEIGHT_OPTIONS) : ''} isLoading={isLoading} />
-      <DetailRow label={isTamil ? 'எடை' : 'Weight'} value={profile?.weight ? `${profile.weight} kg` : ''} isLoading={isLoading} />
-      <DetailRow label={isTamil ? 'நிறம்' : 'Complexion'} value={profile?.complexion ? getEnumLabel(profile.complexion, COMPLEXION_OPTIONS) : ''} isLoading={isLoading} />
-      <DetailRow label={isTamil ? 'இரத்த வகை' : 'Blood Group'} value={profile?.bloodGroup ? getEnumLabel(profile.bloodGroup, BLOOD_GROUP_OPTIONS) : ''} isLoading={isLoading} />
+      <DetailRow label={t('adminMatrimony.profileView.profileFor')} value={profile?.profileFor ? getEnumLabel(profile.profileFor, PROFILE_FOR_OPTIONS) : ''} isLoading={isLoading} />
+      <DetailRow label={t('Marital Status')} value={profile?.maritalStatus ? getEnumLabel(profile.maritalStatus, MARITAL_STATUS_OPTIONS) : ''} isLoading={isLoading} />
+      <DetailRow label={t('Diet')} value={profile?.diet ? getEnumLabel(profile.diet, DIET_OPTIONS) : ''} isLoading={isLoading} />
+      <DetailRow label={t('Height')} value={profile?.height ? getEnumLabel(profile.height.toString(), HEIGHT_OPTIONS) : ''} isLoading={isLoading} />
+      <DetailRow label={t('Weight')} value={profile?.weight ? `${profile.weight} kg` : ''} isLoading={isLoading} />
+      <DetailRow label={t('Complexion')} value={profile?.complexion ? getEnumLabel(profile.complexion, COMPLEXION_OPTIONS) : ''} isLoading={isLoading} />
+      <DetailRow label={t('Blood Group')} value={profile?.bloodGroup ? getEnumLabel(profile.bloodGroup, BLOOD_GROUP_OPTIONS) : ''} isLoading={isLoading} />
     </div>
   </SectionCard3D>
-);
+  );
+};
 
 // ═══════════════════════════════════════════════════════════
 // AdminCommunityDetails
@@ -275,7 +293,9 @@ const AdminCommunityDetails: React.FC<{
   getEnumLabel: (value: string, options: any[]) => string;
   getLocationLabel: (...args: any[]) => string;
   isLoading: boolean;
-}> = ({ profile, isTamil, getEnumLabel, getLocationLabel, isLoading }) => {
+  onEdit?: () => void;
+}> = ({ profile, isTamil, getEnumLabel, getLocationLabel, isLoading, onEdit }) => {
+  const { t } = useLanguage();
   const getCommunityLabel = () => {
     if (!profile) return "";
     const comm = profile.community || 'Kongu Vellalar';
@@ -285,19 +305,25 @@ const AdminCommunityDetails: React.FC<{
   return (
     <SectionCard3D isLoading={isLoading}>
       <SectionHeaderRedesigned
-        title={isTamil ? 'சமூக விவரங்கள்' : 'Community Details'}
+        title={t('adminMatrimony.profileView.communityDetails')}
         icon={<Users size={16} />}
         gradient="bg-rosewood-gradient"
         isLoading={isLoading}
         isTamil={isTamil}
-      />
+      >
+        {onEdit && (
+          <button onClick={onEdit} className="p-1.5 rounded-lg bg-rosewood-gradient text-white hover:brightness-110 transition-all shadow-sm" title="Edit">
+            <Pencil size={13} />
+          </button>
+        )}
+      </SectionHeaderRedesigned>
       <div className="space-y-0">
-        <DetailRow label={isTamil ? 'சாதி' : 'Caste'} value={profile?.caste || "BC"} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'சமூகம்' : 'Community'} value={getCommunityLabel()} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'குலம்' : 'Kulam'} value={profile?.kulam ? getEnumLabel(profile.kulam, KULAM_OPTIONS) : ''} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'குலதெய்வம்' : 'Kuladeivam'} value={profile ? (isTamil ? (profile.kuladeivamTa || profile.kuladeivamEn) : profile.kuladeivamEn) || '' : ''} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'பிறந்த இடம்' : 'Birth Place'} value={profile ? (isTamil ? (profile.birthPlaceTa || profile.birthPlaceEn) : profile.birthPlaceEn) || '' : ''} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'பூர்வீக இடம்' : 'Native Location'} value={profile ? getLocationLabel(profile.nativeDistrictEn || profile.nativeDistrict, profile.nativeTaluk || undefined, profile.nativeDistrictTa, profile.nativeTalukTa) : ''} isLoading={isLoading} />
+        <DetailRow label={t('Caste')} value={profile?.caste || "BC"} isLoading={isLoading} />
+        <DetailRow label={t('Community')} value={getCommunityLabel()} isLoading={isLoading} />
+        <DetailRow label={t('Kulam')} value={profile?.kulam ? getEnumLabel(profile.kulam, KULAM_OPTIONS) : ''} isLoading={isLoading} />
+        <DetailRow label={t('Kuladeivam')} value={profile ? (isTamil ? (profile.kuladeivamTa || profile.kuladeivamEn) : profile.kuladeivamEn) || '' : ''} isLoading={isLoading} />
+        <DetailRow label={t('adminMatrimony.profileView.birthPlace')} value={profile ? (isTamil ? (profile.birthPlaceTa || profile.birthPlaceEn) : profile.birthPlaceEn) || '' : ''} isLoading={isLoading} />
+        <DetailRow label={t('Native Location')} value={profile ? getLocationLabel(profile.nativeDistrictEn || profile.nativeDistrict, profile.nativeTaluk || undefined, profile.nativeDistrictTa, profile.nativeTalukTa) : ''} isLoading={isLoading} />
       </div>
     </SectionCard3D>
   );
@@ -312,26 +338,34 @@ const AdminProfessionalDetails: React.FC<{
   getEnumLabel: (value: string, options: any[]) => string;
   formatSalary: (amount: number) => string;
   isLoading: boolean;
-}> = ({ profile, isTamil, getEnumLabel, formatSalary, isLoading }) => {
-  const education = profile?.education || (isTamil ? 'குறிப்பிடப்படவில்லை' : 'Not Specified');
-  const jobDetail = profile?.jobDetail || (isTamil ? 'குறிப்பிடப்படவில்லை' : 'Not Specified');
+  onEdit?: () => void;
+}> = ({ profile, isTamil, getEnumLabel, formatSalary, isLoading, onEdit }) => {
+  const { t } = useLanguage();
+  const education = profile?.education || t('adminMatrimony.profileView.notSpecified');
+  const jobDetail = profile?.jobDetail || t('adminMatrimony.profileView.notSpecified');
   const jobLocation = profile ? (isTamil ? (profile.jobLocationTa || profile.jobLocationEn) : profile.jobLocationEn) || '' : '';
   return (
     <SectionCard3D isLoading={isLoading}>
       <SectionHeaderRedesigned
-        title={isTamil ? 'தொழில் விவரங்கள்' : 'Professional Details'}
+        title={t('adminMatrimony.profileView.professionalDetails')}
         icon={<Briefcase size={16} />}
         gradient="bg-rosewood-gradient text-white"
         isLoading={isLoading}
         isTamil={isTamil}
-      />
+      >
+        {onEdit && (
+          <button onClick={onEdit} className="p-1.5 rounded-lg bg-rosewood-gradient text-white hover:brightness-110 transition-all shadow-sm" title="Edit">
+            <Pencil size={13} />
+          </button>
+        )}
+      </SectionHeaderRedesigned>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
-        <DetailRow label={isTamil ? 'கல்வி' : 'Education'} value={isTamil ? (profile?.educationTa || education) : education} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'வேலை விவரம்' : 'Job Detail'} value={isTamil ? (profile?.jobDetailTa || jobDetail) : jobDetail} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'நிறுவனம்' : 'Company'} value={profile?.companyName || ''} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'துறை' : 'Sector'} value={profile?.jobSector ? getEnumLabel(profile.jobSector, JOB_SECTOR_OPTIONS) : ''} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'வேலை இடம்' : 'Job Location'} value={jobLocation} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'மாத சம்பளம்' : 'Monthly Salary'} value={profile?.salaryMonthly ? formatSalary(profile.salaryMonthly) : ''} isLoading={isLoading} />
+        <DetailRow label={t('Education')} value={isTamil ? (profile?.educationTa || education) : education} isLoading={isLoading} />
+        <DetailRow label={t('Job Detail')} value={isTamil ? (profile?.jobDetailTa || jobDetail) : jobDetail} isLoading={isLoading} />
+        <DetailRow label={t('Company Name')} value={profile?.companyName || ''} isLoading={isLoading} />
+        <DetailRow label={t('Job Sector')} value={profile?.jobSector ? getEnumLabel(profile.jobSector, JOB_SECTOR_OPTIONS) : ''} isLoading={isLoading} />
+        <DetailRow label={t('adminMatrimony.profileView.jobLocation')} value={jobLocation} isLoading={isLoading} />
+        <DetailRow label={t('Salary')} value={profile?.salaryMonthly ? formatSalary(profile.salaryMonthly) : ''} isLoading={isLoading} />
       </div>
     </SectionCard3D>
   );
@@ -345,61 +379,69 @@ const AdminFamilyDetails: React.FC<{
   isTamil: boolean;
   formatSalary: (amount: number) => string;
   isLoading: boolean;
-}> = ({ profile, isTamil, formatSalary, isLoading }) => {
-  const lateSuffix = isTamil ? ' (இறந்தவர்)' : ' (Late)';
-  const fatherNameRaw = profile ? (isTamil ? (profile.fatherNameTa || profile.fatherNameEn) : profile.fatherNameEn) || (isTamil ? 'வழங்கப்படவில்லை' : 'Not Provided') : '';
-  const motherNameRaw = profile ? (isTamil ? (profile.motherNameTa || profile.motherNameEn) : profile.motherNameEn) || (isTamil ? 'வழங்கப்படவில்லை' : 'Not Provided') : '';
+  onEdit?: () => void;
+}> = ({ profile, isTamil, formatSalary, isLoading, onEdit }) => {
+  const { t } = useLanguage();
+  const lateSuffix = t('adminMatrimony.profileView.lateSuffix');
+  const fatherNameRaw = profile ? (isTamil ? (profile.fatherNameTa || profile.fatherNameEn) : profile.fatherNameEn) || t('adminMatrimony.profileView.notProvided') : '';
+  const motherNameRaw = profile ? (isTamil ? (profile.motherNameTa || profile.motherNameEn) : profile.motherNameEn) || t('adminMatrimony.profileView.notProvided') : '';
   const fatherName = profile?.fatherIsLate ? `${fatherNameRaw}${lateSuffix}` : fatherNameRaw;
   const motherName = profile?.motherIsLate ? `${motherNameRaw}${lateSuffix}` : motherNameRaw;
   return (
     <SectionCard3D isLoading={isLoading}>
       <SectionHeaderRedesigned
-        title={isTamil ? 'குடும்ப விவரங்கள்' : 'Family Details'}
+        title={t('adminMatrimony.profileView.familyDetails')}
         icon={<Heart size={16} />}
         gradient="bg-ivory-gold-gradient text-rosewood"
         isLoading={isLoading}
         isTamil={isTamil}
-      />
+      >
+        {onEdit && (
+          <button onClick={onEdit} className="p-1.5 rounded-lg bg-rosewood-gradient text-white hover:brightness-110 transition-all shadow-sm" title="Edit">
+            <Pencil size={13} />
+          </button>
+        )}
+      </SectionHeaderRedesigned>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
         <div>
           <h3 className="font-semibold text-rosewood text-sm mt-1 mb-2 border-b border-rosewood/10 pb-1">
             {isLoading ? (
               <div className="h-4 w-28 bg-gold/10 rounded animate-pulse" />
             ) : (
-              `${isTamil ? 'தந்தை:' : 'Father:'}`
+              `${t('adminMatrimony.profileView.father')}:`
             )}
           </h3>
-          <DetailRow label={isTamil ? 'பெயர்' : 'Name'} value={fatherName} isLoading={isLoading} />
-          <DetailRow label={isTamil ? 'தொழில்' : 'Job'} value={profile?.fatherJob || ''} isLoading={isLoading} />
-          <DetailRow label={isTamil ? 'சம்பளம்' : 'Salary'} value={profile?.fatherSalary ? formatSalary(profile.fatherSalary) : ''} isLoading={isLoading} />
+          <DetailRow label={t('Name')} value={fatherName} isLoading={isLoading} />
+          <DetailRow label={t('adminMatrimony.profileView.fatherJob')} value={profile?.fatherJob || ''} isLoading={isLoading} />
+          <DetailRow label={t('Salary')} value={profile?.fatherSalary ? formatSalary(profile.fatherSalary) : ''} isLoading={isLoading} />
           <h3 className="font-semibold text-rosewood text-sm mt-5 mb-2 border-b border-rosewood/10 pb-1">
             {isLoading ? (
               <div className="h-4 w-24 bg-gold/10 rounded animate-pulse" />
             ) : (
-              `${isTamil ? 'சகோதரர்கள்:' : 'Siblings:'}`
+              `${t('adminMatrimony.profileView.siblings')}:`
             )}
           </h3>
-          <DetailRow label={isTamil ? 'சகோதரர்கள் எண்ணிக்கை' : 'No. of Brothers'} value={profile?.noOfBrothers ?? 0} isLoading={isLoading} />
+          <DetailRow label={t('adminMatrimony.profileView.noOfBrothers')} value={profile?.noOfBrothers ?? 0} isLoading={isLoading} />
         </div>
         <div>
           <h3 className="font-semibold text-rosewood text-sm mt-1 mb-2 border-b border-rosewood/10 pb-1">
             {isLoading ? (
               <div className="h-4 w-28 bg-gold/10 rounded animate-pulse" />
             ) : (
-              `${isTamil ? 'தாய்:' : 'Mother:'}`
+              `${t('adminMatrimony.profileView.mother')}:`
             )}
           </h3>
-          <DetailRow label={isTamil ? 'பெயர்' : 'Name'} value={motherName} isLoading={isLoading} />
-          <DetailRow label={isTamil ? 'தொழில்' : 'Job'} value={profile?.motherJob || ''} isLoading={isLoading} />
-          <DetailRow label={isTamil ? 'சம்பளம்' : 'Salary'} value={profile?.motherSalary ? formatSalary(profile.motherSalary) : ''} isLoading={isLoading} />
+          <DetailRow label={t('Name')} value={motherName} isLoading={isLoading} />
+          <DetailRow label={t('adminMatrimony.profileView.motherJob')} value={profile?.motherJob || ''} isLoading={isLoading} />
+          <DetailRow label={t('Salary')} value={profile?.motherSalary ? formatSalary(profile.motherSalary) : ''} isLoading={isLoading} />
           <h3 className="font-semibold text-rosewood text-sm mt-5 mb-2 border-b border-rosewood/10 pb-1">
             {isLoading ? (
               <div className="h-4 w-24 bg-gold/10 rounded animate-pulse" />
             ) : (
-              `${isTamil ? 'சகோதரிகள்:' : 'Siblings:'}`
+              `${t('adminMatrimony.profileView.siblings')}:`
             )}
           </h3>
-          <DetailRow label={isTamil ? 'சகோதரிகள் எண்ணிக்கை' : 'No. of Sisters'} value={profile?.noOfSisters ?? 0} isLoading={isLoading} />
+          <DetailRow label={t('adminMatrimony.profileView.noOfSisters')} value={profile?.noOfSisters ?? 0} isLoading={isLoading} />
         </div>
       </div>
     </SectionCard3D>
@@ -414,23 +456,31 @@ const AdminAssetsAndExpectations: React.FC<{
   isTamil: boolean;
   getEnumLabel: (value: string, options: any[]) => string;
   isLoading: boolean;
-}> = ({ profile, isTamil, getEnumLabel, isLoading }) => {
+  onEdit?: () => void;
+}> = ({ profile, isTamil, getEnumLabel, isLoading, onEdit }) => {
+  const { t } = useLanguage();
   const land = profile ? (isTamil ? (profile.landTa || profile.landEn) : profile.landEn) || '' : '';
   const otherAssets = profile ? (isTamil ? (profile.otherAssetsTa || profile.otherAssetsEn) : profile.otherAssetsEn) || '' : '';
   return (
     <SectionCard3D isLoading={isLoading}>
       <SectionHeaderRedesigned
-        title={isTamil ? 'சொத்துக்கள்' : 'Assets'}
+        title={t('adminMatrimony.profileView.assets')}
         icon={<Building2 size={16} />}
         gradient="bg-rosewood-gradient text-white"
         isLoading={isLoading}
         isTamil={isTamil}
-      />
+      >
+        {onEdit && (
+          <button onClick={onEdit} className="p-1.5 rounded-lg bg-rosewood-gradient text-white hover:brightness-110 transition-all shadow-sm" title="Edit">
+            <Pencil size={13} />
+          </button>
+        )}
+      </SectionHeaderRedesigned>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
-        <DetailRow label={isTamil ? 'வசிப்பிடம்' : 'Residence'} value={profile?.residence ? getEnumLabel(profile.residence, RESIDENCE_OPTIONS) : ''} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'வாகனம்' : 'Vehicle'} value={profile?.vehicle || '-'} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'பிற சொத்துகள்' : 'Other Assets'} value={otherAssets || '-'} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'நிலம்' : 'Land'} value={land || '-'} isLoading={isLoading} />
+        <DetailRow label={t('adminMatrimony.profileView.residence')} value={profile?.residence ? getEnumLabel(profile.residence, RESIDENCE_OPTIONS) : ''} isLoading={isLoading} />
+        <DetailRow label={t('adminMatrimony.profileView.vehicle')} value={profile?.vehicle || '-'} isLoading={isLoading} />
+        <DetailRow label={t('adminMatrimony.profileView.otherAssets')} value={otherAssets || '-'} isLoading={isLoading} />
+        <DetailRow label={t('adminMatrimony.profileView.land')} value={land || '-'} isLoading={isLoading} />
       </div>
     </SectionCard3D>
   );
@@ -445,32 +495,40 @@ const AdminPartnerPreferences: React.FC<{
   getEnumLabel: (value: string, options: any[]) => string;
   formatSalary: (amount: number) => string;
   isLoading: boolean;
-}> = ({ profile, isTamil, getEnumLabel, formatSalary, isLoading }) => {
+  onEdit?: () => void;
+}> = ({ profile, isTamil, getEnumLabel, formatSalary, isLoading, onEdit }) => {
+  const { t } = useLanguage();
   const ageRange = profile?.ageMin && profile?.ageMax
-    ? `${profile.ageMin} - ${profile.ageMax} ${isTamil ? 'வயது' : 'yrs'}`
+    ? `${profile.ageMin} - ${profile.ageMax} ${t('adminMatrimony.profileView.yrs')}`
     : profile?.ageMin
-      ? `${profile.ageMin}+ ${isTamil ? 'வயது' : 'yrs'}`
+      ? `${profile.ageMin}+ ${t('adminMatrimony.profileView.yrs')}`
       : profile?.ageMax
-        ? `Up to ${profile.ageMax} ${isTamil ? 'வயது' : 'yrs'}`
+        ? `Up to ${profile.ageMax} ${t('adminMatrimony.profileView.yrs')}`
         : '';
   const expectationNote = profile ? (isTamil ? (profile.expectationNoteTa || profile.expectationNoteEn) : profile.expectationNoteEn) || '' : '';
   const preferredLocation = profile ? (isTamil ? (profile.preferredLocationTa || profile.preferredLocationEn) : profile.preferredLocationEn) || '' : '';
   return (
     <SectionCard3D isLoading={isLoading}>
       <SectionHeaderRedesigned
-        title={isTamil ? 'துணைக்கான விருப்பங்கள்' : 'Partner Preferences'}
+        title={t('adminMatrimony.profileView.partnerPreferences')}
         icon={<Heart size={16} />}
         gradient="bg-ivory-gold-gradient text-rosewood"
         isLoading={isLoading}
         isTamil={isTamil}
-      />
+      >
+        {onEdit && (
+          <button onClick={onEdit} className="p-1.5 rounded-lg bg-rosewood-gradient text-white hover:brightness-110 transition-all shadow-sm" title="Edit">
+            <Pencil size={13} />
+          </button>
+        )}
+      </SectionHeaderRedesigned>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
-        <DetailRow label={isTamil ? 'வயது வரம்பு' : 'Age Range'} value={ageRange || '-'} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'குறைந்தபட்ச உயரம்' : 'Min Height'} value={profile?.heightMinId ? getEnumLabel(profile.heightMinId.toString(), HEIGHT_OPTIONS) : ''} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'அதிகபட்ச உயரம்' : 'Max Height'} value={profile?.heightMaxId ? getEnumLabel(profile.heightMaxId.toString(), HEIGHT_OPTIONS) : ''} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'மாத சம்பளம்' : 'Monthly Salary'} value={profile?.monthlySalary ? formatSalary(profile.monthlySalary) : ''} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'விருப்பமான இடம்' : 'Preferred Location'} value={preferredLocation || '-'} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'எதிர்பார்ப்புகள்' : 'Expectations'} value={expectationNote || '-'} isLoading={isLoading} />
+        <DetailRow label={t('adminMatrimony.profileView.ageRange')} value={ageRange || '-'} isLoading={isLoading} />
+        <DetailRow label={t('adminMatrimony.profileView.minHeight')} value={profile?.heightMinId ? getEnumLabel(profile.heightMinId.toString(), HEIGHT_OPTIONS) : ''} isLoading={isLoading} />
+        <DetailRow label={t('adminMatrimony.profileView.maxHeight')} value={profile?.heightMaxId ? getEnumLabel(profile.heightMaxId.toString(), HEIGHT_OPTIONS) : ''} isLoading={isLoading} />
+        <DetailRow label={t('Salary')} value={profile?.monthlySalary ? formatSalary(profile.monthlySalary) : ''} isLoading={isLoading} />
+        <DetailRow label={t('adminMatrimony.profileView.preferredLocation')} value={preferredLocation || '-'} isLoading={isLoading} />
+        <DetailRow label={t('Expectations')} value={expectationNote || '-'} isLoading={isLoading} />
       </div>
     </SectionCard3D>
   );
@@ -484,7 +542,9 @@ const AdminHoroscopeDetails: React.FC<{
   isTamil: boolean;
   getEnumLabel: (value: string, options: any[]) => string;
   isLoading: boolean;
-}> = ({ profile, isTamil, getEnumLabel, isLoading }) => {
+  onEdit?: () => void;
+}> = ({ profile, isTamil, getEnumLabel, isLoading, onEdit }) => {
+  const { t } = useLanguage();
   const lang: 'en' | 'ta' = isTamil ? 'ta' : 'en';
   const natchathiram = profile?.star ? getBilingualValue(NAKSHATRA_OPTIONS, profile.star, lang) : '';
   const rasiLabel = profile?.rasi ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang) : '';
@@ -494,23 +554,29 @@ const AdminHoroscopeDetails: React.FC<{
   return (
     <SectionCard3D isLoading={isLoading}>
       <SectionHeaderRedesigned
-        title={isTamil ? 'ஜாதக விவரங்கள்' : 'Horoscope Details'}
+        title={t('adminMatrimony.profileView.horoscopeDetails')}
         icon={<Map size={16} />}
         gradient="bg-rosewood-gradient"
         isLoading={isLoading}
         isTamil={isTamil}
-      />
+      >
+        {onEdit && (
+          <button onClick={onEdit} className="p-1.5 rounded-lg bg-rosewood-gradient text-white hover:brightness-110 transition-all shadow-sm" title="Edit">
+            <Pencil size={13} />
+          </button>
+        )}
+      </SectionHeaderRedesigned>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0 mb-8">
-        <DetailRow label={isTamil ? 'நட்சத்திரம்' : 'Star'} value={natchathiram} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'ராசி' : 'Rasi'} value={rasiLabel} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'லக்னம்' : 'Lagnam'} value={lagnam} isLoading={isLoading} />
-        <DetailRow label={isTamil ? 'தோஷம்' : 'Dosham'} value={dosham} isLoading={isLoading} />
+        <DetailRow label={t('Star (Nakshatra)')} value={natchathiram} isLoading={isLoading} />
+        <DetailRow label={t('Moon Sign (Rasi)')} value={rasiLabel} isLoading={isLoading} />
+        <DetailRow label={t('Laganam')} value={lagnam} isLoading={isLoading} />
+        <DetailRow label={t('adminMatrimony.profileView.dosham')} value={dosham} isLoading={isLoading} />
       </div>
       {isLoading || hasCharts ? (
         <div className="mt-8 pt-8 border-t border-gold/20">
           <h3 className="text-sm font-bold text-rosewood uppercase tracking-widest mb-6 flex items-center gap-2">
             <FileText size={14} className="text-gold" />
-            {isTamil ? 'ஜாதக படங்கள்' : 'Horoscope Charts'}
+            {t('adminMatrimony.profileView.horoscopeCharts')}
           </h3>
           {isLoading ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -525,10 +591,10 @@ const AdminHoroscopeDetails: React.FC<{
                 return (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d">
-                      <D1Chart lagnaSign={parsed.lagna.signIndex} planets={parsed.planets} />
+                      <D1Chart lagnaSign={parsed.lagna?.signIndex ?? 0} planets={parsed.planets ?? []} />
                     </motion.div>
                     <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d">
-                      <D9Chart planets={parsed.planets} lagnaNavamsaSignIndex={parsed.lagnaNavamsa.signIndex} />
+                      <D9Chart planets={parsed.planets ?? []} lagnaNavamsaSignIndex={parsed.lagnaNavamsa?.signIndex ?? 0} />
                     </motion.div>
                   </div>
                 );
@@ -541,7 +607,7 @@ const AdminHoroscopeDetails: React.FC<{
                 <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
                   <img src={getImageUrl(profile.horoscope.rasi.url) || ''} alt="Rasi" className="w-full h-full object-contain p-4" />
                   <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{isTamil ? 'ராசி படம்' : 'Rasi Chart'}</span>
+                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{t('adminMatrimony.profileView.rasiChart')}</span>
                   </div>
                 </motion.div>
               )}
@@ -549,7 +615,7 @@ const AdminHoroscopeDetails: React.FC<{
                 <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
                   <img src={getImageUrl(profile.horoscope.navamsa.url) || ''} alt="Navamsa" className="w-full h-full object-contain p-4" />
                   <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{isTamil ? 'நவாம்ச படம்' : 'Navamsa Chart'}</span>
+                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{t('adminMatrimony.profileView.navamsaChart')}</span>
                   </div>
                 </motion.div>
               )}
@@ -558,7 +624,7 @@ const AdminHoroscopeDetails: React.FC<{
         </div>
       ) : (
         <div className="mt-8 p-6 bg-white rounded-xl border border-gold/20 text-center">
-          <p className="text-sm text-slate-400 italic font-medium">{isTamil ? 'ஜாதக படம் வழங்கப்படவில்லை' : 'No horoscope chart provided'}</p>
+          <p className="text-sm text-slate-400 italic font-medium">{t('adminMatrimony.profileView.noHoroscope')}</p>
         </div>
       )}
     </SectionCard3D>
@@ -572,18 +638,26 @@ const AdminGallerySection: React.FC<{
   profile: Profile | undefined;
   isTamil: boolean;
   isLoading: boolean;
-}> = ({ profile, isTamil, isLoading }) => {
+  onEdit?: () => void;
+}> = ({ profile, isTamil, isLoading, onEdit }) => {
+  const { t } = useLanguage();
   const galleryImages = (profile?.gallery || []).filter((url: string) => !!url);
   if (!isLoading && galleryImages.length === 0) return null;
   return (
     <SectionCard3D isLoading={isLoading}>
       <SectionHeaderRedesigned
-        title={isTamil ? 'புகைப்படங்கள்' : 'Photos'}
+        title={t('adminMatrimony.profileView.photos')}
         icon={<Camera size={16} />}
         gradient="bg-ivory-gold-gradient text-rosewood"
         isLoading={isLoading}
         isTamil={isTamil}
-      />
+      >
+        {onEdit && (
+          <button onClick={onEdit} className="p-1.5 rounded-lg bg-rosewood-gradient text-white hover:brightness-110 transition-all shadow-sm" title="Edit">
+            <Pencil size={13} />
+          </button>
+        )}
+      </SectionHeaderRedesigned>
       {(() => {
         if (isLoading) {
           return (
@@ -619,30 +693,31 @@ const AdminGallerySection: React.FC<{
 // AdminOwnerCard
 // ═══════════════════════════════════════════════════════════
 const AdminOwnerCard: React.FC<{ profile: Profile | undefined; isTamil: boolean }> = ({ profile, isTamil }) => {
+  const { t } = useLanguage();
   if (!profile?.owner) return null;
   const ownerName = isTamil ? [profile.owner.firstNameTa, profile.owner.lastNameTa].filter(Boolean).join(' ') : [profile.owner.firstNameEn, profile.owner.lastNameEn].filter(Boolean).join(' ');
   return (
     <SectionCard3D>
       <SectionHeaderRedesigned
-        title={isTamil ? 'கணக்கு உரிமையாளர்' : 'Account Owner'}
+        title={t('adminMatrimony.profileView.accountOwner')}
         icon={<User size={16} />}
         gradient="bg-ivory-gold-gradient text-rosewood"
         isTamil={isTamil}
       />
       <div className="space-y-0">
-        <DetailRow label={isTamil ? 'பெயர்' : 'Name'} value={ownerName} />
-        <DetailRow label={isTamil ? 'பதிவு எண்' : 'Reg No'} value={profile.regNo} />
-        <DetailRow label={isTamil ? 'தொலைபேசி' : 'Phone'} value={profile.owner.phone} />
-        <DetailRow label={isTamil ? 'மின்னஞ்சல்' : 'Email'} value={(profile as any).owner?.email || ''} />
+        <DetailRow label={t('Name')} value={ownerName} />
+        <DetailRow label={t('adminMatrimony.profileView.regNo')} value={profile.regNo} />
+        <DetailRow label={t('adminMatrimony.profileView.phone')} value={profile.owner.phone} />
+        <DetailRow label={t('adminMatrimony.profileView.email')} value={(profile as any).owner?.email || ''} />
         {profile.status === 'REJECTED' && (profile.rejectionReasonEn || (profile as any).rejectionReasonTa) && (
           <DetailRow
-            label={isTamil ? 'நிராகரிப்பு காரணம்' : 'Rejection Reason'}
+            label={t('adminMatrimony.profileView.rejectionReason')}
             value={isTamil && (profile as any).rejectionReasonTa ? (profile as any).rejectionReasonTa : profile.rejectionReasonEn}
           />
         )}
         {(profile.status !== 'REJECTED' && (profile as any).archiveReasonEn) && (
           <DetailRow
-            label={isTamil ? 'காப்பக காரணம்' : 'Archive Reason'}
+            label={t('adminMatrimony.profileView.archiveReason')}
             value={isTamil && (profile as any).archiveReasonTa ? (profile as any).archiveReasonTa : (profile as any).archiveReasonEn}
           />
         )}
@@ -654,6 +729,10 @@ const AdminOwnerCard: React.FC<{ profile: Profile | undefined; isTamil: boolean 
 // ═══════════════════════════════════════════════════════════
 // AdminControls
 // ═══════════════════════════════════════════════════════════
+const btnBase =
+  'rounded-xl font-bold text-sm px-4 py-2.5 sm:py-3 flex items-center justify-center gap-2 ' +
+  'hover:shadow-md hover:-translate-y-0.5 active:scale-95 transition-all duration-200 shadow-sm';
+
 const AdminControls: React.FC<{
   profile: Profile | undefined;
   isTamil: boolean;
@@ -666,27 +745,110 @@ const AdminControls: React.FC<{
 }> = ({ profile, isTamil, onVerify, onToggleStatus, onActionClick, onDelete, isStatusPending }) => {
   const { t } = useLanguage();
   if (!profile) return null;
+
+  const status = profile.status;
+
+  const actionRow = (() => {
+    switch (status) {
+      case 'PENDING':
+        return (
+          <div className="flex gap-2">
+            <motion.button whileHover={{ y: -2 }} whileTap={{ y: 0 }} onClick={onVerify}
+              className={`${btnBase} flex-1 bg-ivory-gold-gradient text-rosewood shadow-gold/10`}>
+              <Check size={16} strokeWidth={2.5} />
+              {t('adminMatrimony.common.approve')}
+            </motion.button>
+            <motion.button whileHover={{ y: -2 }} whileTap={{ y: 0 }} onClick={() => onActionClick('REJECT')}
+              className={`${btnBase} flex-1 bg-rosewood-gradient text-white shadow-rosewood/20`}>
+              <X size={16} strokeWidth={2.5} />
+              {t('adminMatrimony.common.reject')}
+            </motion.button>
+          </div>
+        );
+      case 'ACTIVE':
+        return (
+          <div className="flex gap-2">
+            <motion.button whileHover={{ y: -2 }} whileTap={{ y: 0 }} onClick={() => onActionClick('ARCHIVE')}
+              className={`${btnBase} flex-1 bg-rosewood-gradient text-white shadow-rosewood/20`}>
+              <ShieldBan size={16} strokeWidth={2.5} />
+              {t('adminMatrimony.profileView.archiveAction')}
+            </motion.button>
+            <motion.button whileHover={{ y: -2 }} whileTap={{ y: 0 }} onClick={onDelete}
+              className={`${btnBase} flex-1 bg-linear-to-br from-red-500 to-red-700 text-white shadow-red-500/20`}>
+              <Trash2 size={16} strokeWidth={2.5} />
+              {t('adminMatrimony.common.delete')}
+            </motion.button>
+          </div>
+        );
+      case 'ARCHIVED':
+        return (
+          <div className="flex gap-2">
+            <motion.button whileHover={{ y: -2 }} whileTap={{ y: 0 }} onClick={onToggleStatus} disabled={isStatusPending}
+              className={`${btnBase} flex-1 bg-ivory-gold-gradient text-rosewood shadow-gold/10`}>
+              <Eye size={16} strokeWidth={2.5} />
+              {t('adminMatrimony.profileView.restoreAction')}
+            </motion.button>
+            <motion.button whileHover={{ y: -2 }} whileTap={{ y: 0 }} onClick={onDelete}
+              className={`${btnBase} flex-1 bg-linear-to-br from-red-500 to-red-700 text-white shadow-red-500/20`}>
+              <Trash2 size={16} strokeWidth={2.5} />
+              {t('adminMatrimony.common.delete')}
+            </motion.button>
+          </div>
+        );
+      case 'REJECTED':
+        return (
+          <div className="flex justify-center">
+            <motion.button whileHover={{ y: -2 }} whileTap={{ y: 0 }} onClick={onDelete}
+              className={`${btnBase} w-auto min-w-[180px] bg-linear-to-br from-red-500 to-red-700 text-white shadow-red-500/20`}>
+              <Trash2 size={16} strokeWidth={2.5} />
+              {t('adminMatrimony.common.deleteProfile')}
+            </motion.button>
+          </div>
+        );
+      case 'DRAFT':
+        return (
+          <div className="flex justify-center">
+            <motion.button whileHover={{ y: -2 }} whileTap={{ y: 0 }} onClick={onDelete}
+              className={`${btnBase} w-auto min-w-[180px] bg-linear-to-br from-red-500 to-red-700 text-white shadow-red-500/20`}>
+              <Trash2 size={16} strokeWidth={2.5} />
+              {t('adminMatrimony.common.deleteProfile')}
+            </motion.button>
+          </div>
+        );
+      case 'DELETED':
+        return (
+          <div className="text-center py-4">
+            <p className="text-sm text-slate-400 font-medium italic">
+              {t('adminMatrimony.profileView.deletedMessage')}
+            </p>
+          </div>
+        );
+      default:
+        return null;
+    }
+  })();
+
   return (
     <SectionCard3D>
       <SectionHeaderRedesigned
-        title={isTamil ? 'நிர்வாகக் கட்டுப்பாடுகள்' : 'Administrative Controls'}
+        title={t('adminMatrimony.profileView.administrativeControls')}
         icon={<Shield size={16} />}
         gradient="bg-rosewood-gradient text-white"
         isTamil={isTamil}
       >
-        <StatusBadge status={(profile.status || 'PENDING').toLowerCase() as any} minimal />
+        <StatusBadge status={(status || 'PENDING').toLowerCase() as any} minimal />
       </SectionHeaderRedesigned>
 
       {/* Rejection reason banner */}
-      {profile.status === 'REJECTED' && (profile.rejectionReasonEn || (profile as any).rejectionReasonTa) && (
-        <div className="bg-red-50 rounded-xl p-4 border border-red-100">
+      {status === 'REJECTED' && (profile.rejectionReasonEn || (profile as any).rejectionReasonTa) && (
+        <div className="bg-red-50 rounded-xl p-4 border border-red-100 mb-4">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-500 shrink-0 mt-0.5">
               <X size={16} strokeWidth={3} />
             </div>
             <div>
               <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider mb-1">
-                {isTamil ? 'நிராகரிப்பு காரணம்' : 'Rejection Reason'}
+                {t('adminMatrimony.profileView.rejectionReason')}
               </p>
               <p className="text-sm font-bold text-red-800">
                 {isTamil && (profile as any).rejectionReasonTa ? (profile as any).rejectionReasonTa : profile.rejectionReasonEn}
@@ -697,15 +859,15 @@ const AdminControls: React.FC<{
       )}
 
       {/* Archive reason banner */}
-      {profile.status !== 'REJECTED' && (profile as any).archiveReasonEn && (
-        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+      {status !== 'REJECTED' && (profile as any).archiveReasonEn && (
+        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100 mb-4">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 shrink-0 mt-0.5">
               <ShieldBan size={16} strokeWidth={3} />
             </div>
             <div>
               <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mb-1">
-                {isTamil ? 'காப்பக காரணம்' : 'Archive Reason'}
+                {t('adminMatrimony.profileView.archiveReason')}
               </p>
               <p className="text-sm font-bold text-amber-800">
                 {isTamil && (profile as any).archiveReasonTa ? (profile as any).archiveReasonTa : (profile as any).archiveReasonEn}
@@ -715,94 +877,7 @@ const AdminControls: React.FC<{
         </div>
       )}
 
-      <div className="flex flex-col gap-3 mt-4">
-        {profile.status === 'PENDING' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <motion.button
-              whileHover={{ y: -2 }}
-              whileTap={{ y: 0 }}
-              onClick={onVerify}
-              className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5
-                         bg-linear-to-b from-emerald-500 to-emerald-700 text-white
-                         rounded-xl shadow-sm shadow-emerald-200/50
-                         hover:shadow-md hover:from-emerald-600 hover:to-emerald-800
-                         active:shadow-inner
-                         transition-all duration-200 text-sm font-bold tracking-wide"
-            >
-              <Check size={18} strokeWidth={2.5} />
-              {isTamil ? 'ஏற்க' : 'Approve Profile'}
-            </motion.button>
-            <motion.button
-              whileHover={{ y: -2 }}
-              whileTap={{ y: 0 }}
-              onClick={() => onActionClick('REJECT')}
-              className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5
-                         bg-white text-rosewood/70 rounded-xl
-                         border border-red-200 shadow-sm
-                         hover:bg-red-50 hover:border-red-300 hover:text-red-600 hover:shadow-md
-                         active:shadow-inner
-                         transition-all duration-200 text-sm font-bold tracking-wide"
-            >
-              <X size={18} strokeWidth={2.5} />
-              {isTamil ? 'நிராகரி' : 'Reject Profile'}
-            </motion.button>
-          </div>
-        ) : profile.status === 'ACTIVE' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <motion.button
-              whileHover={{ y: -2 }}
-              whileTap={{ y: 0 }}
-              onClick={() => onActionClick('ARCHIVE')}
-              className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5
-                         bg-white text-rosewood/70 rounded-xl
-                         border border-amber-200 shadow-sm
-                         hover:bg-amber-50 hover:border-amber-300 hover:text-amber-600 hover:shadow-md
-                         active:shadow-inner
-                         transition-all duration-200 text-sm font-bold tracking-wide"
-            >
-              <ShieldBan size={18} strokeWidth={2.5} />
-              {isTamil ? 'காப்பகம்' : 'Archive Profile'}
-            </motion.button>
-          </div>
-        ) : profile.status === 'ARCHIVED' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <motion.button
-              whileHover={{ y: -2 }}
-              whileTap={{ y: 0 }}
-              onClick={onToggleStatus}
-              disabled={isStatusPending}
-              className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5
-                         bg-linear-to-b from-emerald-500 to-emerald-700 text-white
-                         rounded-xl shadow-sm shadow-emerald-200/50
-                         hover:shadow-md hover:from-emerald-600 hover:to-emerald-800
-                         active:shadow-inner
-                         transition-all duration-200 text-sm font-bold tracking-wide"
-            >
-              <Eye size={18} strokeWidth={2.5} />
-              {isTamil ? 'மீட்டெடு' : 'Restore Profile'}
-            </motion.button>
-          </div>
-        )}
-
-        {profile.status !== 'DELETED' && (
-          <div className="border-t border-red-100 pt-4 mt-2">
-            <motion.button
-              whileHover={{ y: -2 }}
-              whileTap={{ y: 0 }}
-              onClick={onDelete}
-              className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5
-                         bg-white text-red-500 rounded-xl
-                         border border-red-200 shadow-sm
-                         hover:bg-red-50 hover:border-red-300 hover:text-red-700 hover:shadow-md
-                         active:shadow-inner
-                         transition-all duration-200 text-sm font-bold tracking-wide"
-            >
-              <Trash2 size={18} strokeWidth={2.5} />
-              {isTamil ? 'நீக்கு' : 'Delete Profile'}
-            </motion.button>
-          </div>
-        )}
-      </div>
+      {actionRow}
     </SectionCard3D>
   );
 };
@@ -847,27 +922,30 @@ const LoadingState: React.FC<{ isTamil: boolean }> = ({ isTamil }) => (
 // ═══════════════════════════════════════════════════════════
 // ErrorState
 // ═══════════════════════════════════════════════════════════
-const ErrorState: React.FC<{ onBack: () => void; isTamil: boolean }> = ({ onBack, isTamil }) => (
+const ErrorState: React.FC<{ onBack: () => void; isTamil: boolean }> = ({ onBack, isTamil }) => {
+  const { t } = useLanguage();
+  return (
   <div className="min-h-screen bg-white flex items-center justify-center p-6">
     <div className="text-center">
       <div className="w-20 h-20 rounded-2xl bg-rosewood/5 flex items-center justify-center mx-auto mb-6">
         <span className="text-rosewood/30 text-2xl font-serif font-bold">!</span>
       </div>
       <h2 className="text-2xl font-serif font-black text-rosewood mb-2">
-        {isTamil ? 'சுயவிவரம் கிடைக்கவில்லை' : 'Profile Not Found'}
+        {t('adminMatrimony.profileView.profileNotFound')}
       </h2>
       <p className="text-gray-500 text-sm mb-6">
-        {isTamil ? 'இந்த சுயவிவரம் நீக்கப்பட்டிருக்கலாம்.' : 'This profile may have been removed.'}
+        {t('adminMatrimony.profileView.profileRemoved')}
       </p>
       <button
         onClick={onBack}
         className="px-8 py-3 bg-rosewood text-white rounded-xl font-black text-xs uppercase tracking-widest-plus hover:scale-105 active:scale-95 transition-all shadow-lg shadow-rosewood/20"
       >
-        {isTamil ? 'பின் செல்ல' : 'Go Back'}
+        {t('adminMatrimony.profileView.goBack')}
       </button>
     </div>
   </div>
-);
+  );
+};
 
 // ═══════════════════════════════════════════════════════════
 // AdminProfileView (Main Orchestrator)
@@ -886,6 +964,7 @@ const AdminProfileView: React.FC = () => {
   useEffect(() => { if (id) fetchProfile(id); }, [id]);
   const refetch = () => { if (id) fetchProfile(id); };
 
+  const [editSection, setEditSection] = useState<SectionKey | null>(null);
   const [rejectionModal, setRejectionModal] = React.useState<{ open: boolean; mode: 'REJECT' | 'ARCHIVE' }>({ open: false, mode: 'REJECT' });
   const [deleteModal, setDeleteModal] = React.useState<{ open: boolean }>({ open: false });
   const [restoreModal, setRestoreModal] = React.useState<{ open: boolean }>({ open: false });
@@ -1081,7 +1160,7 @@ const AdminProfileView: React.FC = () => {
         {/* Hero */}
         <AnimatedSection>
           <div id="section-basic" className="scroll-mt-20 mb-6">
-            <AdminProfileHeader profile={profile} name={name} location={currentLocation} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} />
+            <AdminProfileHeader profile={profile} name={name} location={currentLocation} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} onEdit={profile?.status === 'PENDING' ? () => setEditSection('basic') : undefined} />
           </div>
         </AnimatedSection>
 
@@ -1095,8 +1174,8 @@ const AdminProfileView: React.FC = () => {
         {/* Sections 1 + 2: Personal + Community */}
         <AnimatedSection>
           <div id="section-personal" className="scroll-mt-20 grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-            <AdminPersonalDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} />
-            <AdminCommunityDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} getLocationLabel={getLocationLabel} isLoading={false} />
+            <AdminPersonalDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} onEdit={profile?.status === 'PENDING' ? () => setEditSection('personal') : undefined} />
+            <AdminCommunityDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} getLocationLabel={getLocationLabel} isLoading={false} onEdit={profile?.status === 'PENDING' ? () => setEditSection('community') : undefined} />
           </div>
         </AnimatedSection>
         <SectionDivider />
@@ -1104,7 +1183,7 @@ const AdminProfileView: React.FC = () => {
         {/* Section 3: Professional */}
         <AnimatedSection>
           <div id="section-professional" className="scroll-mt-20">
-            <AdminProfessionalDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} formatSalary={formatSalary} isLoading={false} />
+            <AdminProfessionalDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} formatSalary={formatSalary} isLoading={false} onEdit={profile?.status === 'PENDING' ? () => setEditSection('professional') : undefined} />
           </div>
         </AnimatedSection>
         <SectionDivider />
@@ -1112,7 +1191,7 @@ const AdminProfileView: React.FC = () => {
         {/* Section 4: Family */}
         <AnimatedSection>
           <div id="section-family" className="scroll-mt-20">
-            <AdminFamilyDetails profile={profile} isTamil={isTamil} formatSalary={formatSalary} isLoading={false} />
+            <AdminFamilyDetails profile={profile} isTamil={isTamil} formatSalary={formatSalary} isLoading={false} onEdit={profile?.status === 'PENDING' ? () => setEditSection('family') : undefined} />
           </div>
         </AnimatedSection>
         <SectionDivider />
@@ -1120,7 +1199,7 @@ const AdminProfileView: React.FC = () => {
         {/* Section 5: Assets & Expectations */}
         <AnimatedSection>
           <div id="section-assets" className="scroll-mt-20">
-            <AdminAssetsAndExpectations profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} />
+            <AdminAssetsAndExpectations profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} onEdit={profile?.status === 'PENDING' ? () => setEditSection('assets') : undefined} />
           </div>
         </AnimatedSection>
         <SectionDivider />
@@ -1128,7 +1207,7 @@ const AdminProfileView: React.FC = () => {
         {/* Section 6: Partner Preferences */}
         <AnimatedSection>
           <div id="section-partner-preference" className="scroll-mt-20">
-            <AdminPartnerPreferences profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} formatSalary={formatSalary} isLoading={false} />
+            <AdminPartnerPreferences profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} formatSalary={formatSalary} isLoading={false} onEdit={profile?.status === 'PENDING' ? () => setEditSection('partnerPreference') : undefined} />
           </div>
         </AnimatedSection>
         <SectionDivider />
@@ -1136,7 +1215,7 @@ const AdminProfileView: React.FC = () => {
         {/* Section 7: Horoscope */}
         <AnimatedSection>
           <div id="section-horoscope" className="scroll-mt-20">
-            <AdminHoroscopeDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} />
+            <AdminHoroscopeDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} onEdit={profile?.status === 'PENDING' ? () => setEditSection('horoscope') : undefined} />
           </div>
         </AnimatedSection>
         <SectionDivider />
@@ -1146,7 +1225,7 @@ const AdminProfileView: React.FC = () => {
           <>
             <AnimatedSection>
               <div id="section-gallery" className="scroll-mt-20">
-                <AdminGallerySection profile={profile} isTamil={isTamil} isLoading={false} />
+                <AdminGallerySection profile={profile} isTamil={isTamil} isLoading={false} onEdit={profile?.status === 'PENDING' ? () => setEditSection('photos') : undefined} />
               </div>
             </AnimatedSection>
             <SectionDivider />
@@ -1208,6 +1287,13 @@ const AdminProfileView: React.FC = () => {
         message={t('adminMatrimony.users.restoreWarning') || 'Are you sure you want to restore this profile? It will become visible and matchable again.'}
         confirmText={t('adminMatrimony.common.restore') || 'Restore'}
         variant="warning"
+      />
+      <SectionEditModal
+        isOpen={editSection !== null}
+        onClose={() => setEditSection(null)}
+        section={editSection || 'basic'}
+        profile={profile}
+        onSaved={refetch}
       />
     </div>
   );

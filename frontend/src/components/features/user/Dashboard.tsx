@@ -117,7 +117,7 @@ export const WelcomeHeaderSection: React.FC<{ user: any; isLoading?: boolean }> 
   return (
     <div className="relative w-full mb-8">
       <div className="relative overflow-hidden rounded-xl bg-linear-to-br from-white via-ivory to-white shadow-lg shadow-gold/5 border border-gold/10">
-        <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.03] scale-125 pointer-events-none" />
+        <div className="absolute inset-0 bg-kolam-pattern opacity-[0.03] scale-125 pointer-events-none" />
         <div className="absolute right-0 top-0 w-1/3 h-full bg-linear-to-l from-gold/10 to-transparent pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row items-stretch min-h-[110px]">
@@ -168,7 +168,7 @@ export const WelcomeHeaderSection: React.FC<{ user: any; isLoading?: boolean }> 
               )}
               <div className="pt-1">
                 <Link
-                  to="/manamaalai/plan-upgrade"
+                  to="/manamaalai/my-account?tab=membership"
                   className="block text-center text-[10px] font-bold uppercase tracking-widest text-gold hover:text-rosewood transition-colors"
                 >
                   {i18n.language === 'ta' ? 'மேம்படுத்துக' : 'Upgrade'}
@@ -193,7 +193,7 @@ const EmptySection: React.FC<{ gender: "MALE" | "FEMALE" }> = ({ gender }) => {
     : (lang ? 'ஆண்' : 'groom');
   return (
     <div className="relative bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl p-12 flex flex-col items-center justify-center text-center overflow-hidden group">
-      <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+      <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none" />
       <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
       <div className="w-20 h-20 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mb-6">
@@ -225,7 +225,7 @@ const SectionErrorState: React.FC<{
   const lang = i18n.language === 'ta';
   return (
     <div className="relative bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl p-12 flex flex-col items-center justify-center text-center overflow-hidden">
-      <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+      <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none" />
       <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
       <div className="w-16 h-16 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mb-5">

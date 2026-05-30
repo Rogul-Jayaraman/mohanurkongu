@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Settings, Loader2 } from 'lucide-react';
+import { ModalShell } from '@/components/ui/modals/ModalShell';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import type { MembershipPlan } from '@/api/membership.api';
 import { adminUpdatePlan } from '@/api/admin-membership.api';
 
 interface EditPlanModalProps {
   plan: MembershipPlan | null;
-  isTamil: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
 
-const searchLevels = ['BASIC', 'STANDARD', 'ADVANCED'];
+const searchLevels = ['BASIC', 'EXTENDED', 'ADVANCED', 'FULL'];
+const viewDetailsLevels = ['BASIC', 'EXTENDED', 'ADVANCED', 'FULL'];
 
-export const EditPlanModal: React.FC<EditPlanModalProps> = ({ plan, isTamil, onClose, onSaved }) => {
+export const EditPlanModal: React.FC<EditPlanModalProps> = ({ plan, onClose, onSaved }) => {
   const { t } = useTranslation();
+  const isOpen = !!plan;
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Record<string, any>>({});
 
@@ -28,144 +30,227 @@ export const EditPlanModal: React.FC<EditPlanModalProps> = ({ plan, isTamil, onC
         openLimit: plan.openLimit,
         shortlistLimit: plan.shortlistLimit,
         profileSlotLimit: plan.profileSlotLimit,
-        contactAccess: plan.contactAccess,
-        fullHoroscopeAccess: plan.fullHoroscopeAccess,
+        viewDetails: plan.viewDetails,
         printProfile: plan.printProfile,
         printHoroscope: plan.printHoroscope,
         searchLevel: plan.searchLevel,
-        status: plan.status,
       });
     }
   }, [plan]);
 
-  if (!plan) return null;
-
   const handleSave = async () => {
+    if (!plan) return;
     setSaving(true);
     try {
       await adminUpdatePlan(plan.id, form);
+      toast.success(t('adminMatrimony:plans.saveSuccess'));
       onSaved();
       onClose();
     } catch {
-      // error handled by interceptor
+      toast.error(t('adminMatrimony:plans.saveError'));
     } finally {
       setSaving(false);
     }
   };
 
-  const label = (en: string, ta: string) => isTamil ? ta : en;
+  const set = (key: string, value: any) => setForm({ ...form, [key]: value });
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          onClick={(e) => e.stopPropagation()}
-          className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 mx-4"
-        >
-          <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-lg hover:bg-slate-100">
-            <X size={20} className="text-slate-500" />
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      icon={<Settings size={24} className="text-rosewood" />}
+      title={t('adminMatrimony:plans.editPlan')}
+      size="xl"
+      footer={
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-6 py-3 border border-gold/10 text-rosewood font-bold rounded-xl hover:bg-ivory transition-all text-sm"
+          >
+            {t('adminMatrimony:common.cancel')}
           </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 px-6 py-3 bg-rosewood text-ivory font-bold rounded-xl hover:shadow-lg transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : null}
+            {saving ? t('adminMatrimony:plans.form.saving') : t('adminMatrimony:common.save')}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        <div className="p-4 bg-ivory/50 rounded-xl border border-gold/20 shadow-sm">
+          <span className="text-[9px] text-rosewood/40 font-black uppercase tracking-widest block mb-1">
+            {t('adminMatrimony:plans.form.planName')}
+          </span>
+          <input
+            type="text"
+            value={form.displayName || ''}
+            onChange={(e) => set('displayName', e.target.value)}
+            className="w-full h-10 bg-white/80 rounded-lg px-3 border border-gold/20 text-sm font-bold text-rosewood placeholder:text-rosewood/30 outline-none focus:border-gold/40 focus:ring-2 focus:ring-gold/10 transition-all"
+          />
+        </div>
 
-          <h2 className="text-lg font-bold text-rosewood mb-6">
-            {label('Edit Plan', 'திட்டத்தைத் திருத்து')}
-          </h2>
-
-          <div className="space-y-4">
-            <Field label={label('Plan Name', 'திட்ட பெயர்')}>
-              <input type="text" value={form.displayName || ''} onChange={(e) => setForm({ ...form, displayName: e.target.value })}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40" />
-            </Field>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Field label={label('Price (₹)', 'விலை (₹)')}>
-                <input type="number" value={form.displayPrice || 0} onChange={(e) => setForm({ ...form, displayPrice: Number(e.target.value) })}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40" />
-              </Field>
-              <Field label={label('Duration (days)', 'கால அளவு (நாட்கள்)')}>
-                <input type="number" value={form.durationDays || 0} onChange={(e) => setForm({ ...form, durationDays: Number(e.target.value) })}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40" />
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <Field label={label('Open Limit', 'திறப்பு வரம்பு')}>
-                <input type="number" value={form.openLimit || 0} onChange={(e) => setForm({ ...form, openLimit: Number(e.target.value) })}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40" />
-              </Field>
-              <Field label={label('Shortlist', 'குறும்பட்டியல்')}>
-                <input type="number" value={form.shortlistLimit || 0} onChange={(e) => setForm({ ...form, shortlistLimit: Number(e.target.value) })}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40" />
-              </Field>
-              <Field label={label('Slots', 'இடங்கள்')}>
-                <input type="number" value={form.profileSlotLimit || 0} onChange={(e) => setForm({ ...form, profileSlotLimit: Number(e.target.value) })}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40" />
-              </Field>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-600">{label('Capabilities', 'திறன்கள்')}</label>
-              <div className="grid grid-cols-2 gap-2">
-                <Toggle label={label('Contact Access', 'தொடர்பு அணுகல்')} checked={!!form.contactAccess} onChange={(v) => setForm({ ...form, contactAccess: v })} />
-                <Toggle label={label('Full Horoscope', 'முழு ஜாதகம்')} checked={!!form.fullHoroscopeAccess} onChange={(v) => setForm({ ...form, fullHoroscopeAccess: v })} />
-                <Toggle label={label('Print Profile', 'சுயவிவர அச்சு')} checked={!!form.printProfile} onChange={(v) => setForm({ ...form, printProfile: v })} />
-                <Toggle label={label('Print Horoscope', 'ஜாதக அச்சு')} checked={!!form.printHoroscope} onChange={(v) => setForm({ ...form, printHoroscope: v })} />
-              </div>
-            </div>
-
-            <Field label={label('Search Level', 'தேடல் நிலை')}>
-              <select value={form.searchLevel || 'BASIC'} onChange={(e) => setForm({ ...form, searchLevel: e.target.value })}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40">
-                {searchLevels.map((sl) => (
-                  <option key={sl} value={sl}>{sl}</option>
-                ))}
-              </select>
-            </Field>
-
-            <Field label={label('Status', 'நிலை')}>
-              <select value={form.status || 'ACTIVE'} onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40">
-                <option value="ACTIVE">{label('Active', 'செயலில்')}</option>
-                <option value="INACTIVE">{label('Inactive', 'செயலற்றது')}</option>
-              </select>
-            </Field>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-[9px] text-rosewood/50 font-black uppercase tracking-widest ml-1">
+              {t('adminMatrimony:plans.form.price')}
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={form.displayPrice ? form.displayPrice.toLocaleString('en-IN') : ''}
+              onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); set('displayPrice', v === '' ? 0 : parseInt(v)); }}
+              onWheel={(e) => (e.target as HTMLInputElement).blur()}
+              className="w-full h-12 px-4 rounded-xl border border-gold/20 text-sm font-bold text-rosewood bg-ivory/80 outline-none focus:border-gold/40 transition-all"
+            />
           </div>
-
-          <div className="flex gap-3 mt-8">
-            <button onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
-              {label('Cancel', 'ரத்துசெய்')}
-            </button>
-            <button onClick={handleSave} disabled={saving}
-              className="flex-1 py-2.5 rounded-xl bg-rosewood text-sm font-semibold text-white hover:bg-rosewood/90 transition-colors disabled:opacity-50">
-              {saving ? (isTamil ? 'சேமிக்கிறது...' : 'Saving...') : label('Save', 'சேமி')}
-            </button>
+          <div className="space-y-2">
+            <label className="text-[9px] text-rosewood/50 font-black uppercase tracking-widest ml-1">
+              {t('adminMatrimony:plans.form.durationDays')}
+            </label>
+            <input
+              type="number"
+              value={form.durationDays || 0}
+              onChange={(e) => set('durationDays', Number(e.target.value))}
+              onWheel={(e) => (e.target as HTMLInputElement).blur()}
+              className="w-full h-12 px-4 rounded-xl border border-gold/20 text-sm font-bold text-rosewood bg-ivory/80 outline-none focus:border-gold/40 transition-all"
+            />
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <label className="text-[9px] text-rosewood/50 font-black uppercase tracking-widest ml-1">
+              {t('adminMatrimony:plans.form.openLimit')}
+            </label>
+            <input
+              type="number"
+              value={form.openLimit || 0}
+              onChange={(e) => set('openLimit', Number(e.target.value))}
+              onWheel={(e) => (e.target as HTMLInputElement).blur()}
+              className="w-full h-12 px-4 rounded-xl border border-gold/20 text-sm font-bold text-rosewood bg-ivory/80 outline-none focus:border-gold/40 transition-all"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[9px] text-rosewood/50 font-black uppercase tracking-widest ml-1">
+              {t('adminMatrimony:plans.form.shortlist')}
+            </label>
+            <input
+              type="number"
+              value={form.shortlistLimit || 0}
+              onChange={(e) => set('shortlistLimit', Number(e.target.value))}
+              onWheel={(e) => (e.target as HTMLInputElement).blur()}
+              className="w-full h-12 px-4 rounded-xl border border-gold/20 text-sm font-bold text-rosewood bg-ivory/80 outline-none focus:border-gold/40 transition-all"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[9px] text-rosewood/50 font-black uppercase tracking-widest ml-1">
+              {t('adminMatrimony:plans.form.slots')}
+            </label>
+            <input
+              type="number"
+              value={form.profileSlotLimit || 0}
+              onChange={(e) => set('profileSlotLimit', Number(e.target.value))}
+              onWheel={(e) => (e.target as HTMLInputElement).blur()}
+              className="w-full h-12 px-4 rounded-xl border border-gold/20 text-sm font-bold text-rosewood bg-ivory/80 outline-none focus:border-gold/40 transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <label className="text-[9px] text-rosewood/50 font-black uppercase tracking-widest ml-1">
+            {t('adminMatrimony:plans.form.viewDetails')}
+          </label>
+          <div className="flex gap-2.5">
+            {viewDetailsLevels.map((vd) => (
+              <button
+                key={vd}
+                type="button"
+                onClick={() => set('viewDetails', vd)}
+                className={`flex-1 px-4 py-3 rounded-xl text-[10px] font-black border-2 transition-all ${
+                  form.viewDetails === vd
+                    ? 'bg-rosewood text-ivory border-rosewood shadow-sm'
+                    : 'bg-ivory/80 text-rosewood/40 border-gold/10 hover:border-gold/30'
+                }`}
+              >
+                {vd}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <CapabilityToggle
+            label={t('adminMatrimony:plans.form.printProfile')}
+            checked={!!form.printProfile}
+            onChange={(v) => set('printProfile', v)}
+          />
+          <CapabilityToggle
+            label={t('adminMatrimony:plans.form.printHoroscope')}
+            checked={!!form.printHoroscope}
+            onChange={(v) => set('printHoroscope', v)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[9px] text-rosewood/50 font-black uppercase tracking-widest ml-1">
+            {t('adminMatrimony:plans.form.searchLevel')}
+          </label>
+          <div className="flex gap-2.5">
+            {searchLevels.map((sl) => (
+              <button
+                key={sl}
+                type="button"
+                onClick={() => set('searchLevel', sl)}
+                className={`flex-1 px-4 py-3 rounded-xl text-[10px] font-black border-2 transition-all ${
+                  form.searchLevel === sl
+                    ? 'bg-rosewood text-ivory border-rosewood shadow-sm'
+                    : 'bg-ivory/80 text-rosewood/40 border-gold/10 hover:border-gold/30'
+                }`}
+              >
+                {sl}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </ModalShell>
   );
 };
 
-const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="space-y-1">
-    <label className="text-xs font-semibold text-slate-600">{label}</label>
-    {children}
-  </div>
-);
-
-const Toggle: React.FC<{ label: string; checked: boolean; onChange: (v: boolean) => void }> = ({ label, checked, onChange }) => (
-  <label className="flex items-center gap-2 cursor-pointer">
-    <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)}
-      className="rounded border-slate-300 text-rosewood focus:ring-rosewood/30" />
-    <span className="text-xs text-slate-600">{label}</span>
+const CapabilityToggle: React.FC<{ label: string; checked: boolean; onChange: (v: boolean) => void }> = ({ label, checked, onChange }) => (
+  <label
+    className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all cursor-pointer ${
+      checked
+        ? 'bg-rosewood/10 border-rosewood/30 shadow-sm'
+        : 'bg-ivory/80 border-gold/10 hover:border-gold/30'
+    }`}
+  >
+    <div
+      className={`w-4 h-4 rounded flex items-center justify-center transition-all ${
+        checked ? 'bg-rosewood shadow-sm' : 'bg-white border border-slate-300'
+      }`}
+    >
+      {checked && (
+        <svg viewBox="0 0 24 24" className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="4">
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      )}
+    </div>
+    <span className={`text-xs font-bold transition-colors ${checked ? 'text-rosewood' : 'text-slate-500'}`}>
+      {label}
+    </span>
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      className="sr-only"
+    />
   </label>
 );

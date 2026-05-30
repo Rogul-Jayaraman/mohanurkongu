@@ -19,7 +19,7 @@ const SettingsHeader: React.FC<{ title: string; subtitle: string }> = ({ title, 
 // ═══════════════════════════════════════════════════════════
 // SettingsSection
 // ═══════════════════════════════════════════════════════════
-const SettingsSection: React.FC<{ section: any; index: number; onAction: (label: string) => void; isTamil: boolean }> = ({ section, index, onAction, isTamil }) => (
+const SettingsSection: React.FC<{ section: any; index: number; onAction: (label: string) => void; isTamil: boolean; t: (key: string, params?: any) => string }> = ({ section, index, onAction, isTamil, t }) => (
     <motion.section
         key={section.id}
         initial={{ opacity: 0, y: 20 }}
@@ -49,7 +49,7 @@ const SettingsSection: React.FC<{ section: any; index: number; onAction: (label:
                             {field.verified && (
                                 <div className="flex items-center gap-2 px-3 py-1 bg-green-50 text-green-600 rounded-lg border border-green-100">
                                     <Check size={12} strokeWidth={4} />
-                                    <span className="text-[9px] font-black uppercase tracking-tighter">{isTamil ? 'சரிபார்க்கப்பட்டது' : 'Verified'}</span>
+                                    <span className="text-[9px] font-black uppercase tracking-tighter">{t('common.verified')}</span>
                                 </div>
                             )}
                         </div>
@@ -76,9 +76,9 @@ const SettingsSection: React.FC<{ section: any; index: number; onAction: (label:
 // ═══════════════════════════════════════════════════════════
 // SecurityShield
 // ═══════════════════════════════════════════════════════════
-const SecurityShield: React.FC<{ isTamil: boolean }> = ({ isTamil }) => (
+const SecurityShield: React.FC<{ t: (key: string, params?: any) => string }> = ({ t }) => (
     <div className="text-center pt-4">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">{isTamil ? 'நிர்வாக பாதுகாப்பு கவசம் செயல்பாட்டில் உள்ளது' : 'Admin Security Shield Active'}</p>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">{t('adminMatrimony.settings.securityShieldActive')}</p>
         <div className="flex justify-center gap-4 mt-4">
             <div className="w-1 h-1 rounded-full bg-gold/30" />
             <div className="w-1 h-1 rounded-full bg-gold/30" />
@@ -92,43 +92,43 @@ const SecurityShield: React.FC<{ isTamil: boolean }> = ({ isTamil }) => (
 // ═══════════════════════════════════════════════════════════
 const AdminSettings: React.FC = () => {
     const { user } = useAuth();
-    const { language } = useLanguage();
+    const { t, language } = useLanguage();
     const isTamil = language === 'ta';
 
     const accountSections = [
         {
             id: 'profile',
-            title: isTamil ? 'நிர்வாக அடையாள விவரங்கள்' : 'Admin Identity Details',
-            description: isTamil ? 'உங்கள் அடிப்படை நிர்வாக கணக்கு அடையாளம் மற்றும் தொடர்பு தரவு.' : 'Your fundamental administrative account identification and contact data.',
+            title: t('adminMatrimony.settings.identityTitle'),
+            description: t('adminMatrimony.settings.identityDesc'),
             icon: <User className="w-5 h-5" />,
             fields: [
-                { label: isTamil ? 'நிர்வாகி பெயர்' : 'Admin Full Name', value: isTamil ? formatFullName(user?.firstNameTa, user?.lastNameTa) : formatFullName(user?.firstNameEn, user?.lastNameEn), key: 'name', icon: <User size={16} /> },
-                { label: isTamil ? 'பாதுகாப்பான மின்னஞ்சல்' : 'Secure Email', value: user?.email, key: 'email', icon: <Mail size={16} />, verified: true },
-                { label: isTamil ? 'முன்னுரிமை தொடர்பு' : 'Priority Contact', value: user?.phone, key: 'phone', icon: <Phone size={16} />, verified: true }
+                { label: t('adminMatrimony.settings.adminName'), value: isTamil ? formatFullName(user?.firstNameTa, user?.lastNameTa) : formatFullName(user?.firstNameEn, user?.lastNameEn), key: 'name', icon: <User size={16} /> },
+                { label: t('adminMatrimony.settings.secureEmail'), value: user?.email, key: 'email', icon: <Mail size={16} />, verified: true },
+                { label: t('adminMatrimony.settings.priorityContact'), value: user?.phone, key: 'phone', icon: <Phone size={16} />, verified: true }
             ]
         },
         {
             id: 'security',
-            title: isTamil ? 'பாதுகாப்பு பெட்டகம்' : 'Security Vault',
-            description: isTamil ? 'நவீன குறியாக்கம் மற்றும் அணுகல் கட்டுப்பாடுகளுடன் உங்கள் கணக்கைப் பாதுகாக்கவும்.' : 'Protect your administrative account with modern encryption and access controls.',
+            title: t('adminMatrimony.settings.securityVault'),
+            description: t('adminMatrimony.settings.securityDesc'),
             icon: <Shield className="w-5 h-5" />,
             actions: [
-                { label: isTamil ? 'கடவுச்சொல்லை மாற்றவும்' : 'Change Password', icon: <Key size={16} />, type: 'button', enabled: false }
+                { label: t('adminMatrimony.settings.changePassword'), icon: <Key size={16} />, type: 'button', enabled: false }
             ]
         }
     ];
 
     const handleAction = (label: string) => {
-        toast.info(isTamil ? `${label} இடைமுகம் அடுத்த கணினி புதுப்பிப்பில் விரைவில் வரவுள்ளது.` : `${label} interface is coming soon in the next system update.`);
+        toast.info(t('adminMatrimony.settings.featureComingSoon', { label }));
     };
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 max-w-3xl mx-auto pb-16 pt-8">
-            <SettingsHeader title={isTamil ? 'அமைப்புகள்' : 'System Settings'} subtitle={isTamil ? 'நிர்வாக கட்டுப்பாட்டு மையம்' : 'Administrative Control Center'} />
+            <SettingsHeader title={t('adminMatrimony.settings.systemSettings')} subtitle={t('adminMatrimony.settings.adminControlCenter')} />
             {accountSections.map((section, sIdx) => (
-                <SettingsSection key={section.id} section={section} index={sIdx} onAction={handleAction} isTamil={isTamil} />
+                <SettingsSection key={section.id} section={section} index={sIdx} onAction={handleAction} isTamil={isTamil} t={t} />
             ))}
-            <SecurityShield isTamil={isTamil} />
+            <SecurityShield t={t} />
         </motion.div>
     );
 };

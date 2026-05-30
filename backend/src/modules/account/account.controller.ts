@@ -23,15 +23,4 @@ export class AccountController {
     }
   };
 
-  changePassword = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await this.accountService.changePassword(
-        req.account.sub,
-        req.body,
-      );
-      sendSuccess(res, result);
-    } catch (err) {
-      next(err);
-    }
-  };
 }

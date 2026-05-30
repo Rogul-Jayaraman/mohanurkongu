@@ -20,6 +20,7 @@ import { StatusBadge } from "@/components/ui/feedback/StatusBadge";
 import { useInitials } from "@/hooks/useInitials";
 import { toggleShortlist as toggleShortlistApi } from '@/api/profile.api';
 import { formatFullName } from "@/utils/formatName";
+import { getImageUrl } from "@/utils/getImageUrl";
 import { getAccessToken } from "@/lib/session";
 
 interface UserProfileCardProps {
@@ -166,10 +167,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
 
     const resolveImageUrl = (url: string | null | undefined) => {
       if (!url) return renderPlaceholderImage();
-      if (/^(https?:\/\/)/i.test(url)) return url;
-      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-      const path = url.startsWith('/media/') ? url : `/media/${url}.webp`;
-      return `${API_BASE}${path}`;
+      return getImageUrl(url) || renderPlaceholderImage();
     };
 
     const profilePhotoObj =

@@ -42,7 +42,7 @@ const EmptyStateView: React.FC<{
     t: (key: string, opts?: any) => string;
 }> = ({ hasAnyProfiles, isSearching, onCreateNew, onClearSearch, t }) => (
     <div className="text-center py-20 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl animate-in fade-in slide-in-from-bottom-4 duration-1000 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+        <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none" />
         <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
         <div className="w-20 h-20 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mx-auto mb-6">
@@ -78,18 +78,10 @@ const MyProfiles: React.FC = () => {
     const [profiles, setProfiles] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [deletePending, setDeletePending] = useState(false);
-    useEffect(() => { fetchMyProfiles().then(setProfiles).catch(() => toast.error(t('myprofiles:error_fetching'))).finally(() => setLoading(false)); }, []);
-
     const [searchQuery, setSearchQuery] = useState('');
     const [profileToDelete, setProfileToDelete] = useState<string | null>(null);
 
-    const filteredProfiles = profiles?.filter((p: any) => {
-        if (!p) return false;
-        const search = (searchQuery || '').toLowerCase();
-        const pName = ([p.firstNameEn, p.lastNameEn, p.firstNameTa, p.lastNameTa].filter(Boolean).join(' ') || p.name || '').toLowerCase();
-        const pRegNo = (p.regNo || '').toLowerCase();
-        return pName.includes(search) || pRegNo.includes(search);
-    }) || [];
+    useEffect(() => { fetchMyProfiles(searchQuery || undefined).then(setProfiles).catch(() => toast.error(t('myprofiles:error_fetching'))).finally(() => setLoading(false)); }, [searchQuery]);
 
     const handleCreateNew = async () => {
         await indexedDBStorage.clearDraft();
@@ -145,7 +137,7 @@ const MyProfiles: React.FC = () => {
                         <AnimatedSection>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 pt-4">
                                 <AnimatePresence mode="popLayout">
-                                    {filteredProfiles.map((p: any, index: number) => (
+                                    {profiles.map((p: any, index: number) => (
                                         <motion.div 
                                             key={p.id} 
                                             initial={{ opacity: 0, y: 20 }} 
@@ -166,7 +158,7 @@ const MyProfiles: React.FC = () => {
                             </div>
                         </AnimatedSection>
 
-                        {filteredProfiles.length === 0 && (
+                        {profiles.length === 0 && (
                             <AnimatedSection>
                                 <EmptyStateView
                                     hasAnyProfiles={hasAnyProfiles}

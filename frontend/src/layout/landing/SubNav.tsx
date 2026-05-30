@@ -44,7 +44,7 @@ export const SubNav: React.FC = () => {
           : 'bg-transparent border-transparent'
       }`}
     >
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[48px] lg:min-h-[56px] flex items-center justify-center">
+      <nav aria-label="Main navigation" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[48px] lg:min-h-[56px] flex items-center justify-center">
         <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-y-2 sm:gap-x-6 lg:gap-x-10 xl:gap-x-16 py-1.5 lg:py-2 w-full">
           {NAV_ITEMS.map((item, index) => {
             const isActive = activeItem === item.id;

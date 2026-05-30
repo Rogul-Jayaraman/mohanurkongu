@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfileUtils } from "@/hooks/useProfileUtils";
 import { useDateFormatter } from "@/hooks/useDateFormatter";
 import { getBilingualValue } from "@/utils/bilingual";
-const getImageUrl = (url: string | null | undefined): string | null => { if (!url || typeof url !== 'string') return null; if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url; if (url.startsWith('/media/')) { const b = import.meta.env.VITE_API_URL || 'http://localhost:4000'; return `${b}${url}`; } return null; };
+import { getImageUrl } from '@/utils/getImageUrl';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { toast } from "sonner";
 import {
@@ -1042,6 +1042,19 @@ const ProfileViewGallery: React.FC<{
 // ═══════════════════════════════════════════════════════════
 // ProfileView (Main Orchestrator)
 // ═══════════════════════════════════════════════════════════
+const LockedSection: React.FC<{ message: string; messageTa: string }> = ({ message, messageTa }) => {
+  const { i18n } = useTranslation();
+  const isTamil = i18n.language === 'ta';
+  return (
+    <div className="flex flex-col items-center justify-center py-8 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-rosewood/5 flex items-center justify-center mb-4 border border-rosewood/10">
+        <Lock size={28} className="text-rosewood/30" />
+      </div>
+      <p className="text-sm text-slate-500 font-medium max-w-[220px]">{isTamil ? messageTa : message}</p>
+    </div>
+  );
+};
+
 const ProfileView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -1050,7 +1063,24 @@ const ProfileView: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
+  const [viewDetails, setViewDetails] = useState<string>('FULL');
   useEffect(() => { if (id) { fetchProfile(id).then(setProfile).catch(() => setIsError(true)).finally(() => setIsLoading(false)); } }, [id]);
+  useEffect(() => {
+    import('@/api/membership.api').then(({ getMyCapabilities }) => {
+      getMyCapabilities().then(({ capabilities }) => {
+        if (capabilities?.viewDetails) setViewDetails(capabilities.viewDetails);
+      }).catch(() => {});
+    });
+  }, []);
+
+  const levels = ['BASIC', 'EXTENDED', 'ADVANCED', 'FULL'];
+  const vd = (min: string) => levels.indexOf(viewDetails) >= levels.indexOf(min);
+  const professionalLocked = !vd('EXTENDED') && !profile?.isOwner;
+  const familyLocked = !vd('EXTENDED') && !profile?.isOwner;
+  const horoscopeLabelsLocked = !vd('EXTENDED') && !profile?.isOwner;
+  const horoscopeChartsLocked = !vd('ADVANCED') && !profile?.isOwner;
+  const contactLocked = !vd('FULL') && !profile?.isOwner;
+  const galleryLocked = !vd('EXTENDED') && !profile?.isOwner;
 
   const [isPrintingJathagam, setIsPrintingJathagam] = useState(false);
   const [isPrintingBiodata, setIsPrintingBiodata] = useState(false);
@@ -1214,10 +1244,14 @@ const ProfileView: React.FC = () => {
         {/* Section 3: Professional */}
         <AnimatedSection>
           <div id="section-professional" className="scroll-mt-20">
-            <ProfileViewProfessional
-              profile={profile}
-              isLoading={isLoading}
-            />
+            {professionalLocked ? (
+              <LockedSection
+                message="Upgrade to view professional details"
+                messageTa="தொழில் விவரங்களைக் காண மேம்படுத்தவும்"
+              />
+            ) : (
+              <ProfileViewProfessional profile={profile} isLoading={isLoading} />
+            )}
           </div>
         </AnimatedSection>
         <SectionDivider />
@@ -1225,7 +1259,14 @@ const ProfileView: React.FC = () => {
         {/* Section 4: Family */}
         <AnimatedSection>
           <div id="section-family" className="scroll-mt-20">
-            <ProfileViewFamily profile={profile} isLoading={isLoading} />
+            {familyLocked ? (
+              <LockedSection
+                message="Upgrade to view family details"
+                messageTa="குடும்ப விவரங்களைக் காண மேம்படுத்தவும்"
+              />
+            ) : (
+              <ProfileViewFamily profile={profile} isLoading={isLoading} />
+            )}
           </div>
         </AnimatedSection>
         <SectionDivider />
@@ -1244,7 +1285,14 @@ const ProfileView: React.FC = () => {
         {/* Section 6: Contact */}
         <AnimatedSection>
           <div id="section-contact" className="scroll-mt-20">
-            <ProfileViewContact profile={profile} isLoading={isLoading} />
+            {contactLocked ? (
+              <LockedSection
+                message="Upgrade to Platinum to view contact information"
+                messageTa="தொடர்பு தகவலைக் காண பிளாட்டினத்திற்கு மேம்படுத்தவும்"
+              />
+            ) : (
+              <ProfileViewContact profile={profile} isLoading={isLoading} />
+            )}
           </div>
         </AnimatedSection>
         <SectionDivider />
@@ -1260,23 +1308,34 @@ const ProfileView: React.FC = () => {
         </AnimatedSection>
         <SectionDivider />
 
-        {/* Section 7: Horoscope */}
+        {/* Section 8: Horoscope */}
         <AnimatedSection>
           <div id="section-horoscope" className="scroll-mt-20">
-            <ProfileViewHoroscope profile={profile} isLoading={isLoading} />
+            {horoscopeLabelsLocked && !profile?.isOwner ? (
+              <LockedSection
+                message="Upgrade to view horoscope details"
+                messageTa="ஜாதக விவரங்களைக் காண மேம்படுத்தவும்"
+              />
+            ) : (
+              <ProfileViewHoroscope profile={profile} isLoading={isLoading} />
+            )}
           </div>
         </AnimatedSection>
         {hasUserGalleryContent && (
           <>
             <SectionDivider />
 
-            {/* Section 8: Gallery */}
+            {/* Section 9: Gallery */}
             <AnimatedSection>
               <div id="section-gallery" className="scroll-mt-20 mb-6">
-                <ProfileViewGallery
-                  profile={profile}
-                  isLoading={isLoading}
-                />
+                {galleryLocked ? (
+                  <LockedSection
+                    message="Upgrade to view photos"
+                    messageTa="புகைப்படங்களைக் காண மேம்படுத்தவும்"
+                  />
+                ) : (
+                  <ProfileViewGallery profile={profile} isLoading={isLoading} />
+                )}
               </div>
             </AnimatedSection>
           </>

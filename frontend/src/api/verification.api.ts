@@ -41,3 +41,7 @@ export function restoreProfile(id: string) {
 export function deleteProfile(id: string) {
   return api.post(`/admin/profiles/${id}/delete`);
 }
+
+export function updateProfile(id: string, data: any) {
+  return api.put(`/admin/profiles/${id}`, data);
+}

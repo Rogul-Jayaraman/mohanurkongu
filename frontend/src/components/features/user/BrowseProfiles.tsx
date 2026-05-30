@@ -18,6 +18,7 @@ const InfiniteScrollTrigger: React.FC<{
     hasMore: boolean;
     isLoading: boolean;
 }> = ({ onIntersect, hasMore, isLoading }) => {
+    const { t } = useTranslation();
     const observerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
@@ -44,7 +45,7 @@ const InfiniteScrollTrigger: React.FC<{
             {isLoading ? (
                 <div className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
             ) : (
-                <span className="text-rosewood/40 text-sm font-medium">Scroll for more profiles</span>
+                <span className="text-rosewood/40 text-sm font-medium">{t('browse:scrollMore')}</span>
             )}
         </div>
     );
@@ -183,7 +184,7 @@ const NoResultsView: React.FC<NoResultsViewProps> = ({ isSearching, selectedGend
 
     return (
         <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+            <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none" />
             <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
             <div className="w-24 h-24 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mb-8">
@@ -196,7 +197,7 @@ const NoResultsView: React.FC<NoResultsViewProps> = ({ isSearching, selectedGend
                 {isSearching ? t('dashboard:no_search_results_desc') : t('dashboard:no_suggestions')}
             </p>
             <button onClick={() => window.location.reload()} className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-xs uppercase tracking-widest hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 transition-all duration-300">
-                {lang ? 'புதிய தேடல்' : 'Refresh Search'}
+                {t('browse:refresh')}
             </button>
         </div>
     );
@@ -214,22 +215,20 @@ const ErrorStateView: React.FC<{
 
     return (
         <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+            <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none" />
             <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
             <div className="w-20 h-20 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mx-auto mb-6">
                 <span className="material-symbols-outlined text-4xl">error_outline</span>
             </div>
             <h3 className="text-xl font-serif font-bold text-rosewood mb-2">
-                {lang ? 'ஏதோ தவறு ஏற்பட்டுள்ளது' : t('browse:error_loading')}
+                {lang ? t('browse:error_loading_ta', 'ஏதோ தவறு ஏற்பட்டுள்ளது') : t('browse:error_loading')}
             </h3>
             <p className="text-rosewood/60 text-sm font-medium max-w-sm mx-auto leading-relaxed mb-8">
-                {message || (lang
-                    ? 'வரன்களை ஏற்றும் போது பிழை ஏற்பட்டது. சிறிது நேரம் கழித்து மீண்டும் முயற்சிக்கவும்.'
-                    : t('dashboard:error_desc'))}
+                {message || t('browse:error_desc')}
             </p>
             <button onClick={onRetry} className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-xs uppercase tracking-widest hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 transition-all duration-300">
-                {lang ? 'மீண்டும் முயலவும்' : t('browse:try_again')}
+                {t('browse:try_again')}
             </button>
         </div>
     );
@@ -249,7 +248,7 @@ const NoDataView: React.FC<{
 
     return (
         <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+            <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none" />
             <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
             <div className="w-20 h-20 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mx-auto mb-6">
@@ -262,7 +261,7 @@ const NoDataView: React.FC<{
                 {t('dashboard:no_suggestions', { gender: genderLabel })}
             </p>
             <button onClick={() => window.location.reload()} className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-xs uppercase tracking-widest hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 transition-all duration-300">
-                {lang ? 'மீண்டும் முயலவும்' : 'Refresh Search'}
+                {t('browse:refresh')}
             </button>
         </div>
     );
@@ -277,8 +276,18 @@ const BrowseProfiles: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState<Record<string, any>>({});
+    const [searchLevel, setSearchLevel] = useState('BASIC');
     const [selectedGender, setSelectedGender] = React.useState<'MALE' | 'FEMALE'>('FEMALE');
     const handleGenderChange = (gender: 'MALE' | 'FEMALE') => { setSelectedGender(gender); };
+
+    // Fetch membership capabilities for search level gating
+    useEffect(() => {
+      import('@/api/membership.api').then(({ getMyCapabilities }) => {
+        getMyCapabilities().then(({ capabilities }) => {
+          if (capabilities?.searchLevel) setSearchLevel(capabilities.searchLevel);
+        }).catch(() => {});
+      });
+    }, []);
 
     const {
         profiles,
@@ -355,6 +364,7 @@ const BrowseProfiles: React.FC = () => {
                 filters={filters}
                 setFilters={setFilters}
                 onApply={() => setShowFilters(false)}
+                searchLevel={searchLevel}
             />
 
             <style dangerouslySetInnerHTML={{ __html: `

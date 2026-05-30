@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useOutletContext, useNavigate } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/context/LanguageContext';
-import { stubFetchPurchaseHistory } from '@/utils/stubs';
+import { getBillingOverview } from '@/api/membership.api';
+import type { BillingOverview } from '@/api/membership.api';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/utils/format';
 import {
     ShieldCheck,
     Trash2,
@@ -15,10 +17,10 @@ import {
     ChevronDown,
     ChevronUp,
     Lock,
-    CheckCircle2,
-    Info,
+    Eye,
+    Printer,
     Star,
-    ArrowRight
+    Users
 } from 'lucide-react';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { toast } from 'sonner';
@@ -30,6 +32,7 @@ import { ComingSoonOverlay } from '@/components/ui/ComingSoonOverlay';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { scrollToTop } from '@/components/ui/layout/ScrollToTop';
 import { formatFullName } from '@/utils/formatName';
+import { UserPlanCard } from '@/components/features/user/UserPlanCard';
 
 
 // ═══════════════════════════════════════════════════════════
@@ -142,7 +145,7 @@ const TransactionRow: React.FC<{
                         {isActive ? t('myaccount:membership.history.active') : t('myaccount:membership.history.expired')}
                     </span>
                 </div>
-                <span className={`${isTamil ? 'text-xs' : 'text-sm'} font-black text-rosewood`}>₹{amount.toLocaleString('en-IN')}</span>
+                <span className={`${isTamil ? 'text-xs' : 'text-sm'} font-black text-rosewood`}>{formatCurrency(amount)}</span>
             </div>
             <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 mt-1.5">
                 <p className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
@@ -159,43 +162,40 @@ const TransactionRow: React.FC<{
 };
 
 // ═══════════════════════════════════════════════════════════
-// Our Plans Section (moved from Dashboard)
+// Our Plans Section
 // ═══════════════════════════════════════════════════════════
 
-const OurPlansSection: React.FC = () => {
+const OurPlansSection: React.FC<{ plans: any[]; isTamil: boolean; currentPlanCode?: string | null }> = ({ plans, isTamil, currentPlanCode }) => {
     const { t } = useLanguage();
-    const basicFeatures =
-        (t('dashboard:basic_features', {
-            returnObjects: true,
-        }) as unknown as string[]) || [];
+
+    const handleUpgrade = (plan: any) => {
+        if (plan.code === currentPlanCode) return;
+        toast.info(isTamil ? 'மேம்படுத்தும் பக்கம் விரைவில் வருகிறது' : 'Upgrade page coming soon');
+    };
 
     return (
         <div className="w-full space-y-8 pt-4 max-w-7xl mx-auto">
-            <div className="px-4">
-                <SectionHeader
-                    title={t('dashboard:plans_title')}
-                    description={t('dashboard:plans_desc')}
-                />
-            </div>
+            <SectionHeader
+                title={t('myaccount:membership.plans_title')}
+                description={t('myaccount:membership.plans_desc')}
+            />
 
-            <div className="px-4">
-                <div className="rounded-xl border border-gold/20 bg-ivory shadow-sm p-6 md:p-8">
-                    <h3 className="text-lg font-bold text-rosewood tracking-tight uppercase mb-2">
-                        {t('dashboard:basic_plan')}
-                    </h3>
-                    <p className="text-xl font-semibold text-gold/80 mb-4">
-                        {t('dashboard:free') || 'Free'} &mdash; {t('dashboard:lifetime_access') || 'Lifetime Access'}
-                    </p>
-                    <div className="space-y-3">
-                        {basicFeatures.map((feature: string, i: number) => (
-                            <div key={i} className="flex items-start gap-3">
-                                <CheckCircle2 size={16} className="text-emerald-500 mt-0.5 shrink-0" />
-                                <span className="text-sm text-slate-700">{feature}</span>
-                            </div>
-                        ))}
-                    </div>
+            {plans.length === 0 ? (
+                <div className="rounded-xl border border-gold/20 bg-ivory shadow-sm p-12 text-center">
+                    <p className="text-slate-500 text-sm">{isTamil ? 'திட்டங்கள் எதுவும் இல்லை' : 'No plans available'}</p>
                 </div>
-            </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    {plans.map((plan) => (
+                        <UserPlanCard
+                            key={plan.id}
+                            plan={plan}
+                            currentPlanCode={currentPlanCode ?? undefined}
+                            onUpgrade={handleUpgrade}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
@@ -228,7 +228,7 @@ const ContactBanner: React.FC<{ title: string; subtitle: string; onCopy: (text: 
         variant="ivory"
         className="mt-12 p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden bg-linear-to-br from-white via-ivory to-white shadow-lg shadow-gold/5 border border-gold/10"
     >
-        <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.03] scale-125 pointer-events-none" />
+        <div className="absolute inset-0 bg-kolam-pattern opacity-[0.03] scale-125 pointer-events-none" />
         <div className="absolute right-0 top-0 w-1/3 h-full bg-linear-to-l from-gold/10 to-transparent pointer-events-none" />
 
         <div className="relative z-10 text-center lg:text-left">
@@ -634,10 +634,18 @@ const DangerZoneSection: React.FC = () => {
 // Membership Status Section
 // ═══════════════════════════════════════════════════════════
 
-const MembershipStatusSection: React.FC<{ scrollToPlans: () => void; scrollToHistory: () => void; isLoading: boolean }> = ({ scrollToPlans, scrollToHistory, isLoading }) => {
-    const { user } = useAuth();
+const MembershipStatusSection: React.FC<{
+    currentPlan: BillingOverview['currentPlan'];
+    capabilities: BillingOverview['capabilities'];
+    scrollToPlans: () => void;
+    scrollToHistory: () => void;
+    isLoading: boolean;
+}> = ({ currentPlan, capabilities, scrollToPlans, scrollToHistory, isLoading }) => {
     const { t, language } = useLanguage();
     const isTamil = language === 'ta';
+
+    const planName = currentPlan?.name || '—';
+    const expiresAt = currentPlan?.expiresAt || null;
 
     return (
         <AnimatedSection>
@@ -652,12 +660,13 @@ const MembershipStatusSection: React.FC<{ scrollToPlans: () => void; scrollToHis
                         <div className="h-8 w-40 skeleton mt-1" />
                     ) : (
                         <h3 className={`${isTamil ? 'text-xl' : 'text-2xl'} font-serif font-black text-gold tracking-tight`}>
-                            {user && 'plan' in user ? (user.plan as string) : 'Gold'}
+                            {planName}
                         </h3>
                     )}
                 </div>
-                <div className="p-4 sm:p-5 rounded-xl bg-linear-to-br from-ivory to-white border border-gold/20 flex items-center justify-between shadow-lg shadow-gold/10 ring-1 ring-gold/20 gap-3">
-                    <div className="flex items-center gap-3 sm:gap-4 flex-1">
+
+                <div className="p-4 sm:p-5 rounded-xl bg-linear-to-br from-ivory to-white border border-gold/20 shadow-lg shadow-gold/10 ring-1 ring-gold/20 gap-3 mb-5">
+                    <div className="flex items-center gap-3 sm:gap-4">
                         <div className="p-2 sm:p-3 bg-gold/10 rounded-xl shrink-0">
                             <Calendar size={18} className="text-gold" />
                         </div>
@@ -669,21 +678,42 @@ const MembershipStatusSection: React.FC<{ scrollToPlans: () => void; scrollToHis
                                 <div className="h-4 w-32 skeleton mt-0.5" />
                             ) : (
                                 <span className="text-xs sm:text-sm font-black text-rosewood leading-tight">
-                                    {user?.role === 'USER' && user.planExpiry
-                                        ? format(new Date(user.planExpiry), 'MMM dd, yyyy')
-                                        : t('myaccount:membership.not_available')}
+                                    {expiresAt
+                                        ? format(new Date(expiresAt), 'MMM dd, yyyy')
+                                        : (currentPlan?.planCode === 'BRONZE' && !expiresAt
+                                            ? (isTamil ? 'காலவரையின்றி' : 'Lifetime')
+                                            : t('myaccount:membership.not_available'))}
                                 </span>
                             )}
                         </div>
                     </div>
-                    {isLoading ? (
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 skeleton rounded-full!" />
-                    ) : (
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gold/10 flex items-center justify-center border border-gold/20 text-gold shrink-0">
-                            <CheckCircle2 size={16} className="sm:w-5 sm:h-5" />
-                        </div>
-                    )}
                 </div>
+
+                {capabilities && !isLoading && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                        <CapabilityBadge
+                            icon={<Eye size={14} />}
+                            label={isTamil ? 'தேடல்' : 'Search'}
+                            value={capabilities.searchLevel || '—'}
+                        />
+                        <CapabilityBadge
+                            icon={<Users size={14} />}
+                            label={isTamil ? 'சுயவிவரங்கள்' : 'Profiles'}
+                            value={capabilities.profileSlotLimit < 0 ? (isTamil ? 'வரம்பில்லை' : 'Unlimited') : `${capabilities.profileSlotLimit}`}
+                        />
+                        <CapabilityBadge
+                            icon={<Star size={14} />}
+                            label={isTamil ? 'குறும்பட்டியல்' : 'Shortlists'}
+                            value={capabilities.shortlistLimit < 0 ? (isTamil ? 'வரம்பில்லை' : 'Unlimited') : `${capabilities.shortlistLimit}`}
+                        />
+                        <CapabilityBadge
+                            icon={<Printer size={14} />}
+                            label={isTamil ? 'அச்சு' : 'Print'}
+                            value={capabilities.printProfile ? (isTamil ? 'ஆம்' : 'Yes') : (isTamil ? 'இல்லை' : 'No')}
+                        />
+                    </div>
+                )}
+
                 <div className="mt-6 flex flex-col md:flex-row gap-3">
                     {isLoading ? (
                         <>
@@ -712,19 +742,28 @@ const MembershipStatusSection: React.FC<{ scrollToPlans: () => void; scrollToHis
     );
 };
 
+const CapabilityBadge: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
+    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-ivory border border-gold/10">
+        <div className="text-gold shrink-0">{icon}</div>
+        <div className="min-w-0">
+            <p className="text-[9px] font-bold text-rosewood/40 uppercase tracking-wider">{label}</p>
+            <p className="text-[11px] font-bold text-rosewood truncate">{value}</p>
+        </div>
+    </div>
+);
+
 // ═══════════════════════════════════════════════════════════
 // Purchase History Section (self-contained query + state)
 // ═══════════════════════════════════════════════════════════
 
-const PurchaseHistorySection: React.FC = () => {
+const PurchaseHistorySection: React.FC<{
+    history: BillingOverview['history'];
+    isLoading: boolean;
+    hasError: boolean;
+}> = ({ history, isLoading, hasError }) => {
     const { t, language } = useLanguage();
     const isTamil = language === 'ta';
     const [showAllHistory, setShowAllHistory] = useState(false);
-
-    const [history, setHistory] = useState<any[]>([]);
-    const [historyLoading, setHistoryLoading] = useState(true);
-    const [historyError, setHistoryError] = useState(false);
-    useEffect(() => { stubFetchPurchaseHistory().then(setHistory).catch(() => setHistoryError(true)).finally(() => setHistoryLoading(false)); }, []);
 
     const displayedHistory = showAllHistory ? history : history?.slice(0, 3);
 
@@ -735,7 +774,7 @@ const PurchaseHistorySection: React.FC = () => {
                 description={t('myaccount:membership.history.subtitle')}
             />
 
-            {historyLoading ? (
+            {isLoading ? (
                 <div className="space-y-3">
                     {[1, 2, 3].map((i) => (
                         <div key={i} className="p-5 rounded-xl border border-gold/10 bg-ivory">
@@ -753,7 +792,7 @@ const PurchaseHistorySection: React.FC = () => {
                         </div>
                     ))}
                 </div>
-            ) : historyError ? (
+            ) : hasError ? (
                 <div className="rounded-xl border border-gold/20 bg-ivory shadow-sm p-12 text-center">
                     <p className="text-red-500 font-medium">{t('myaccount:membership.history.error')}</p>
                 </div>
@@ -769,13 +808,13 @@ const PurchaseHistorySection: React.FC = () => {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {displayedHistory?.map((tx: any) => (
+                    {displayedHistory?.map((tx: any, idx: number) => (
                         <TransactionRow
-                            key={tx.id}
-                            plan={tx.plan}
+                            key={idx}
+                            plan={tx.planName}
                             amount={tx.amount}
-                            createdAt={tx.createdAt}
-                            endDate={tx.endDate}
+                            createdAt={tx.startedAt}
+                            endDate={tx.expiresAt}
                         />
                     ))}
                     {(history?.length ?? 0) > 3 && (
@@ -804,9 +843,15 @@ const PurchaseHistorySection: React.FC = () => {
 const MyAccount: React.FC = () => {
     const { user } = useAuth();
     const { setHeaderContent } = useOutletContext<any>();
+    const [searchParams] = useSearchParams();
+    const { language } = useLanguage();
+    const isTamil = language === 'ta';
 
     const [activeTab, setActiveTab] = useState<'details' | 'membership'>('details');
     const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+    const [billing, setBilling] = useState<BillingOverview | null>(null);
+    const [billingLoading, setBillingLoading] = useState(true);
+    const [billingError, setBillingError] = useState(false);
 
     const plansRef = useRef<HTMLDivElement>(null);
     const historyRef = useRef<HTMLDivElement>(null);
@@ -820,11 +865,36 @@ const MyAccount: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        const tabParam = searchParams.get('tab');
+        if (tabParam === 'membership') {
+            setActiveTab('membership');
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
         setHeaderContent(<TabBar activeTab={activeTab} onTabChange={setActiveTab} />);
         scrollToTop();
         return () => setHeaderContent(null);
     }, [activeTab, setHeaderContent]);
 
+    useEffect(() => {
+        if (activeTab === 'membership') {
+            const tabParam = searchParams.get('tab');
+            if (tabParam === 'membership') {
+                setTimeout(() => scrollToPlans(), 300);
+            }
+        }
+    }, [activeTab, searchParams, scrollToPlans]);
+
+    useEffect(() => {
+        if (activeTab !== 'membership') return;
+        setBillingLoading(true);
+        setBillingError(false);
+        getBillingOverview()
+            .then(setBilling)
+            .catch(() => setBillingError(true))
+            .finally(() => setBillingLoading(false));
+    }, [activeTab]);
 
     return (
         <div className="flex flex-col min-h-full">
@@ -856,19 +926,25 @@ const MyAccount: React.FC = () => {
                                 className="space-y-10"
                             >
                                 <MembershipStatusSection
+                                    currentPlan={billing?.currentPlan ?? null}
+                                    capabilities={billing?.capabilities ?? null}
                                     scrollToPlans={scrollToPlans}
                                     scrollToHistory={scrollToHistory}
-                                    isLoading={!user}
+                                    isLoading={billingLoading}
                                 />
 
                                 <div ref={plansRef}>
                                     <AnimatedSection>
-                                        <OurPlansSection />
+                                        <OurPlansSection plans={billing?.plans ?? []} isTamil={isTamil} currentPlanCode={billing?.currentPlan?.planCode} />
                                     </AnimatedSection>
                                 </div>
 
                                 <div ref={historyRef}>
-                                    <PurchaseHistorySection />
+                                    <PurchaseHistorySection
+                                        history={billing?.history ?? []}
+                                        isLoading={billingLoading}
+                                        hasError={billingError}
+                                    />
                                 </div>
 
                                 <PaymentSection />

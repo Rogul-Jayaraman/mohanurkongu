@@ -1,31 +1,40 @@
 import React from 'react';
-import type { MandapamPackage } from '@/types/admin-types';
+import { useLanguage } from '@/context/LanguageContext';
+import type { MandapamPackage } from '@/types/mandapam';
 import { PackageCard } from './PackageCard';
 
 interface PackageGridProps {
-    t: any;
     packages: MandapamPackage[];
     onEdit: (pkg: MandapamPackage) => void;
     onToggleStatus: (id: string, currentStatus: boolean) => void;
-    onDelete?: (id: string) => void;
 }
 
-export const PackageGrid: React.FC<PackageGridProps> = ({ t, packages, onEdit, onToggleStatus, onDelete }) => {
+export const PackageGrid: React.FC<PackageGridProps> = ({ packages, onEdit, onToggleStatus }) => {
+    const { t } = useLanguage();
+
+    if (packages.length === 0) {
+        return (
+            <div className="text-center py-16 bg-ivory-tint border-2 border-dashed border-primary/20 rounded-2xl">
+                <p className="text-rosewood/60 font-medium">
+                    {t('adminMandapam.packages.noPackagesFound')}
+                </p>
+                <p className="text-rosewood/40 text-sm mt-2">
+                    {t('adminMandapam.packages.noPackagesDesc')}
+                </p>
+            </div>
+        );
+    }
+
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-16 px-1">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             {packages.map((pkg) => (
-                <PackageCard 
+                <PackageCard
                     key={pkg.id}
-                    t={t}
                     pkg={pkg}
                     onEdit={onEdit}
                     onToggleStatus={onToggleStatus}
-                    onDelete={onDelete}
                 />
             ))}
         </div>
     );
 };
-
-
-

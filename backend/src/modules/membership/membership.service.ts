@@ -1,7 +1,7 @@
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
-import type { MembershipPlanCode, SearchLevel, MembershipStatus, PlanStatus, Prisma } from '@prisma/client';
+import type { MembershipPlanCode, SearchLevel, ViewDetails, MembershipStatus, PlanStatus, PaymentMethod, Prisma } from '@prisma/client';
 
 export type CapabilitySnapshot = {
   planCode: MembershipPlanCode;
@@ -10,8 +10,7 @@ export type CapabilitySnapshot = {
   openRemaining: number;
   shortlistLimit: number;
   profileSlotLimit: number;
-  contactAccess: boolean;
-  fullHoroscopeAccess: boolean;
+  viewDetails: ViewDetails;
   printProfile: boolean;
   printHoroscope: boolean;
   searchLevel: SearchLevel;
@@ -42,13 +41,13 @@ export class MembershipService {
 
   async getPlanById(planId: string): Promise<any> {
     const plan = await prisma.membershipPlan.findUnique({ where: { id: planId } });
-    if (!plan) throw new AppError(404, ErrorCodes.MEMBERSHIP_PLAN_NOT_FOUND, 'PLAN_NOT_FOUND');
+    if (!plan) throw new AppError(404, ErrorCodes.MEMBERSHIP_PLAN_NOT_FOUND, ErrorCodes.MEMBERSHIP_PLAN_NOT_FOUND);
     return plan;
   }
 
   async updatePlan(planId: string, data: any): Promise<any> {
     const plan = await prisma.membershipPlan.findUnique({ where: { id: planId } });
-    if (!plan) throw new AppError(404, ErrorCodes.MEMBERSHIP_PLAN_NOT_FOUND, 'PLAN_NOT_FOUND');
+    if (!plan) throw new AppError(404, ErrorCodes.MEMBERSHIP_PLAN_NOT_FOUND, ErrorCodes.MEMBERSHIP_PLAN_NOT_FOUND);
 
     const updateData: any = {};
     if (data.displayPrice !== undefined) updateData.displayPrice = data.displayPrice;
@@ -56,8 +55,7 @@ export class MembershipService {
     if (data.openLimit !== undefined) updateData.openLimit = data.openLimit;
     if (data.shortlistLimit !== undefined) updateData.shortlistLimit = data.shortlistLimit;
     if (data.profileSlotLimit !== undefined) updateData.profileSlotLimit = data.profileSlotLimit;
-    if (data.contactAccess !== undefined) updateData.contactAccess = data.contactAccess;
-    if (data.fullHoroscopeAccess !== undefined) updateData.fullHoroscopeAccess = data.fullHoroscopeAccess;
+    if (data.viewDetails !== undefined) updateData.viewDetails = data.viewDetails;
     if (data.printProfile !== undefined) updateData.printProfile = data.printProfile;
     if (data.printHoroscope !== undefined) updateData.printHoroscope = data.printHoroscope;
     if (data.searchLevel !== undefined) updateData.searchLevel = data.searchLevel;
@@ -102,16 +100,16 @@ export class MembershipService {
     adminId: string,
     accountId: string,
     planId: string,
-    notes?: string,
+    options?: { paymentMethod?: PaymentMethod; notes?: string },
   ): Promise<any> {
     const plan = await prisma.membershipPlan.findUnique({ where: { id: planId } });
-    if (!plan) throw new AppError(404, ErrorCodes.MEMBERSHIP_PLAN_NOT_FOUND, 'PLAN_NOT_FOUND');
+    if (!plan) throw new AppError(404, ErrorCodes.MEMBERSHIP_PLAN_NOT_FOUND, ErrorCodes.MEMBERSHIP_PLAN_NOT_FOUND);
     if (plan.status !== 'ACTIVE') {
-      throw new AppError(400, ErrorCodes.MEMBERSHIP_PLAN_INACTIVE, 'PLAN_INACTIVE');
+      throw new AppError(400, ErrorCodes.MEMBERSHIP_PLAN_INACTIVE, ErrorCodes.MEMBERSHIP_PLAN_INACTIVE);
     }
 
     const account = await prisma.account.findUnique({ where: { id: accountId } });
-    if (!account) throw new AppError(404, ErrorCodes.ACCOUNT_NOT_FOUND, 'ACCOUNT_NOT_FOUND');
+    if (!account) throw new AppError(404, ErrorCodes.ACCOUNT_NOT_FOUND, ErrorCodes.ACCOUNT_NOT_FOUND);
 
     await prisma.subscription.updateMany({
       where: { accountId, status: 'ACTIVE' },
@@ -131,6 +129,7 @@ export class MembershipService {
         startedAt: now,
         expiresAt,
         assignedByAdminId: adminId,
+        paymentMethod: options?.paymentMethod ?? null,
         snapshotPlanCode: plan.code,
         snapshotPlanName: plan.displayName,
         snapshotDisplayPrice: plan.displayPrice,
@@ -138,12 +137,11 @@ export class MembershipService {
         snapshotOpenLimit: plan.openLimit,
         snapshotShortlistLimit: plan.shortlistLimit,
         snapshotProfileSlotLimit: plan.profileSlotLimit,
-        snapshotContactAccess: plan.contactAccess,
-        snapshotFullHoroscopeAccess: plan.fullHoroscopeAccess,
+        snapshotViewDetails: plan.viewDetails,
         snapshotPrintProfile: plan.printProfile,
         snapshotPrintHoroscope: plan.printHoroscope,
         snapshotSearchLevel: plan.searchLevel,
-        notes: notes || null,
+        notes: options?.notes || null,
       },
     });
   }
@@ -158,8 +156,7 @@ export class MembershipService {
         openRemaining: -1,
         shortlistLimit: -1,
         profileSlotLimit: -1,
-        contactAccess: true,
-        fullHoroscopeAccess: true,
+        viewDetails: 'FULL' as ViewDetails,
         printProfile: true,
         printHoroscope: true,
         searchLevel: 'FULL' as SearchLevel,
@@ -183,8 +180,7 @@ export class MembershipService {
         openRemaining: 10,
         shortlistLimit: 0,
         profileSlotLimit: 1,
-        contactAccess: false,
-        fullHoroscopeAccess: false,
+        viewDetails: 'BASIC' as ViewDetails,
         printProfile: false,
         printHoroscope: false,
         searchLevel: 'BASIC' as SearchLevel,
@@ -208,14 +204,108 @@ export class MembershipService {
       openRemaining,
       shortlistLimit: sub.snapshotShortlistLimit,
       profileSlotLimit: sub.snapshotProfileSlotLimit,
-      contactAccess: sub.snapshotContactAccess,
-      fullHoroscopeAccess: sub.snapshotFullHoroscopeAccess,
+      viewDetails: sub.snapshotViewDetails,
       printProfile: sub.snapshotPrintProfile,
       printHoroscope: sub.snapshotPrintHoroscope,
       searchLevel: sub.snapshotSearchLevel,
       isActive: sub.status === 'ACTIVE',
       expiresAt: sub.expiresAt,
     };
+  }
+
+  async getPreviousSubscription(accountId: string): Promise<any> {
+    return prisma.subscription.findFirst({
+      where: { accountId, status: 'CANCELLED', expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+      include: { plan: true },
+    });
+  }
+
+  async cancelSubscription(
+    adminId: string,
+    accountId: string,
+    action: 'cancel' | 'revert',
+  ): Promise<any> {
+    const account = await prisma.account.findUnique({ where: { id: accountId } });
+    if (!account) throw new AppError(404, ErrorCodes.ACCOUNT_NOT_FOUND, ErrorCodes.ACCOUNT_NOT_FOUND);
+
+    const currentSub = await prisma.subscription.findFirst({
+      where: { accountId, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!currentSub) {
+      throw new AppError(400, ErrorCodes.SUBSCRIPTION_NOT_FOUND, ErrorCodes.SUBSCRIPTION_NOT_FOUND);
+    }
+
+    await prisma.subscription.updateMany({
+      where: { accountId, status: 'ACTIVE' },
+      data: { status: 'CANCELLED' },
+    });
+
+    const now = new Date();
+
+    if (action === 'revert') {
+      const prevSub = await prisma.subscription.findFirst({
+        where: { accountId, status: 'CANCELLED', id: { not: currentSub.id }, expiresAt: { gt: now } },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!prevSub) {
+        throw new AppError(400, ErrorCodes.NO_REVERTABLE_SUBSCRIPTION, ErrorCodes.NO_REVERTABLE_SUBSCRIPTION);
+      }
+
+      return prisma.subscription.create({
+        data: {
+          accountId,
+          planId: prevSub.snapshotPlanCode === currentSub.snapshotPlanCode ? prevSub.planId : prevSub.planId,
+          status: 'ACTIVE',
+          startedAt: now,
+          expiresAt: prevSub.expiresAt,
+          assignedByAdminId: adminId,
+          snapshotPlanCode: prevSub.snapshotPlanCode,
+          snapshotPlanName: prevSub.snapshotPlanName,
+          snapshotDisplayPrice: prevSub.snapshotDisplayPrice,
+          snapshotDurationDays: prevSub.snapshotDurationDays,
+          snapshotOpenLimit: prevSub.snapshotOpenLimit,
+          snapshotShortlistLimit: prevSub.snapshotShortlistLimit,
+          snapshotProfileSlotLimit: prevSub.snapshotProfileSlotLimit,
+          snapshotViewDetails: prevSub.snapshotViewDetails,
+          snapshotPrintProfile: prevSub.snapshotPrintProfile,
+          snapshotPrintHoroscope: prevSub.snapshotPrintHoroscope,
+          snapshotSearchLevel: prevSub.snapshotSearchLevel,
+          notes: `Reverted from ${currentSub.snapshotPlanName} by admin`,
+        },
+      });
+    }
+
+    const bronze = await prisma.membershipPlan.findUnique({ where: { code: 'BRONZE' } });
+    if (!bronze) {
+      throw new AppError(500, ErrorCodes.MEMBERSHIP_PLAN_NOT_FOUND, ErrorCodes.MEMBERSHIP_PLAN_NOT_FOUND);
+    }
+
+    return prisma.subscription.create({
+      data: {
+        accountId,
+        planId: bronze.id,
+        status: 'ACTIVE',
+        startedAt: now,
+        expiresAt: null,
+        assignedByAdminId: adminId,
+        snapshotPlanCode: bronze.code,
+        snapshotPlanName: bronze.displayName,
+        snapshotDisplayPrice: bronze.displayPrice,
+        snapshotDurationDays: bronze.durationDays,
+        snapshotOpenLimit: bronze.openLimit,
+        snapshotShortlistLimit: bronze.shortlistLimit,
+        snapshotProfileSlotLimit: bronze.profileSlotLimit,
+        snapshotViewDetails: bronze.viewDetails,
+        snapshotPrintProfile: bronze.printProfile,
+        snapshotPrintHoroscope: bronze.printHoroscope,
+        snapshotSearchLevel: bronze.searchLevel,
+        notes: `Cancelled from ${currentSub.snapshotPlanName} by admin`,
+      },
+    });
   }
 
   async getAllSubscriptions(params: {

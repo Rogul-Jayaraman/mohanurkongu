@@ -10,8 +10,7 @@ import { fetchVerificationQueue } from '@/api/verification.api';
 import { AdminProfileCardSkeleton } from '@/components/features/admin/matrimony/ProfileCardSkeleton';
 
 const VerificationQueuePreview: React.FC = () => {
-    const { language } = useLanguage();
-    const isTamil = language === 'ta';
+    const { t } = useLanguage();
     const navigate = useNavigate();
 
     const [data, setData] = React.useState<{ profiles: any[] }>({ profiles: [] });
@@ -25,7 +24,7 @@ const VerificationQueuePreview: React.FC = () => {
     return (
         <div className="w-full space-y-6">
             <SectionHeader 
-                title={isTamil ? 'சரிபார்ப்பு வரிசை' : 'Verification Queue'}
+                title={t('adminMatrimony.verification.queueTitle')}
                 icon={ShieldCheck}
             />
 
@@ -58,7 +57,7 @@ const VerificationQueuePreview: React.FC = () => {
                 </div>
             ) : (
                 <EmptyState 
-                    message={isTamil ? 'சரிபார்ப்பு வரிசை காலியாக உள்ளது' : 'All profiles are verified. Queue cleared.'}
+                    message={t('adminMatrimony.verification.queueCleared')}
                     icon={ShieldCheck}
                 />
             )}

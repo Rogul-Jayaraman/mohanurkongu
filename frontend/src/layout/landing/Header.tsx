@@ -46,7 +46,7 @@ export const Header: React.FC = () => {
                     : 'bg-transparent py-4 border-transparent'
                 }`}
         >
-            <nav className="max-w-7xl mx-auto px-3 sm:px-6 relative flex items-center justify-between min-h-[64px] lg:min-h-[80px]">
+            <nav aria-label="Site header" className="max-w-7xl mx-auto px-3 sm:px-6 relative flex items-center justify-between min-h-[64px] lg:min-h-[80px]">
                 <HeaderLogo isScrolled={isScrolled} closeAll={closeAll} />
                 <HeaderTitle isScrolled={isScrolled} lang={lang} />
                 <HeaderLanguageSwitcher

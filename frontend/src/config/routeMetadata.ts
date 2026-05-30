@@ -29,7 +29,7 @@ const routes: RouteMatch = {
   '/admin/analytics':            { ns: 'analytics', key: 'meta' },
   '/admin/settings':             { ns: 'adminLayout', key: 'meta.settings' },
   '/admin/matrimony/verification':   { ns: 'adminMatrimony', key: 'meta.verification' },
-  '/admin/matrimony/users':          { ns: 'adminMatrimony', key: 'meta.users' },
+  '/admin/matrimony/account':          { ns: 'adminMatrimony', key: 'meta.users' },
   '/admin/matrimony/profiles':       { ns: 'adminMatrimony', key: 'meta.profiles' },
   '/admin/matrimony/membership':     { ns: 'adminMatrimony', key: 'meta.membership' },
   '/admin/mandapam/packages':        { ns: 'adminMandapam', key: 'meta.packages' },
@@ -40,6 +40,7 @@ const routes: RouteMatch = {
 const wildcardRoutes: { prefix: string; meta: RouteMeta }[] = [
   { prefix: '/manamaalai/view-profile', meta: { ns: 'common', key: 'profileView.meta' } },
   { prefix: '/admin/matrimony/profiles', meta: { ns: 'adminLayout', key: 'meta.profile_details' } },
+  { prefix: '/admin/matrimony/account', meta: { ns: 'adminLayout', key: 'meta.account_detail' } },
 ];
 
 export function matchRoute(pathname: string): RouteMeta {

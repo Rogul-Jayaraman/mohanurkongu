@@ -9,6 +9,10 @@ interface FailedRequest {
   reject: (err: unknown) => void;
 }
 
+let _lastAuthRole: 'USER' | 'ADMIN' | null = null;
+export function setLastAuthRole(role: 'USER' | 'ADMIN') { _lastAuthRole = role; }
+export function getLastAuthRole() { return _lastAuthRole; }
+
 let isRefreshing = false;
 let failedQueue: FailedRequest[] = [];
 const MAX_QUEUE_SIZE = 50;
@@ -84,7 +88,7 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const isAdmin = originalRequest.url?.startsWith('/admin');
+      const isAdmin = _lastAuthRole === 'ADMIN';
 
       const tryRefresh = async (): Promise<void> => {
         const refreshUrl = isAdmin ? `${API_BASE}/admin/auth/refresh` : `${API_BASE}/auth/refresh`;

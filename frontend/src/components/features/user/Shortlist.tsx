@@ -28,7 +28,7 @@ const EmptyStateView: React.FC<{
     t: (key: string, opts?: any) => string;
 }> = ({ isSearching, t }) => (
     <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+        <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none" />
         <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
         <div className="w-20 h-20 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mx-auto mb-6">
@@ -60,7 +60,7 @@ const ErrorStateView: React.FC<{
     onRetry: () => void;
 }> = ({ t, onRetry }) => (
     <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/assets/images/kolam-gold.png')] opacity-[0.02] scale-125 pointer-events-none" />
+        <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none" />
         <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
         <div className="w-20 h-20 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mx-auto mb-6">
