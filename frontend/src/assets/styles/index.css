@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Catamaran:wght@400;700&family=Great+Vibes&family=Kavivanar&family=Namdhinggo:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&family=Mukta+Malar:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 @import "tailwindcss";
 
 @theme {
@@ -711,28 +713,5 @@ html[lang="ta"] .otp-input-box {
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid color-mix(in srgb, var(--color-gold), transparent 70%);
   box-shadow: 0 20px 60px rgba(60, 30, 30, 0.12);
-}
-/* --- Skip Link (accessibility) --- */
-.skip-link {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 10000;
-  padding: 12px 24px;
-  background: var(--color-rosewood);
-  color: var(--color-ivory);
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  transform: translateY(-120%);
-  transition: transform 0.15s ease;
-}
-.skip-link:focus {
-  transform: translateY(0);
-  outline: 3px solid var(--color-gold-500);
-}
-/* kolam decorative pattern (SVG replaces missing kolam-gold.png) */
-.bg-kolam-pattern {
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDgwIDgwIj4KICA8cGF0aCBkPSJNNDAgNUw3NSA0MEw0MCA3NUw1IDQwWiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRDRBRjM3IiBzdHJva2Utd2lkdGg9IjAuNSIgb3BhY2l0eT0iMC4yNSIvPgogIDxwYXRoIGQ9Ik00MCAyMEw2MCA0MEw0MCA2MEwyMCA0MFoiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0Q0QUYzNyIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuMTUiLz4KICA8Y2lyY2xlIGN4PSI0MCIgY3k9IjQwIiByPSIyIiBmaWxsPSIjRDRBRjM3IiBvcGFjaXR5PSIwLjM1Ii8+CiAgPGNpcmNsZSBjeD0iNSIgY3k9IjUiIHI9IjEuNSIgZmlsbD0iI0Q0QUYzNyIgb3BhY2l0eT0iMC4yIi8+CiAgPGNpcmNsZSBjeD0iNzUiIGN5PSI1IiByPSIxLjUiIGZpbGw9IiNENEFGMzciIG9wYWNpdHk9IjAuMiIvPgogIDxjaXJjbGUgY3g9IjUiIGN5PSI3NSIgcj0iMS41IiBmaWxsPSIjRDRBRjM3IiBvcGFjaXR5PSIwLjIiLz4KICA8Y2lyY2xlIGN4PSI3NSIgY3k9Ijc1IiByPSIxLjUiIGZpbGw9IiNENEFGMzciIG9wYWNpdHk9IjAuMiIvPgo8L3N2Zz4=");
 }
 /*-----------------------------------------------------------------*/
