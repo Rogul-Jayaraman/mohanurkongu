@@ -8,6 +8,7 @@ import { QuickFilters } from '@/components/ui/table/QuickFilters';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { useAuth } from '@/hooks/useAuth';
 import { useBrowseProfiles } from '@/hooks/useProfileBrowse';
+import { useMyCapabilitiesQuery } from '@/queries/useMembershipQueries';
 import { BrowseProfileFilters, ActiveFilterChips } from '@/components/forms/user/BrowseProfileFilters';
 
 // ═══════════════════════════════════════════════════════════
@@ -183,12 +184,17 @@ const NoResultsView: React.FC<NoResultsViewProps> = ({ isSearching, selectedGend
     const lang = i18n.language === 'ta';
 
     return (
-        <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
-            <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none" />
+        <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none group-hover:scale-150 transition-transform duration-1000" />
             <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
-            <div className="w-24 h-24 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mb-8">
-                <span className="material-symbols-outlined text-5xl">{isSearching ? 'search_off' : 'person_off'}</span>
+            <div className="relative">
+                <div className="w-28 h-28 rounded-2xl bg-linear-to-br from-ivory to-gold/30 text-rosewood border-2 border-gold/20 flex items-center justify-center mx-auto mb-8 shadow-lg shadow-gold/5 group-hover:shadow-gold/20 group-hover:-translate-y-1 transition-all duration-500">
+                    <span className="material-symbols-outlined text-5xl">{isSearching ? 'search_off' : 'person_off'}</span>
+                </div>
+                <div className="absolute -top-2 -right-2 w-8 h-8 rounded-lg bg-rosewood/10 border border-rosewood/20 flex items-center justify-center animate-pulse">
+                    <span className="material-symbols-outlined text-sm text-rosewood/40">filter_alt_off</span>
+                </div>
             </div>
             <h3 className="text-2xl font-serif font-bold text-rosewood mb-3 text-balance max-w-md">
                 {isSearching ? t('dashboard:no_search_results') : t('dashboard:no_profiles_found', { gender: selectedGender === 'FEMALE' ? t('dashboard:bride').toLowerCase() : t('dashboard:groom').toLowerCase() })}
@@ -196,8 +202,11 @@ const NoResultsView: React.FC<NoResultsViewProps> = ({ isSearching, selectedGend
             <p className="text-rosewood/60 text-sm font-medium max-w-sm leading-relaxed mb-8">
                 {isSearching ? t('dashboard:no_search_results_desc') : t('dashboard:no_suggestions')}
             </p>
-            <button onClick={() => window.location.reload()} className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-xs uppercase tracking-widest hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 transition-all duration-300">
-                {t('browse:refresh')}
+            <button onClick={() => window.location.reload()} className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-xs uppercase tracking-widest hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 hover:shadow-lg hover:shadow-rosewood/20 transition-all duration-300 active:scale-[0.97]">
+                <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">refresh</span>
+                    {t('browse:refresh')}
+                </span>
             </button>
         </div>
     );
@@ -214,21 +223,24 @@ const ErrorStateView: React.FC<{
     const lang = i18n.language === 'ta';
 
     return (
-        <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
-            <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none" />
+        <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none group-hover:scale-150 transition-transform duration-1000" />
             <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
-            <div className="w-20 h-20 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mx-auto mb-6">
+            <div className="w-24 h-24 rounded-2xl bg-linear-to-br from-rosewood/10 to-rosewood/5 text-rosewood border-2 border-rosewood/20 flex items-center justify-center mx-auto mb-8 shadow-lg group-hover:shadow-rosewood/10 group-hover:-translate-y-1 transition-all duration-500">
                 <span className="material-symbols-outlined text-4xl">error_outline</span>
             </div>
-            <h3 className="text-xl font-serif font-bold text-rosewood mb-2">
+            <h3 className="text-2xl font-serif font-bold text-rosewood mb-3 text-balance max-w-md">
                 {lang ? t('browse:error_loading_ta', 'ஏதோ தவறு ஏற்பட்டுள்ளது') : t('browse:error_loading')}
             </h3>
             <p className="text-rosewood/60 text-sm font-medium max-w-sm mx-auto leading-relaxed mb-8">
                 {message || t('browse:error_desc')}
             </p>
-            <button onClick={onRetry} className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-xs uppercase tracking-widest hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 transition-all duration-300">
-                {t('browse:try_again')}
+            <button onClick={onRetry} className="px-8 py-3 rounded-xl bg-linear-to-br from-rosewood/80 via-dark-rosewood/95 to-rosewood/80 text-white border border-rosewood/20 font-bold text-xs uppercase tracking-widest hover:shadow-lg hover:shadow-rosewood/20 transition-all duration-300 active:scale-[0.97]">
+                <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">refresh</span>
+                    {t('browse:try_again')}
+                </span>
             </button>
         </div>
     );
@@ -247,21 +259,24 @@ const NoDataView: React.FC<{
         : t('dashboard:groom').toLowerCase();
 
     return (
-        <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden">
-            <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none" />
+        <div className="py-24 md:py-32 bg-white/10 backdrop-blur-2xl border-2 border-gold/20 rounded-xl flex flex-col items-center justify-center text-center px-6 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-kolam-pattern opacity-[0.02] scale-125 pointer-events-none group-hover:scale-150 transition-transform duration-1000" />
             <div className="absolute top-0 right-0 w-48 h-48 bg-gold/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-gold/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
-            <div className="w-20 h-20 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 flex items-center justify-center mx-auto mb-6">
+            <div className="w-24 h-24 rounded-2xl bg-linear-to-br from-ivory to-gold/30 text-rosewood border-2 border-gold/20 flex items-center justify-center mx-auto mb-8 shadow-lg shadow-gold/5 group-hover:shadow-gold/20 group-hover:-translate-y-1 transition-all duration-500">
                 <span className="material-symbols-outlined text-4xl">person_off</span>
             </div>
-            <h3 className="text-xl font-serif font-bold text-rosewood mb-2">
+            <h3 className="text-2xl font-serif font-bold text-rosewood mb-3 text-balance max-w-md">
                 {t('browse:no_profiles_found')}
             </h3>
             <p className="text-rosewood/60 text-sm font-medium max-w-sm mx-auto leading-relaxed mb-8">
                 {t('dashboard:no_suggestions', { gender: genderLabel })}
             </p>
-            <button onClick={() => window.location.reload()} className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-xs uppercase tracking-widest hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 transition-all duration-300">
-                {t('browse:refresh')}
+            <button onClick={() => window.location.reload()} className="px-8 py-3 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood border border-gold/10 font-bold text-xs uppercase tracking-widest hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 hover:shadow-lg hover:shadow-rosewood/20 transition-all duration-300 active:scale-[0.97]">
+                <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">refresh</span>
+                    {t('browse:refresh')}
+                </span>
             </button>
         </div>
     );
@@ -280,14 +295,11 @@ const BrowseProfiles: React.FC = () => {
     const [selectedGender, setSelectedGender] = React.useState<'MALE' | 'FEMALE'>('FEMALE');
     const handleGenderChange = (gender: 'MALE' | 'FEMALE') => { setSelectedGender(gender); };
 
-    // Fetch membership capabilities for search level gating
+    const { data: capsData } = useMyCapabilitiesQuery();
     useEffect(() => {
-      import('@/api/membership.api').then(({ getMyCapabilities }) => {
-        getMyCapabilities().then(({ capabilities }) => {
-          if (capabilities?.searchLevel) setSearchLevel(capabilities.searchLevel);
-        }).catch(() => {});
-      });
-    }, []);
+      const caps = (capsData as any)?.capabilities as { searchLevel?: string } | undefined;
+      if (caps?.searchLevel) setSearchLevel(caps.searchLevel);
+    }, [capsData]);
 
     const {
         profiles,

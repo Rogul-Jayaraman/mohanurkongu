@@ -6,9 +6,10 @@ import { formatFullName, getInitials } from '../../utils/formatName';
 interface HeaderProps {
     onMenuClick: () => void;
     title: string;
+    onBack?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onMenuClick, title }) => {
+export const Header: React.FC<HeaderProps> = ({ onMenuClick, title, onBack }) => {
     const { user, logout } = useAuth();
     const { t } = useLanguage();
 
@@ -21,6 +22,14 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, title }) => {
                 >
                     <span className="material-symbols-outlined">menu</span>
                 </button>
+                {onBack && (
+                  <button
+                    onClick={onBack}
+                    className="p-2 -ml-2 text-rosewood hover:bg-gold-soft/10 rounded-lg transition-colors"
+                  >
+                    <span className="material-symbols-outlined">arrow_back</span>
+                  </button>
+                )}
                 <div className="flex flex-col">
                     <h2 className="text-xl md:text-2xl font-serif font-bold text-rosewood leading-tight truncate max-w-[200px] md:max-w-none">
                         {t(title)}

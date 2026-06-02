@@ -1,0 +1,86 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import {
+  fetchAdminAccounts,
+  fetchAdminAccountDetail,
+  suspendAccount,
+  restoreAccount,
+} from '../api/admin-accounts.api';
+import { adminCancelSubscription, adminAssignSubscription } from '../api/admin-membership.api';
+import { queryKeys } from './queryKeys';
+import { showErrorToast } from './mutationUtils';
+
+export function useAdminAccountsQuery(params: { page: number; search?: string }) {
+  return useQuery({
+    queryKey: ['admin', 'accounts', 'list', params],
+    queryFn: () => fetchAdminAccounts(params),
+    staleTime: 15_000,
+  });
+}
+
+export function useAdminAccountDetailQuery(accountId: string | undefined) {
+  return useQuery({
+    queryKey: accountId ? ['admin', 'account', 'detail', accountId] : ['admin', 'account', 'detail'],
+    queryFn: () => fetchAdminAccountDetail(accountId!),
+    enabled: !!accountId,
+    staleTime: 30_000,
+  });
+}
+
+export function useSuspendAccountMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; reasonEn: string; reasonTa?: string }) =>
+      suspendAccount(args.id, args.reasonEn, args.reasonTa),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['admin', 'account', 'detail', id] });
+      qc.invalidateQueries({ queryKey: queryKeys.profile.adminLists(), refetchType: 'none' });
+      toast.success('Account suspended');
+    },
+    onError: (err) => showErrorToast(err, 'Could not suspend account'),
+  });
+}
+
+export function useRestoreAccountMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => restoreAccount(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['admin', 'account', 'detail', id] });
+      qc.invalidateQueries({ queryKey: queryKeys.profile.adminLists(), refetchType: 'none' });
+      toast.success('Account restored');
+    },
+    onError: (err) => showErrorToast(err, 'Could not restore account'),
+  });
+}
+
+export function useAdminCancelSubscriptionMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; action: 'cancel' | 'revert' }) =>
+      adminCancelSubscription(args.id, args.action),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['admin', 'account', 'detail', id] });
+      qc.invalidateQueries({ queryKey: queryKeys.membership.all, refetchType: 'none' });
+      toast.success('Subscription updated');
+    },
+    onError: (err) => showErrorToast(err, 'Could not update subscription'),
+  });
+}
+
+export function useAdminAssignSubscriptionMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      accountId: string;
+      planId: string;
+      options?: { paymentMethod?: 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE' | 'OTHER'; notes?: string };
+    }) => adminAssignSubscription(args.accountId, args.planId, args.options),
+    onSuccess: (_data, { accountId }) => {
+      qc.invalidateQueries({ queryKey: ['admin', 'account', 'detail', accountId] });
+      qc.invalidateQueries({ queryKey: queryKeys.membership.all, refetchType: 'none' });
+      toast.success('Plan assigned');
+    },
+    onError: (err) => showErrorToast(err, 'Could not assign plan'),
+  });
+}

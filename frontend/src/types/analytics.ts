@@ -1,29 +1,17 @@
-export interface OverviewMetric {
-  value: number;
-  change: number;
-}
-
 export interface ManamaalaiAnalytics {
   overview: {
     activeProfiles: number;
     pendingVerifications: number;
     newRegistrations7d: number;
     activeMemberships: number;
-    activeProfilesWoW: number;
-    pendingVerificationsWoW: number;
-    newRegistrationsWoW: number;
-    activeMembershipsWoW: number;
   };
-  profileGrowth: { date: string; count: number; movingAvg: number }[];
-  membershipDistribution: { plan: string; count: number; percentage: number }[];
+  profileGrowth: { date: string; count: number }[];
   demographicsRadar: {
     labels: string[];
     male: number[];
     female: number[];
   };
   ageGenderMatrix: { bucket: string; male: number; female: number }[];
-  activityCalendar: { date: string; count: number }[];
-  communityTreemap: { name: string; value: number }[];
   profileStatusStack: {
     date: string;
     draft: number;
@@ -32,6 +20,15 @@ export interface ManamaalaiAnalytics {
     rejected: number;
     archived: number;
   }[];
+  membershipRevenue: {
+    mrr: number;
+    arr: number;
+    arpu: number;
+    churnRate: number;
+  };
+  membershipFunnel: { stage: string; count: number }[];
+  membershipPlanDistribution: { plan: string; count: number; percentage: number }[];
+  renewalForecast: { bucket: string; silver: number; gold: number; platinum: number }[];
 }
 
 export interface MandapamAnalytics {
@@ -68,48 +65,4 @@ export interface MandapamAnalytics {
     forecast: number;
     next30Days: { date: string; status: string }[];
   };
-}
-
-export interface MembershipAnalytics {
-  overview: {
-    mrr: number;
-    arr: number;
-    avgRevenuePerUser: number;
-    churnRate: number;
-    mrrWoW: number;
-    arrWoW: number;
-    arpuWoW: number;
-    churnWoW: number;
-  };
-  mrrTrend: { month: string; mrr: number }[];
-  planDistribution: { plan: string; count: number }[];
-  churnRiskScatter: {
-    plan: string;
-    daysSinceLogin: number;
-    daysToExpiry: number;
-    value: number;
-  }[];
-  expiryForecast: {
-    bucket: string;
-    bronze: number;
-    silver: number;
-    gold: number;
-    platinum: number;
-  }[];
-}
-
-export interface OperationsAnalytics {
-  overview: {
-    queueSize: number;
-    avgTAT: number;
-    slaCompliance: number;
-    approvalsToday: number;
-    tatWoW: number;
-    slaWoW: number;
-  };
-  queueTrend: { date: string; incoming: number; resolved: number; pending: number }[];
-  verificationTimeDist: { label: string; count: number }[];
-  queueAging: { label: string; count: number }[];
-  approvalTrend: { date: string; approved: number; rejected: number; approvalRate: number }[];
-  rejectionReasons: { reason: string; count: number }[];
 }

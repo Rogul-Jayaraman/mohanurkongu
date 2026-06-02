@@ -13,9 +13,9 @@ const ICONS = [
     'kitchen', 'bathtub', 'deck', 'outdoor_grill', 'music_note', 'videocam',
     'mic', 'theater_comedy', 'stadium', 'pool', 'child_care', 'accessible',
     'elevator', 'escalator', 'security', 'smoke_free', 'fire_extinguisher', 'eco',
-    'light', 'sound', 'restaurant', 'cake', 'diamond', 'star',
+    'light', 'surround_sound', 'restaurant', 'cake', 'diamond', 'star',
     'favorite', 'celebration', 'nightlight', 'sunny', 'cloud', 'water',
-    'forest', 'cabin', 'festival', 'spa', 'dance', 'camera_alt',
+    'forest', 'cabin', 'festival', 'spa', 'self_improvement', 'camera_alt',
     'album', 'auto_awesome', 'villa', 'home', 'business', 'checkroom',
     'luggage', 'pets', 'set_meal', 'brunch_dining'
 ];

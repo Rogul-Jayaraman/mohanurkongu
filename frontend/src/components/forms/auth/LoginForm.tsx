@@ -7,9 +7,9 @@ import { PasswordField } from '@/components/ui/forms/PasswordField';
 import { validateLogin, type LoginData } from '@/utils/validation';
 import { toast } from 'sonner';
 import { useTranslations } from '@/hooks/useTranslations';
-import * as authApi from '@/api/auth.api';
 import { isAppError, isValidationError, getFieldError, getErrorMessage } from '@/lib/errors';
 import { Spinner } from '@/components/ui/feedback/Spinner';
+import { useLoginMutation } from '@/queries/useAuthMutations';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -28,13 +28,14 @@ export const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const auth = useAuth();
   const { t, translateError } = useTranslations(['auth', 'errors']);
-  const [isPending, setIsPending] = useState(false);
+  const loginMutation = useLoginMutation();
   const [formData, setFormData] = useState<LoginData>({
     identifier: '',
     password: '',
   });
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof LoginData, string>>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const isPending = loginMutation.isPending;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -55,9 +56,8 @@ export const LoginForm: React.FC = () => {
       return;
     }
 
-    setIsPending(true);
     try {
-      const result = await authApi.login({
+      const result = await loginMutation.mutateAsync({
         identifier: formData.identifier,
         password: formData.password,
       });
@@ -86,8 +86,6 @@ export const LoginForm: React.FC = () => {
       } else {
         setGeneralError(getErrorMessage(err));
       }
-    } finally {
-      setIsPending(false);
     }
   };
 

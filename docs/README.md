@@ -16,6 +16,7 @@
 - [BUSINESS_RULES](./BUSINESS_RULES.md) — State machines, validation, permissions
 - [KNOWN_LIMITATIONS](./KNOWN_LIMITATIONS.md) — Gaps, stubs, unimplemented paths
 - [architecture/](./architecture/) — Context, component, sequence, deployment diagrams
+- [BOOKING_ARCHITECTURE](./architecture.md) — Booking system architecture (20 diagrams)
 - [config/ENVIRONMENT.md](./config/ENVIRONMENT.md) — Environment variables reference
 - [deployment/](./deployment/) — Deployment, rollback, backup, monitoring, runbook
 - [database/](./database/) — Schema, ERD, data rules, migration guide
@@ -23,12 +24,15 @@
 - [quality/](./quality/) — Bug reports, regression matrix, risk register
 - [incidents/](./incidents/) — Incident history, postmortems, recovery plans
 - [adr/](./adr/) — Architecture Decision Records
+- [architecture/CACHE_ARCHITECTURE](./architecture/CACHE_ARCHITECTURE.md) — 3-layer cache (Redis + React Query + DB) with permission isolation
+- [features/CACHE_MUTATIONS](./features/CACHE_MUTATIONS.md) — Cache mutation feature workflow (which mutations invalidate which keys)
 
 ## Documentation Coverage
 
 | Category | Coverage | Missing |
 |---|---|---|
 | Architecture | 100% | — |
+| Caching | 100% | — (Phase 0-1 in progress) |
 | API Contracts | 100% (auth) | 0% (profiles, admin, mandapam — no backend) |
 | Database | 100% | — |
 | Deployment | 90% | CI/CD pipeline TBD |

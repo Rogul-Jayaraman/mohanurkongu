@@ -94,13 +94,15 @@ export class ProfileUpsertService {
     }
   }
 
-  async upsertSections(tx: any, profileId: string, sections: any, photos: any, translations: any) {
+  async upsertSections(tx: any, profileId: string, sections: any, photos: any, translations: any, isUpdate = false) {
     if (sections.basic !== undefined && sections.basic !== null) {
       const data = this.mapBasicData(sections.basic);
-      if (data.heightId !== undefined) {
+      if (data.heightId !== undefined && !(isUpdate && data.heightId === '')) {
         const h = await tx.height.findUnique({ where: { valueCm: data.heightId } });
         if (!h) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         data.heightId = h.id;
+      } else if (isUpdate && data.heightId === '') {
+        delete data.heightId;
       }
       const locationFields = ['currentDistrict', 'currentTaluk', 'currentCityEn', 'currentCityTa',
         'currentStateEn', 'currentStateTa', 'currentCountryEn', 'currentCountryTa',
@@ -109,7 +111,7 @@ export class ProfileUpsertService {
       if (hasLocationData) {
         for (const prefix of ['current', 'native']) {
           const district = sections.basic[`${prefix}District`];
-          if (district !== undefined && district !== null) {
+          if (district !== undefined && district !== null && !(isUpdate && district === '')) {
             const isOther = district === 'OTHER';
             let locationId;
             if (isOther) {
@@ -170,13 +172,18 @@ export class ProfileUpsertService {
           if (!pf) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
           data.profileForId = pf.id;
         }
-        const required = ['profileForId', 'gender', 'dob', 'diet', 'heightId'];
-        const hasRequired = required.every(f => data[f] !== undefined && data[f] !== null);
-        if (hasRequired) {
+        const existingBasic = await tx.profileBasic.findUnique({ where: { profileId } });
+        if (existingBasic) {
+          await tx.profileBasic.update({ where: { profileId }, data });
+        } else {
+          const required = ['profileForId', 'gender', 'dob', 'diet', 'heightId'];
+          const hasRequired = required.every(f => data[f] !== undefined && data[f] !== null);
+          if (!hasRequired) {
+            throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'Missing required basic fields');
+          }
           const { profileForId, heightId, currentLocationId, nativeLocationId, ...rest } = data;
-          await tx.profileBasic.upsert({
-            where: { profileId },
-            create: {
+          await tx.profileBasic.create({
+            data: {
               profile: { connect: { id: profileId } },
               profileFor: { connect: { id: profileForId } },
               height: { connect: { id: heightId } },
@@ -184,7 +191,6 @@ export class ProfileUpsertService {
               ...(nativeLocationId != null ? { nativeLocation: { connect: { id: nativeLocationId } } } : {}),
               ...rest,
             },
-            update: data,
           });
         }
       }
@@ -193,13 +199,13 @@ export class ProfileUpsertService {
     if (sections.community !== undefined && sections.community !== null) {
       const d = sections.community;
       const cleaned: any = {};
-      if (d.community !== undefined && d.community !== null) {
+      if (d.community !== undefined && d.community !== null && !(isUpdate && d.community === '')) {
         const com = await tx.community.findUnique({ where: { code: d.community } });
         if (!com) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         cleaned.communityId = com.id;
       }
       if (d.communityId !== undefined) cleaned.communityId = d.communityId;
-      if (d.caste !== undefined && d.caste !== null) {
+      if (d.caste !== undefined && d.caste !== null && !(isUpdate && d.caste === '')) {
         if (cleaned.communityId != null) {
           const ca = await tx.caste.findFirst({ where: { communityId: cleaned.communityId, code: d.caste } });
           if (!ca) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
@@ -210,7 +216,7 @@ export class ProfileUpsertService {
         }
       }
       if (d.casteId !== undefined) cleaned.casteId = d.casteId;
-      if (d.kulam !== undefined && d.kulam !== null) {
+      if (d.kulam !== undefined && d.kulam !== null && !(isUpdate && d.kulam === '')) {
         const kl = await tx.kulam.findUnique({ where: { code: d.kulam } });
         if (!kl) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         cleaned.kulamId = kl.id;
@@ -236,7 +242,7 @@ export class ProfileUpsertService {
       const d = sections.professional;
       const data: any = {};
       if (d.education !== undefined) data.education = d.education;
-      if (d.jobSector !== undefined && d.jobSector !== null) {
+      if (d.jobSector !== undefined && d.jobSector !== null && !(isUpdate && d.jobSector === '')) {
         const js = await tx.jobSector.findUnique({ where: { code: d.jobSector } });
         if (!js) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         data.jobSectorId = js.id;
@@ -288,19 +294,19 @@ export class ProfileUpsertService {
       if (data.mode !== undefined) {
         cleaned.mode = data.mode;
       }
-      if (data.rasi !== undefined && data.rasi !== null) {
+      if (data.rasi !== undefined && data.rasi !== null && !(isUpdate && data.rasi === '')) {
         const r = await tx.rasi.findUnique({ where: { code: data.rasi } });
         if (!r) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         cleaned.rasiId = r.id;
       }
       if (data.rasiId !== undefined) cleaned.rasiId = data.rasiId;
-      if (data.nakshatra !== undefined && data.nakshatra !== null) {
+      if (data.nakshatra !== undefined && data.nakshatra !== null && !(isUpdate && data.nakshatra === '')) {
         const n = await tx.nakshatra.findUnique({ where: { code: data.nakshatra } });
         if (!n) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         cleaned.nakshatraId = n.id;
       }
       if (data.nakshatraId !== undefined) cleaned.nakshatraId = data.nakshatraId;
-      if (data.lagna !== undefined && data.lagna !== null) {
+      if (data.lagna !== undefined && data.lagna !== null && !(isUpdate && data.lagna === '')) {
         const l = await tx.lagna.findUnique({ where: { code: data.lagna } });
         if (!l) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
         cleaned.lagnaId = l.id;
@@ -382,10 +388,12 @@ export class ProfileUpsertService {
     if (sections.partnerPreference !== undefined && sections.partnerPreference !== null) {
       const data = this.mapPartnerPreferenceData(sections.partnerPreference);
       for (const key of ['heightMinId', 'heightMaxId']) {
-        if (data[key] != null) {
+        if (data[key] != null && !(isUpdate && data[key] === '')) {
           const h = await tx.height.findUnique({ where: { valueCm: data[key] } });
           if (!h) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, ErrorCodes.VALIDATION_ERROR);
           data[key] = h.id;
+        } else if (isUpdate && data[key] === '') {
+          delete data[key];
         }
       }
       if (Object.keys(data).length > 0) {

@@ -47,17 +47,26 @@ const BiodataHeader: React.FC<{ isTamil: boolean; profileId: string }> = ({ isTa
 const BiodataBasicDetail: React.FC<{
     name: string; dob: string; age: string; gender: string;
     height: string; weight: string; bloodGroup: string;
-    currentLocation: string; isTamil: boolean;
-}> = ({ name, dob, age, gender, height, weight, bloodGroup, currentLocation, isTamil }) => (
-    <div className="grid grid-cols-2 gap-y-0 mb-[-12px]">
-        <DetailItem label={isTamil ? 'பெயர்' : 'Name'} value={name} />
-        <DetailItem label={isTamil ? 'பிறந்த தேதி' : 'DOB'} value={dob} />
-        <DetailItem label={isTamil ? 'வயது' : 'Age'} value={`${age} yrs`} />
-        <DetailItem label={isTamil ? 'பாலினம்' : 'Gender'} value={gender} />
-        <DetailItem label={isTamil ? 'உயரம்' : 'Height'} value={height} />
-        <DetailItem label={isTamil ? 'எடை' : 'Weight'} value={weight} />
-        <DetailItem label={isTamil ? 'இரத்த வகை' : 'Blood Group'} value={bloodGroup} />
-        <DetailItem label={isTamil ? 'தற்போதைய இடம்' : 'Current Location'} value={currentLocation} />
+    currentLocation: string; isTamil: boolean; profilePhotoUrl?: string;
+}> = ({ name, dob, age, gender, height, weight, bloodGroup, currentLocation, isTamil, profilePhotoUrl }) => (
+    <div className="flex gap-6 mb-4 p-4 border border-gray-200">
+        <div className="flex-1 grid grid-cols-2 gap-y-0">
+            <DetailItem label={isTamil ? 'பெயர்' : 'Name'} value={name} />
+            <DetailItem label={isTamil ? 'பிறந்த தேதி' : 'DOB'} value={dob} />
+            <DetailItem label={isTamil ? 'வயது' : 'Age'} value={`${age} yrs`} />
+            <DetailItem label={isTamil ? 'பாலினம்' : 'Gender'} value={gender} />
+            <DetailItem label={isTamil ? 'உயரம்' : 'Height'} value={height} />
+            <DetailItem label={isTamil ? 'எடை' : 'Weight'} value={weight} />
+            <DetailItem label={isTamil ? 'இரத்த வகை' : 'Blood Group'} value={bloodGroup} />
+            <DetailItem label={isTamil ? 'தற்போதைய இடம்' : 'Current Location'} value={currentLocation} />
+        </div>
+        {profilePhotoUrl && (
+            <div className="shrink-0">
+                <div className="w-32 h-40 border border-gray-200 overflow-hidden bg-white">
+                    <img src={profilePhotoUrl} alt={name} className="w-full h-full object-cover" />
+                </div>
+            </div>
+        )}
     </div>
 );
 
@@ -67,7 +76,7 @@ const BiodataPersonalInfo: React.FC<{
     fatherName: string; motherName: string; fatherJob: string;
     motherJob: string; brothers: number; sisters: number; isTamil: boolean;
 }> = ({ education, occupation, monthlyIncome, residence, jobLocation, nativeLocation, fatherName, motherName, fatherJob, motherJob, brothers, sisters, isTamil }) => (
-    <>
+    <div className="p-4 border border-gray-200">
         <SectionHeader title={isTamil ? 'தனிப்பட்ட தகவல்கள்' : 'Personal Information'} />
         <div className="grid grid-cols-2">
             <DetailItem label={isTamil ? 'கல்வி' : 'Education'} value={education} />
@@ -83,16 +92,16 @@ const BiodataPersonalInfo: React.FC<{
             <DetailItem label={isTamil ? 'சகோதரர்கள்' : 'Brothers'} value={brothers.toString()} />
             <DetailItem label={isTamil ? 'சகோதரிகள்' : 'Sisters'} value={sisters.toString()} />
         </div>
-    </>
+    </div>
 );
 
 const BiodataCommunity: React.FC<{
     caste: string; kulam: string; community: string;
     kuladeivam: string; isTamil: boolean;
 }> = ({ caste, kulam, community, kuladeivam, isTamil }) => (
-    <div className="mt-2">
+    <div className="p-4 border border-gray-200">
         <SectionHeader title={isTamil ? 'சமுதாய விவரங்கள்' : 'Community Details'} />
-        <div className="grid grid-cols-2 mb-4">
+        <div className="grid grid-cols-2">
             <DetailItem label={isTamil ? 'சாதி' : 'Caste'} value={caste} />
             <DetailItem label={isTamil ? 'குலம்' : 'Kulam'} value={kulam} />
             <DetailItem label={isTamil ? 'சமூகம்' : 'Community'} value={community} />
@@ -107,7 +116,7 @@ const BiodataJathagam: React.FC<{
     getImageUrl: (url: string | null | undefined) => string | null;
     parseHoroscopeData: (data: any) => any;
 }> = ({ star, rasi, lagna, dosham, horoscope, isTamil, mode, getImageUrl, parseHoroscopeData }) => (
-    <div className="mt-[-6px]">
+    <div className="p-4 border border-gray-200">
         <SectionHeader title={isTamil ? 'ஜாதக விவரங்கள்' : 'Jathagam Details'} />
         <div className="grid grid-cols-2 mb-4">
             <DetailItem label={isTamil ? 'நட்சத்திரம்' : 'Star'} value={star} />
@@ -124,13 +133,15 @@ const BiodataJathagam: React.FC<{
                     return (
                         <>
                             <div className="flex flex-col items-center">
+                                <span className="text-[9px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'ராசி' : 'RASI'}</span>
                                 <div className="w-full max-w-[280px] chart-container">
-                                    <SouthIndianChart lagnaSignIndex={result.lagna.signIndex} planets={result.planets} rotateHouses={true} title={isTamil ? 'ராசி' : 'Rasi'} />
+                                    <SouthIndianChart lagnaSignIndex={result.lagna.signIndex} planets={result.planets} rotateHouses={true} />
                                 </div>
                             </div>
                             <div className="flex flex-col items-center">
+                                <span className="text-[9px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'நவாம்சம்' : 'NAVAMSA'}</span>
                                 <div className="w-full max-w-[280px] chart-container">
-                                    <SouthIndianChart lagnaSignIndex={result.lagnaNavamsa.signIndex} planets={d9Planets} rotateHouses={false} title={isTamil ? 'நவாம்சம்' : 'Navamsa'} />
+                                    <SouthIndianChart lagnaSignIndex={result.lagnaNavamsa.signIndex} planets={d9Planets} rotateHouses={false} />
                                 </div>
                             </div>
                         </>
@@ -139,6 +150,7 @@ const BiodataJathagam: React.FC<{
             ) : (
                 <>
                     <div className="flex flex-col items-center">
+                        <span className="text-[9px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'ராசி' : 'RASI'}</span>
                         <div className="w-full max-w-[280px] chart-container">
                             {horoscope?.rasi?.url ? (
                                     <div className="w-full h-full border border-gray-200 bg-white flex items-center justify-center p-2">
@@ -155,6 +167,7 @@ const BiodataJathagam: React.FC<{
                         </div>
                     </div>
                     <div className="flex flex-col items-center">
+                        <span className="text-[9px] font-bold text-gray-500 mb-2 uppercase tracking-[.3em]">{isTamil ? 'நவாம்சம்' : 'NAVAMSA'}</span>
                         <div className="w-full max-w-[280px] chart-container">
                             {horoscope?.navamsa?.url ? (
                                     <div className="w-full h-full border border-gray-200 bg-white flex items-center justify-center p-2">
@@ -215,7 +228,7 @@ const PrintProfile: React.FC<{ profile: any }> = ({ profile }) => {
     const nativeLocation = getLocationLabel(profile.nativeDistrictEn || profile.nativeDistrict, profile.nativeTaluk || undefined, profile.nativeDistrictTa, profile.nativeTalukTa) || '-';
     const residence = profile.residence ? getEnumLabel(profile.residence, RESIDENCE_OPTIONS) : '-';
 
-    const lateSuffix = isTamil ? ` (${t('common:is_late', { defaultValue: 'மறைவு' })})` : ' (Late)';
+    const lateSuffix = isTamil ? ` (${t('profile_new:is_late', { defaultValue: 'மறைவு' })})` : ' (Late)';
     const fatherNameRaw = (isTamil ? (profile.fatherNameTa || profile.fatherNameEn) : profile.fatherNameEn) || '-';
     const fatherName = profile.fatherIsLate ? `${fatherNameRaw}${lateSuffix}` : fatherNameRaw;
     const fatherJob = (isTamil ? (profile.fatherJobTa || profile.fatherJob) : profile.fatherJob) || '-';
@@ -230,6 +243,12 @@ const PrintProfile: React.FC<{ profile: any }> = ({ profile }) => {
     const kulam = profile.kulam ? getEnumLabel(profile.kulam, KULAM_OPTIONS) : '-';
     const kuladeivam = (isTamil ? (profile.kuladeivamTa || profile.kuladeivamEn) : profile.kuladeivamEn) || '-';
 
+    const profilePhotoUrl = profile.profilePhoto
+      ? (typeof profile.profilePhoto === 'object' && profile.profilePhoto?.url
+          ? getImageUrl(profile.profilePhoto.url)
+          : getImageUrl(profile.profilePhoto as string)) || ''
+      : '';
+
     const lang = i18n.language as 'en' | 'ta';
     const star = profile.star ? getBilingualValue(NAKSHATRA_OPTIONS, profile.star, lang) : '-';
     const rasiComputed = profile.rasi ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang) : '-';
@@ -242,13 +261,16 @@ const PrintProfile: React.FC<{ profile: any }> = ({ profile }) => {
 
                 <BiodataHeader isTamil={isTamil} profileId={profile.profileId || profile.id?.slice(-4).toUpperCase()} />
 
-                <div className='w-full h-[1.5px] bg-gold mb-2'></div>
+                <div className='w-full h-[1.5px] bg-gold mb-4'></div>
 
                 <BiodataBasicDetail
                     name={name} dob={dob} age={age} gender={gender}
                     height={height} weight={weight} bloodGroup={bloodGroup}
                     currentLocation={currentLocation} isTamil={isTamil}
+                    profilePhotoUrl={profilePhotoUrl}
                 />
+
+                <div className="mb-4" />
 
                 <BiodataPersonalInfo
                     education={education} occupation={occupation}
@@ -259,11 +281,15 @@ const PrintProfile: React.FC<{ profile: any }> = ({ profile }) => {
                     brothers={brothers} sisters={sisters} isTamil={isTamil}
                 />
 
+                <div className="mb-4" />
+
                 <BiodataCommunity
                     caste={caste} kulam={kulam}
                     community={community} kuladeivam={kuladeivam}
                     isTamil={isTamil}
                 />
+
+                <div className="mb-4" />
 
                 <BiodataJathagam
                     star={star} rasi={rasiComputed} lagna={lagna} dosham={dosham}
@@ -308,9 +334,10 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
     const bloodGroup = profile.bloodGroup ? getEnumLabel(profile.bloodGroup, BLOOD_GROUP_OPTIONS) : '-';
     const currentLocation = getLocationLabel(profile.currentDistrictEn || profile.currentDistrict, profile.currentTaluk || profile.currentCityEn, profile.currentDistrictTa, profile.currentTalukTa, profile.currentCityEn, profile.currentStateEn, profile.currentCountryEn, profile.currentCityTa, profile.currentStateTa, profile.currentCountryTa) || '-';
 
-    const star = profile.star ? getEnumLabel(profile.star, NAKSHATRA_OPTIONS) : '-';
-    const rasiComputed = profile.rasi ? getEnumLabel(profile.rasi, RASI_OPTIONS) : '-';
-    const lagna = profile.lagnam ? getEnumLabel(profile.lagnam, RASI_OPTIONS) : '-';
+    const lang = i18n.language as 'en' | 'ta';
+    const star = profile.star ? getBilingualValue(NAKSHATRA_OPTIONS, profile.star, lang) : '-';
+    const rasiComputed = profile.rasi ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang) : '-';
+    const lagna = profile.lagnam ? getBilingualValue(RASI_OPTIONS, profile.lagnam, lang) : '-';
     const dosham = profile.dosham ? getEnumLabel(profile.dosham, DOSHAM_OPTIONS) : '-';
 
     const parseHoroscopeData = (data: any) => {
@@ -322,20 +349,29 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
         return data;
     };
 
+    const profilePhotoUrl = profile.profilePhoto
+      ? (typeof profile.profilePhoto === 'object' && profile.profilePhoto?.url
+          ? getImageUrl(profile.profilePhoto.url)
+          : getImageUrl(profile.profilePhoto as string)) || ''
+      : '';
+
     return (
         <div id="jathagam-print-layout" className="min-h-screen font-sans text-gray-900 p-6 flex justify-center items-start bg-white">
             <div className="w-[794px] min-h-[1123px] bg-white p-8 box-border flex flex-col relative overflow-hidden">
 
                 <BiodataHeader isTamil={isTamil} profileId={profile.profileId || profile.id?.slice(-4).toUpperCase()} />
 
-                <div className='w-full h-[1.5px] bg-gold mb-2'></div>
+                <div className='w-full h-[1.5px] bg-gold mb-4'></div>
 
                 <BiodataBasicDetail
                     name={name} dob={dob} age={age} gender={gender}
                     height={height} weight={weight} bloodGroup={bloodGroup}
                     currentLocation={currentLocation} isTamil={isTamil}
+                    profilePhotoUrl={profilePhotoUrl}
                 />
-<div className='w-full h-[1.5px] my-4'></div>
+
+                <div className="mb-4" />
+
                 <BiodataJathagam
                     star={star} rasi={rasiComputed} lagna={lagna} dosham={dosham}
                     horoscope={profile.horoscope} isTamil={isTamil}

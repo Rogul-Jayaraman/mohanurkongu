@@ -21,14 +21,15 @@ const adminMutationLimiter = rateLimit({
 export function createAdminProfilesRoutes(controller: AdminProfilesController): Router {
   const router = Router();
 
-  router.use(requireSession, requireRole('ADMIN'));
+  router.use(requireSession);
 
-  router.get('/profiles', controller.list);
-  router.get('/profiles/:id', controller.detail);
-  router.put('/profiles/:id', adminMutationLimiter, controller.update);
-  router.post('/profiles/:id/archive', adminMutationLimiter, controller.archive);
-  router.post('/profiles/:id/restore', adminMutationLimiter, controller.restore);
-  router.post('/profiles/:id/delete', adminMutationLimiter, controller.deleteProfile);
+  router.get('/profiles', requireRole('ADMIN'), controller.list);
+  router.get('/profiles/:id', requireRole('ADMIN'), controller.detail);
+  router.get('/profiles/:id/audit', requireRole('ADMIN'), controller.audit);
+  router.put('/profiles/:id', requireRole('ADMIN'), adminMutationLimiter, controller.update);
+  router.post('/profiles/:id/archive', requireRole('ADMIN'), adminMutationLimiter, controller.archive);
+  router.post('/profiles/:id/restore', requireRole('ADMIN'), adminMutationLimiter, controller.restore);
+  router.post('/profiles/:id/delete', requireRole('ADMIN'), adminMutationLimiter, controller.deleteProfile);
 
   return router;
 }

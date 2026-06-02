@@ -1,48 +1,46 @@
-import { useState, useEffect, useCallback } from 'react';
-import { listPlans, getMySubscription, getMyCapabilities } from '@/api/membership.api';
+import { useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  useMembershipPlansQuery,
+  useMySubscriptionQuery,
+  useMyCapabilitiesQuery,
+} from '@/queries/useMembershipQueries';
+import { queryKeys } from '@/queries/queryKeys';
 import type { MembershipPlan, SubscriptionInfo, MembershipCapabilities } from '@/api/membership.api';
 
 export function useMembership() {
-  const [plans, setPlans] = useState<MembershipPlan[]>([]);
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
-  const [capabilities, setCapabilities] = useState<MembershipCapabilities | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const qc = useQueryClient();
+  const plansQuery = useMembershipPlansQuery();
+  const subQuery = useMySubscriptionQuery();
+  const capsQuery = useMyCapabilitiesQuery();
 
-  const fetchPlans = useCallback(async () => {
-    try {
-      const { plans: data } = await listPlans();
-      setPlans(data);
-    } catch {
-      // non-critical
-    }
-  }, []);
+  const plans: MembershipPlan[] = (plansQuery.data as any)?.plans ?? [];
+  const subscription: SubscriptionInfo | null = (subQuery.data as any)?.subscription ?? null;
+  const capabilities: MembershipCapabilities | null =
+    (subQuery.data as any)?.capabilities ??
+    ((capsQuery.data as any)?.capabilities as MembershipCapabilities) ??
+    null;
 
-  const fetchSubscription = useCallback(async () => {
-    try {
-      const { subscription: sub, capabilities: caps } = await getMySubscription();
-      setSubscription(sub);
-      setCapabilities(caps);
-    } catch {
-      // non-critical
-    }
-  }, []);
+  const loading = plansQuery.isPending || subQuery.isPending;
+  const error = plansQuery.error
+    ? (plansQuery.error as Error).message
+    : subQuery.error
+    ? (subQuery.error as Error).message
+    : null;
 
   const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      await Promise.all([fetchPlans(), fetchSubscription()]);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to load membership data');
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchPlans, fetchSubscription]);
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: queryKeys.membership.plans() }),
+      qc.invalidateQueries({ queryKey: queryKeys.membership.mine() }),
+      qc.invalidateQueries({ queryKey: queryKeys.membership.caps() }),
+    ]);
+  }, [qc]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (!plansQuery.isFetched && !plansQuery.isPending) {
+      plansQuery.refetch();
+    }
+  }, []);
 
   return { plans, subscription, capabilities, loading, error, refresh };
 }

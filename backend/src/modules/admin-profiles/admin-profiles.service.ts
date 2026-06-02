@@ -13,11 +13,20 @@ export class AdminProfilesService {
     private readonly storageService?: StorageService,
   ) {}
 
-  async listProfiles(params: { page: number; limit: number; search?: string; status?: string }) {
+  async listProfiles(params: {
+    page: number; limit: number; search?: string; status?: string;
+    sortBy?: string; sortOrder?: string; communityId?: string; regNo?: string;
+    createdAtFrom?: string; createdAtTo?: string;
+  }) {
     const page = Math.max(1, params.page);
     const limit = Math.min(100, Math.max(1, params.limit));
 
-    const result = await this.repo.findAll({ page, limit, search: params.search, status: params.status });
+    const result = await this.repo.findAll({
+      page, limit, search: params.search, status: params.status,
+      sortBy: params.sortBy, sortOrder: params.sortOrder,
+      communityId: params.communityId, regNo: params.regNo,
+      createdAtFrom: params.createdAtFrom, createdAtTo: params.createdAtTo,
+    });
 
     const profiles = result.profiles.map((p: any) => {
       const en = p.translations?.find((t: any) => t.language === 'EN');
@@ -295,7 +304,7 @@ export class AdminProfilesService {
     await this.upsertService.resolveUploadTokensInDto(dto);
 
     return prisma.$transaction(async (tx) => {
-      await this.upsertService.upsertSections(tx, profileId, sections, photos, translations);
+      await this.upsertService.upsertSections(tx, profileId, sections, photos, translations, true);
 
       await tx.profileStateHistory.create({
         data: {
@@ -303,6 +312,14 @@ export class AdminProfilesService {
           changedByAccountId: adminId,
           fromStatus: 'PENDING',
           toStatus: 'PENDING',
+        },
+      });
+
+      await tx.profileReview.create({
+        data: {
+          profileId,
+          reviewerId: adminId,
+          action: 'UPDATE',
         },
       });
 
@@ -352,6 +369,16 @@ export class AdminProfilesService {
         },
       });
 
+      await tx.profileReview.create({
+        data: {
+          profileId,
+          reviewerId: adminId,
+          action: 'ARCHIVE',
+          reasonEn: dto.reasonEn,
+          reasonTa: dto.reasonTa || null,
+        },
+      });
+
       await tx.adminAuditEvent.create({
         data: {
           actorId: adminId,
@@ -393,6 +420,14 @@ export class AdminProfilesService {
         },
       });
 
+      await tx.profileReview.create({
+        data: {
+          profileId,
+          reviewerId: adminId,
+          action: 'DELETE',
+        },
+      });
+
       await tx.adminAuditEvent.create({
         data: {
           actorId: adminId,
@@ -428,6 +463,77 @@ export class AdminProfilesService {
     });
   }
 
+  async getAuditTrail(profileId: string) {
+    const profile = await prisma.profile.findUnique({
+      where: { id: profileId },
+      select: { id: true, regNo: true },
+    });
+    if (!profile) {
+      throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
+    }
+
+    const [stateHistory, reviews, queue] = await Promise.all([
+      prisma.profileStateHistory.findMany({
+        where: { profileId },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      prisma.profileReview.findMany({
+        where: { profileId },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        include: { reviewer: { select: { id: true, translations: true } } },
+      }),
+      prisma.verificationQueue.findUnique({
+        where: { profileId },
+        select: { assignedTo: true, priority: true, createdAt: true, completedAt: true },
+      }),
+    ]);
+
+    // Resolve account names for state history changedBy
+    const accountIds = [...new Set(stateHistory.map((h: any) => h.changedByAccountId).filter(Boolean))];
+    const accounts = accountIds.length > 0
+      ? await prisma.account.findMany({
+          where: { id: { in: accountIds } },
+          select: { id: true, translations: true },
+        })
+      : [];
+    const accountMap = new Map(accounts.map((a: any) => [a.id, a]));
+
+    const formatName = (account: any) => {
+      if (!account) return null;
+      const en = account.translations?.find((t: any) => t.language === 'EN');
+      return en ? `${en.firstName ?? ''} ${en.lastName ?? ''}`.trim() : null;
+    };
+
+    return {
+      stateHistory: stateHistory.map((h: any) => {
+        const changedByAccount = h.changedByAccountId ? accountMap.get(h.changedByAccountId) : null;
+        return {
+          from: h.fromStatus,
+          to: h.toStatus,
+          changedBy: formatName(changedByAccount) || h.changedByAccountId,
+          changedAt: h.createdAt.toISOString(),
+          reason: h.reason || null,
+        };
+      }),
+      reviews: reviews.map((r: any) => ({
+        verifierName: formatName(r.reviewer),
+        decision: r.action,
+        comment: r.reasonEn || r.reasonTa || null,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      queue: queue
+        ? {
+            assignedTo: queue.assignedTo,
+            priority: queue.priority,
+            createdAt: queue.createdAt?.toISOString() ?? null,
+            completedAt: queue.completedAt?.toISOString() ?? null,
+          }
+        : null,
+    };
+  }
+
   async restoreProfile(adminId: string, profileId: string, ipAddress?: string) {
     const profile = await prisma.profile.findUnique({ where: { id: profileId }, select: { currentStatus: true } });
 
@@ -453,6 +559,14 @@ export class AdminProfilesService {
           changedByAccountId: adminId,
           fromStatus: 'ARCHIVED',
           toStatus: 'ACTIVE',
+        },
+      });
+
+      await tx.profileReview.create({
+        data: {
+          profileId,
+          reviewerId: adminId,
+          action: 'RESTORE',
         },
       });
 

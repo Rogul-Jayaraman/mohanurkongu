@@ -319,6 +319,39 @@ body {
   font-size: 0.8em;
 }
 
+/* Admin Tamil font-size reduction — scoped via .admin-layout class */
+html[lang="ta"] .admin-layout .text-4xl { font-size: 1.5rem; }
+html[lang="ta"] .admin-layout .text-3xl { font-size: 1.25rem; }
+html[lang="ta"] .admin-layout .text-2xl { font-size: 1.125rem; }
+html[lang="ta"] .admin-layout .text-xl { font-size: 1rem; }
+html[lang="ta"] .admin-layout .text-lg { font-size: 0.875rem; }
+html[lang="ta"] .admin-layout .text-base { font-size: 0.875rem; }
+html[lang="ta"] .admin-layout .text-sm { font-size: 0.75rem; }
+html[lang="ta"] .admin-layout .text-xs { font-size: 0.6875rem; }
+html[lang="ta"] .admin-layout .text-\[14px\] { font-size: 12px; }
+html[lang="ta"] .admin-layout .text-\[13px\] { font-size: 12px; }
+html[lang="ta"] .admin-layout .text-\[12px\] { font-size: 11px; }
+html[lang="ta"] .admin-layout .text-\[11px\] { font-size: 10px; }
+html[lang="ta"] .admin-layout .text-\[10px\] { font-size: 9px; }
+html[lang="ta"] .admin-layout .text-\[9px\] { font-size: 8px; }
+html[lang="ta"] .admin-layout .text-\[8px\] { font-size: 7px; }
+html[lang="ta"] .admin-layout .text-\[7px\] { font-size: 6px; }
+
+@media (min-width: 768px) {
+  html[lang="ta"] .admin-layout .md\:text-3xl { font-size: 1.25rem; }
+  html[lang="ta"] .admin-layout .md\:text-2xl { font-size: 1.125rem; }
+  html[lang="ta"] .admin-layout .md\:text-xs { font-size: 0.6875rem; }
+  html[lang="ta"] .admin-layout .md\:text-\[10px\] { font-size: 9px; }
+}
+
+@media (min-width: 640px) {
+  html[lang="ta"] .admin-layout .sm\:text-lg { font-size: 0.875rem; }
+  html[lang="ta"] .admin-layout .sm\:text-base { font-size: 0.875rem; }
+  html[lang="ta"] .admin-layout .sm\:text-sm { font-size: 0.75rem; }
+  html[lang="ta"] .admin-layout .sm\:text-xs { font-size: 0.6875rem; }
+  html[lang="ta"] .admin-layout .sm\:text-\[11px\] { font-size: 10px; }
+}
+
 /* Prevent Tamil from being too large on mobile */
 .text-ta-adjusted {
   font-size: 0.7rem;

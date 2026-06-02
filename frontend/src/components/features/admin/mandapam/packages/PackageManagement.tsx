@@ -1,21 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Plus } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { toast } from 'sonner';
-import {
-    adminGetAllPackages,
-    adminGetAllFacilities,
-    adminGetAllAddons,
-    adminUpdatePackage,
-    adminUpdateFacility,
-    adminDeleteFacility,
-    adminUpdateAddon,
-    adminDeleteAddon,
-} from '@/api/mandapam.api';
-import { SectionHeader } from '@/components/features/admin/mandapam/shared/SectionHeader';
+import { useAdminPackages, useFacilities, useAddons } from '@/queries/useMandapamQueries';
+import { useUpdatePackage, useDeletePackageFunction, useUpdateFacility, useDeleteFacility, useUpdateAddon, useDeleteAddon } from '@/queries/useMandapamMutations';
 import { PackageGrid } from './PackageGrid';
-
 import { EditPackageModal } from './EditPackageModal';
 import { FacilityGrid } from '@/components/features/admin/mandapam/facilities/FacilityGrid';
 import { FacilityModal } from '@/components/features/admin/mandapam/facilities/FacilityModal';
@@ -26,11 +15,18 @@ import type { MandapamPackage, MandapamFacility, MandapamAddon } from '@/types/m
 const PackageManagement: React.FC = () => {
     const { t } = useLanguage();
 
-    const [packages, setPackages] = useState<MandapamPackage[]>([]);
-    const [facilities, setFacilities] = useState<MandapamFacility[]>([]);
-    const [addons, setAddons] = useState<MandapamAddon[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<any>(null);
+    const { data: pkgData, isLoading, error, refetch } = useAdminPackages();
+    const { data: facData } = useFacilities();
+    const { data: addonData } = useAddons();
+    const deleteFn = useDeletePackageFunction();
+    const updateFac = useUpdateFacility();
+    const deleteFac = useDeleteFacility();
+    const updateAddon = useUpdateAddon();
+    const deleteAddon = useDeleteAddon();
+
+    const packages = pkgData?.packages ?? [];
+    const facilities = facData?.items ?? [];
+    const addons = addonData?.items ?? [];
 
     const [editPackage, setEditPackage] = useState<MandapamPackage | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -41,35 +37,10 @@ const PackageManagement: React.FC = () => {
     const [editAddon, setEditAddon] = useState<MandapamAddon | undefined>(undefined);
     const [isAddonModalOpen, setIsAddonModalOpen] = useState(false);
 
-    const fetchAll = () => {
-        setIsLoading(true);
-        setError(null);
-        Promise.all([
-            adminGetAllPackages(),
-            adminGetAllFacilities(),
-            adminGetAllAddons(),
-        ])
-            .then(([pkgRes, facRes, addonRes]) => {
-                setPackages(pkgRes.packages);
-                setFacilities(facRes.facilities);
-                setAddons(addonRes.addons);
-            })
-            .catch(setError)
-            .finally(() => setIsLoading(false));
-    };
-
-    useEffect(() => {
-        fetchAll();
-    }, []);
+    const updatePkg = useUpdatePackage();
 
     const handleTogglePackageStatus = async (id: string, currentStatus: boolean) => {
-        try {
-            await adminUpdatePackage(id, { status: !currentStatus });
-            toast.success(t('adminMandapam.packages.updateSuccess'));
-            fetchAll();
-        } catch (err: any) {
-            toast.error(err?.message ?? t('adminMandapam.packages.somethingWentWrong'));
-        }
+        await updatePkg.mutateAsync({ id, dto: { status: !currentStatus } });
     };
 
     const handleEditPackage = (pkg: MandapamPackage) => {
@@ -80,7 +51,7 @@ const PackageManagement: React.FC = () => {
     const handleEditModalSuccess = () => {
         setIsEditModalOpen(false);
         setEditPackage(null);
-        fetchAll();
+        refetch();
     };
 
     const handleAddFacility = () => {
@@ -94,29 +65,16 @@ const PackageManagement: React.FC = () => {
     };
 
     const handleToggleFacilityStatus = async (id: string, currentStatus: boolean) => {
-        try {
-            await adminUpdateFacility(id, { status: !currentStatus });
-            toast.success(t('adminMandapam.facilities.updateSuccess'));
-            fetchAll();
-        } catch (err: any) {
-            toast.error(err?.message ?? t('adminMandapam.facilities.somethingWentWrong'));
-        }
+        await updateFac.mutateAsync({ id, dto: { status: !currentStatus } });
     };
 
     const handleDeleteFacility = async (id: string) => {
-        try {
-            await adminDeleteFacility(id);
-            toast.success(t('adminMandapam.facilities.deleteSuccess'));
-            fetchAll();
-        } catch (err: any) {
-            toast.error(err?.message ?? t('adminMandapam.facilities.somethingWentWrong'));
-        }
+        await deleteFac.mutateAsync(id);
     };
 
     const handleFacilityModalSuccess = () => {
         setIsFacilityModalOpen(false);
         setEditFacility(undefined);
-        fetchAll();
     };
 
     const handleAddAddon = () => {
@@ -130,29 +88,16 @@ const PackageManagement: React.FC = () => {
     };
 
     const handleToggleAddonStatus = async (id: string, currentStatus: boolean) => {
-        try {
-            await adminUpdateAddon(id, { status: !currentStatus });
-            toast.success(t('adminMandapam.addons.updateSuccess'));
-            fetchAll();
-        } catch (err: any) {
-            toast.error(err?.message ?? t('adminMandapam.addons.somethingWentWrong'));
-        }
+        await updateAddon.mutateAsync({ id, dto: { status: !currentStatus } });
     };
 
     const handleDeleteAddon = async (id: string) => {
-        try {
-            await adminDeleteAddon(id);
-            toast.success(t('adminMandapam.addons.deleteSuccess'));
-            fetchAll();
-        } catch (err: any) {
-            toast.error(err?.message ?? t('adminMandapam.addons.somethingWentWrong'));
-        }
+        await deleteAddon.mutateAsync(id);
     };
 
     const handleAddonModalSuccess = () => {
         setIsAddonModalOpen(false);
         setEditAddon(undefined);
-        fetchAll();
     };
 
     if (isLoading) {
@@ -160,7 +105,7 @@ const PackageManagement: React.FC = () => {
             <div className="flex items-center justify-center min-h-[400px]">
                 <div className="flex flex-col items-center gap-3">
                     <Loader2 className="w-8 h-8 text-rosewood animate-spin" />
-                    <p className="text-sm text-slate-500 font-medium">
+                    <p className="text-sm text-rosewood/50 font-medium">
                         {t('adminMandapam.packages.loading')}
                     </p>
                 </div>
@@ -172,15 +117,15 @@ const PackageManagement: React.FC = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
                 <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
-                <h3 className="text-lg font-bold text-slate-900 mb-2">
+                <h3 className="text-lg font-bold text-rosewood mb-2">
                     {t('adminMandapam.packages.somethingWentWrong')}
                 </h3>
-                <p className="text-sm text-slate-500 mb-6 max-w-md">
-                    {typeof error === 'string' ? error : t('adminMandapam.packages.somethingWentWrong')}
+                <p className="text-sm text-rosewood/50 mb-6 max-w-md">
+                    {(error as Error)?.message || t('adminMandapam.packages.somethingWentWrong')}
                 </p>
                 <button
-                    onClick={fetchAll}
-                    className="px-6 py-2.5 text-sm font-semibold text-white bg-rosewood rounded-xl hover:opacity-90 transition-all"
+                    onClick={() => refetch()}
+                    className="px-6 py-2.5 text-sm font-semibold text-white bg-rosewood rounded-xl hover:bg-rosewood-dark transition-all"
                 >
                     {t('adminMandapam.packages.tryAgain')}
                 </button>
@@ -202,12 +147,23 @@ const PackageManagement: React.FC = () => {
                 />
             </section>
 
-            <section>
-                <SectionHeader
-                    title={t('adminMandapam.facilities.title')}
-                    description={t('adminMandapam.facilities.desc')}
-                    action={{ label: t('adminMandapam.facilities.addNew'), onClick: handleAddFacility }}
-                />
+            <section className="space-y-5">
+                <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-1 h-10 rounded-full bg-linear-to-b from-rosewood to-rosewood/40" />
+                        <div>
+                            <h2 className="text-lg font-bold text-rosewood">{t('adminMandapam.facilities.title')}</h2>
+                            <p className="text-xs text-rosewood/40 mt-0.5">{t('adminMandapam.facilities.desc')}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleAddFacility}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-rosewood text-white rounded-xl text-xs font-bold hover:bg-rosewood-dark transition-all shrink-0"
+                    >
+                        <Plus size={15} />
+                        {t('adminMandapam.facilities.addNew')}
+                    </button>
+                </div>
                 <FacilityGrid
                     facilities={facilities}
                     onEdit={handleEditFacility}
@@ -216,12 +172,23 @@ const PackageManagement: React.FC = () => {
                 />
             </section>
 
-            <section>
-                <SectionHeader
-                    title={t('adminMandapam.addons.title')}
-                    description={t('adminMandapam.addons.desc')}
-                    action={{ label: t('adminMandapam.addons.addNew'), onClick: handleAddAddon }}
-                />
+            <section className="space-y-5">
+                <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-1 h-10 rounded-full bg-linear-to-b from-gold to-gold/40" />
+                        <div>
+                            <h2 className="text-lg font-bold text-rosewood">{t('adminMandapam.addons.title')}</h2>
+                            <p className="text-xs text-rosewood/40 mt-0.5">{t('adminMandapam.addons.desc')}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleAddAddon}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-rosewood text-white rounded-xl text-xs font-bold hover:bg-rosewood-dark transition-all shrink-0"
+                    >
+                        <Plus size={15} />
+                        {t('adminMandapam.addons.addNew')}
+                    </button>
+                </div>
                 <AddonGrid
                     addons={addons}
                     onEdit={handleEditAddon}

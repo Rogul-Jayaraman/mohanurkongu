@@ -2,7 +2,6 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
-// fonts import removed
 import './assets/styles/manamaalai.css'
 import './assets/styles/index.css'
 import i18n from './i18n'
@@ -10,9 +9,23 @@ import { I18nextProvider } from 'react-i18next'
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: 1, staleTime: 30_000 },
+    queries: {
+      retry: (failureCount, error: any) => {
+        const status = error?.status ?? error?.response?.status;
+        if (status === 401 || status === 403 || status === 404) return false;
+        if (status >= 500) return failureCount < 2;
+        return failureCount < 1;
+      },
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
+    },
+    mutations: {
+      retry: false,
+    },
   },
-})
+});
 
 // Disable automatic scroll restoration and scroll to top on page load
 if ('scrollRestoration' in window.history) {
@@ -20,7 +33,6 @@ if ('scrollRestoration' in window.history) {
 }
 window.scrollTo(0, 0);
 
-// Prevent accidental value changes in number inputs on scroll while allowing page scroll
 document.addEventListener('wheel', () => {
     if (document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'number') {
         document.activeElement.blur();

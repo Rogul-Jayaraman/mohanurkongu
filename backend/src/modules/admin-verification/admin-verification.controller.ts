@@ -68,4 +68,26 @@ export class AdminVerificationController {
       next(err);
     }
   };
+
+  claim = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const profileId = req.params.id as string;
+      const adminId = req.account.sub;
+      const result = await this.verificationService.claimQueue(profileId, adminId);
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  unclaim = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const profileId = req.params.id as string;
+      const adminId = req.account.sub;
+      const result = await this.verificationService.unclaimQueue(profileId, adminId);
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  };
 }

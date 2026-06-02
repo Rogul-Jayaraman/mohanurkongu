@@ -22,6 +22,18 @@ export function fetchVerificationStats() {
   return api.get('/admin/verification/stats');
 }
 
+export function claimProfile(id: string) {
+  return api.post(`/admin/verification/${id}/claim`);
+}
+
+export function unclaimProfile(id: string) {
+  return api.post(`/admin/verification/${id}/unclaim`);
+}
+
+export function fetchAuditTrail(profileId: string) {
+  return api.get(`/admin/profiles/${profileId}/audit`);
+}
+
 export function fetchAdminProfiles(params: Record<string, any> = {}) {
   return api.get('/admin/profiles', { params });
 }

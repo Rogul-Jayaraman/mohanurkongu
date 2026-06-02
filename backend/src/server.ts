@@ -14,7 +14,7 @@ import { expireRegistrationSessions, expireResetSessions } from './jobs/expire-r
 import { authConfig } from './config/auth.config.js';
 
 async function bootstrap() {
-  const app = createApp();
+  const app = await createApp();
   const server = app.listen(app.get('port') || 4000, '0.0.0.0', () => {
     logger.info({ port: 4000, env: process.env.NODE_ENV }, 'Server started');
   });

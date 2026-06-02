@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Crown, IndianRupee, Check, X } from 'lucide-react';
 import { ModalShell } from '@/components/ui/modals/ModalShell';
 import { useLanguage } from '@/context/LanguageContext';
-import { adminAssignSubscription } from '@/api/admin-membership.api';
+import { useAdminAssignSubscriptionMutation } from '@/queries/useAdminAccountQueries';
 import type { MembershipPlan } from '@/api/membership.api';
 import type { PaymentMethodType } from '@/api/admin-accounts.api';
 import { toast } from 'sonner';
@@ -50,10 +50,11 @@ const AssignPlanModal: React.FC<AssignPlanModalProps> = ({
   const { t, language } = useLanguage();
   const isTamil = language === 'ta';
 
+  const assignMut = useAdminAssignSubscriptionMutation();
+  const saving = assignMut.isPending;
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType | null>(null);
   const [notes, setNotes] = useState('');
-  const [saving, setSaving] = useState(false);
 
   const selectedPlan = availablePlans.find((p) => p.id === selectedPlanId);
   const isFreePlan = selectedPlan?.displayPrice === 0;
@@ -61,23 +62,19 @@ const AssignPlanModal: React.FC<AssignPlanModalProps> = ({
 
   const handleAssign = async () => {
     if (!selectedPlanId || !isValid) return;
-    setSaving(true);
     try {
-      await adminAssignSubscription(accountId, selectedPlanId, {
-        paymentMethod: isFreePlan ? undefined : (paymentMethod ?? undefined),
-        notes: notes.trim() || undefined,
+      await assignMut.mutateAsync({
+        accountId,
+        planId: selectedPlanId,
+        options: {
+          paymentMethod: isFreePlan ? undefined : (paymentMethod ?? undefined),
+          notes: notes.trim() || undefined,
+        },
       });
-      toast.success(
-        isTamil
-          ? 'திட்டம் வெற்றிகரமாக ஒதுக்கப்பட்டது'
-          : 'Plan assigned successfully',
-      );
       onAssigned();
       onClose();
     } catch (err: any) {
       toast.error(err?.response?.data?.error?.message || 'Failed to assign plan');
-    } finally {
-      setSaving(false);
     }
   };
 

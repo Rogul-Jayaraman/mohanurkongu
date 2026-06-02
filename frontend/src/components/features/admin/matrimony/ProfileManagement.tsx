@@ -9,10 +9,18 @@ import { ConfirmationModal } from '@/modals/admin/ConfirmationModal';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { TableActionDropdown } from '@/components/ui/table/TableActionDropdown';
 import { DataTable, Column } from '@/components/ui/table/DataTable';
-import { fetchVerificationQueue, approveProfile, rejectProfile, fetchAdminProfiles, archiveProfile, restoreProfile, deleteProfile } from '@/api/verification.api';
+// hooks used for API calls instead of direct imports
 import { useDateFormatter } from '@/hooks/useDateFormatter';
 import type { AdminManagedProfile } from '@/types/admin-types';
 import { toast } from 'sonner';
+import { useAdminProfilesQuery } from '@/queries/useProfileQueries';
+import {
+  useApproveProfileMutation,
+  useRejectProfileMutation,
+  useArchiveProfileMutation,
+  useRestoreProfileMutation,
+  useDeleteProfileMutation,
+} from '@/queries/useAdminMutations';
 
 import { Tooltip } from '@/components/ui/Tooltip';
 import { getImageUrl } from '@/utils/getImageUrl';
@@ -30,9 +38,20 @@ const ProfileManagement: React.FC = () => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [statusFilter, setStatusFilter] = React.useState<string>('All');
 
-    const [data, setData] = React.useState<any>({ profiles: [], meta: { total: 0, totalPages: 1, page: 1, limit: itemsPerPage } });
-    const [isLoading, setIsLoading] = React.useState(true);
-    React.useEffect(() => { setIsLoading(true); fetchAdminProfiles({ page: currentPage, search: searchQuery, status: statusFilter, limit: itemsPerPage }).then((res: any) => setData(res)).finally(() => setIsLoading(false)); }, [currentPage, searchQuery, statusFilter, itemsPerPage]);
+    const adminProfilesQuery = useAdminProfilesQuery({
+      page: currentPage,
+      search: searchQuery,
+      status: statusFilter,
+      limit: itemsPerPage,
+    });
+    const data: any = (adminProfilesQuery.data as any) ?? { profiles: [], meta: { total: 0, totalPages: 1, page: 1, limit: itemsPerPage } };
+    const isLoading = adminProfilesQuery.isPending;
+
+    const approveMutation = useApproveProfileMutation();
+    const rejectMutation = useRejectProfileMutation();
+    const archiveMutation = useArchiveProfileMutation();
+    const restoreMutation = useRestoreProfileMutation();
+    const deleteMutation = useDeleteProfileMutation();
 
     const [rejectionModal, setRejectionModal] = React.useState<{ open: boolean; profileId: string | null; mode: 'REJECT' | 'ARCHIVE' }>({
         open: false,
@@ -51,30 +70,33 @@ const ProfileManagement: React.FC = () => {
     });
 
     const handleVerify = (id: string) => {
-        approveProfile(id).then(
-            () => toast.success(t('adminMatrimony.users.verifySuccess'))
-        ).catch(
-            (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.verifyError'))
-        );
+        approveMutation.mutate(id, {
+            onSuccess: () => toast.success(t('adminMatrimony.users.verifySuccess')),
+        });
     };
 
     const confirmReject = async (reasonEn: string, reasonTa: string) => {
         if (!rejectionModal.profileId) return;
-        const handleSuccess = (msg: string) => {
-            toast.success(msg);
-            setRejectionModal({ open: false, profileId: null, mode: 'REJECT' });
-        };
+        const profileId = rejectionModal.profileId;
         if (rejectionModal.mode === 'REJECT') {
-            rejectProfile(rejectionModal.profileId, reasonEn, reasonTa).then(
-                () => handleSuccess(t('adminMatrimony.users.rejectSuccess'))
-            ).catch(
-                (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.rejectFailed'))
+            rejectMutation.mutate(
+                { id: profileId, reasonEn, reasonTa },
+                {
+                    onSuccess: () => {
+                        toast.success(t('adminMatrimony.users.rejectSuccess'));
+                        setRejectionModal({ open: false, profileId: null, mode: 'REJECT' });
+                    },
+                },
             );
         } else if (rejectionModal.mode === 'ARCHIVE') {
-            archiveProfile(rejectionModal.profileId, reasonEn, reasonTa).then(
-                () => handleSuccess(t('adminMatrimony.users.blockSuccess') || 'Profile archived')
-            ).catch(
-                (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
+            archiveMutation.mutate(
+                { id: profileId, reasonEn, reasonTa },
+                {
+                    onSuccess: () => {
+                        toast.success(t('adminMatrimony.users.blockSuccess') || 'Profile archived');
+                        setRejectionModal({ open: false, profileId: null, mode: 'REJECT' });
+                    },
+                },
             );
         }
     };
@@ -94,27 +116,21 @@ const ProfileManagement: React.FC = () => {
     const handleConfirmDelete = () => {
         if (!deleteModal.profileId) return;
         const profileId = deleteModal.profileId;
-        deleteProfile(profileId).then(
-            () => {
-                toast.success(t('adminMatrimony.users.deleteSuccess') || 'Profile deleted');
+        deleteMutation.mutate(profileId, {
+            onSuccess: () => {
                 setDeleteModal({ open: false, profileId: null });
-            }
-        ).catch(
-            (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
-        );
+            },
+        });
     };
 
     const handleConfirmRestore = () => {
         if (!restoreModal.profileId) return;
         const profileId = restoreModal.profileId;
-        restoreProfile(profileId).then(
-            () => {
-                toast.success(t('adminMatrimony.users.statusUpdateSuccess') || 'Profile restored');
+        restoreMutation.mutate(profileId, {
+            onSuccess: () => {
                 setRestoreModal({ open: false, profileId: null });
-            }
-        ).catch(
-            (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.statusUpdateError'))
-        );
+            },
+        });
     };
 
     const columns: Column<AdminManagedProfile>[] = [

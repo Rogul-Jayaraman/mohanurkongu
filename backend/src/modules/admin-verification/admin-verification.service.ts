@@ -177,4 +177,52 @@ export class AdminVerificationService {
   async getStats() {
     return this.repo.getQueueStats();
   }
+
+  async claimQueue(profileId: string, verifierId: string) {
+    const profile = await prisma.profile.findUnique({
+      where: { id: profileId },
+      select: { id: true, currentStatus: true },
+    });
+    if (!profile) {
+      throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, ErrorCodes.PROFILE_NOT_FOUND);
+    }
+    if (profile.currentStatus !== 'PENDING') {
+      throw new AppError(400, ErrorCodes.PROFILE_WRONG_STATUS, ErrorCodes.PROFILE_WRONG_STATUS);
+    }
+
+    const queueEntry = await prisma.verificationQueue.findUnique({ where: { profileId } });
+    if (!queueEntry) {
+      throw new AppError(400, ErrorCodes.VERIFICATION_QUEUE_ENTRY_MISSING, ErrorCodes.VERIFICATION_QUEUE_ENTRY_MISSING);
+    }
+    if (queueEntry.completedAt) {
+      throw new AppError(400, ErrorCodes.VERIFICATION_ALREADY_COMPLETED, ErrorCodes.VERIFICATION_ALREADY_COMPLETED);
+    }
+    if (queueEntry.assignedTo && queueEntry.assignedTo !== verifierId) {
+      throw new AppError(409, ErrorCodes.VERIFICATION_ALREADY_CLAIMED, ErrorCodes.VERIFICATION_ALREADY_CLAIMED);
+    }
+
+    await prisma.verificationQueue.update({
+      where: { profileId },
+      data: { assignedTo: verifierId },
+    });
+
+    return { claimed: true };
+  }
+
+  async unclaimQueue(profileId: string, verifierId: string) {
+    const queueEntry = await prisma.verificationQueue.findUnique({ where: { profileId } });
+    if (!queueEntry) {
+      throw new AppError(400, ErrorCodes.VERIFICATION_QUEUE_ENTRY_MISSING, ErrorCodes.VERIFICATION_QUEUE_ENTRY_MISSING);
+    }
+    if (queueEntry.assignedTo !== verifierId) {
+      throw new AppError(400, ErrorCodes.VERIFICATION_NOT_CLAIMED, ErrorCodes.VERIFICATION_NOT_CLAIMED);
+    }
+
+    await prisma.verificationQueue.update({
+      where: { profileId },
+      data: { assignedTo: null },
+    });
+
+    return { claimed: false };
+  }
 }

@@ -1,0 +1,30 @@
+import type { PipelineContext, StepFunction } from './types';
+
+export class PipelineRunner {
+  async run<TCtx extends PipelineContext>(
+    steps: StepFunction<TCtx>[],
+    context: TCtx,
+  ): Promise<TCtx> {
+    let ctx = context;
+
+    for (let i = 0; i < steps.length; i++) {
+      ctx = await steps[i](ctx);
+    }
+
+    return ctx;
+  }
+
+  compose<TCtx extends PipelineContext>(
+    ...pipelines: Array<(ctx: TCtx) => Promise<TCtx>>
+  ) {
+    return async (ctx: TCtx): Promise<TCtx> => {
+      let result = ctx;
+      for (const pipeline of pipelines) {
+        result = await pipeline(result);
+      }
+      return result;
+    };
+  }
+}
+
+export const pipeline = new PipelineRunner();

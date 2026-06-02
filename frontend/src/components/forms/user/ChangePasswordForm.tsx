@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/context/LanguageContext';
 import { Input } from '@/components/ui/forms/Input';
 import { PasswordField } from '@/components/ui/forms/PasswordField';
-import * as authApi from '@/api/auth.api';
+import { useChangePasswordMutation } from '@/queries/useAuthMutations';
 
 interface ChangePasswordFormProps {
     isOpen: boolean;
@@ -15,8 +15,9 @@ interface ChangePasswordFormProps {
 
 export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ isOpen, onClose }) => {
     const { t, translateError } = useLanguage();
+    const changePasswordMutation = useChangePasswordMutation();
     const [formData, setFormData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
-    const [isLoading, setIsLoading] = useState(false);
+    const isLoading = changePasswordMutation.isPending;
     const [strength, setStrength] = useState({ score: 0, label: 'Very Weak', color: 'bg-gray-200' });
 
     useEffect(() => {
@@ -53,9 +54,8 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ isOpen, 
             toast.warning(t('myaccount:drawers.change_password.errors.too_weak'));
             return;
         }
-        setIsLoading(true);
         try {
-            await authApi.changePassword({
+            await changePasswordMutation.mutateAsync({
                 currentPassword: formData.oldPassword,
                 newPassword: formData.newPassword,
             });
@@ -64,8 +64,6 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ isOpen, 
             setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' });
         } catch (error: any) {
             toast.error(translateError(error) || t('myaccount:drawers.change_password.errors.failed'));
-        } finally {
-            setIsLoading(false);
         }
     };
 

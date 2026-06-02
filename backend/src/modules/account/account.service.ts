@@ -6,16 +6,38 @@ import type { ChangePasswordDto } from '../auth/dto/change-password.dto.js';
 import { prisma } from '../../database/prisma.js';
 import { enqueueAuditEvent } from '../../common/utils/audit.js';
 import { appConfig } from '../../config/app.config.js';
+import { CacheManager } from '../../common/cache/CacheManager.js';
+import { buildAuthMeTag, CacheTtls } from '../../common/cache/cacheKeys.js';
 
 export class AccountService {
-  constructor(private repo: AccountRepository) {}
+  constructor(
+    private repo: AccountRepository,
+    private cacheManager?: CacheManager,
+  ) {}
 
   async getProfile(accountId: string) {
+    const tag = buildAuthMeTag(accountId);
+
+    if (this.cacheManager) {
+      const cached = await this.cacheManager.get<Awaited<ReturnType<AccountService['buildProfileResponse']>>>(tag);
+      if (cached) return cached;
+    }
+
     const account = await this.repo.findById(accountId);
     if (!account) {
       throw new AppError(404, ErrorCodes.ACCOUNT_NOT_FOUND, 'ACCOUNT_NOT_FOUND');
     }
 
+    const response = this.buildProfileResponse(account);
+
+    if (this.cacheManager) {
+      await this.cacheManager.setByTags([tag], response, { defaultTtl: CacheTtls.AUTH_ME });
+    }
+
+    return response;
+  }
+
+  private buildProfileResponse(account: NonNullable<Awaited<ReturnType<AccountRepository['findById']>>>) {
     const enTranslation = account.translations.find((t) => t.language === 'EN');
     const taTranslation = account.translations.find((t) => t.language === 'TA');
     const activeMembership = account.subscriptions[0];
@@ -36,6 +58,11 @@ export class AccountService {
         : null,
       createdAt: account.createdAt.toISOString(),
     };
+  }
+
+  async invalidateAuthMeCache(accountId: string): Promise<void> {
+    if (!this.cacheManager) return;
+    await this.cacheManager.flushTags([buildAuthMeTag(accountId)]);
   }
 
   async changePassword(accountId: string, dto: ChangePasswordDto) {
@@ -71,6 +98,8 @@ export class AccountService {
     });
 
     await enqueueAuditEvent('PASSWORD_CHANGE', accountId, {});
+
+    await this.invalidateAuthMeCache(accountId);
   }
 
   async updateProfile(accountId: string, data: Record<string, any>) {

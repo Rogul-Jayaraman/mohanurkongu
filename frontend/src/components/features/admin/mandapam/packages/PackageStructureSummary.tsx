@@ -8,7 +8,7 @@ interface PackageStructureSummaryProps {
     packages: MandapamPackage[];
 }
 
-const bookingTypeLabels: Record<string, string> = {
+const packageCodeLabelKeys: Record<string, string> = {
     STANDARD: 'adminMandapam.packages.hoursBased',
     ROYAL: 'adminMandapam.packages.oneDayFunction',
     GRAND: 'adminMandapam.packages.twoDayFunction',
@@ -100,7 +100,7 @@ export const PackageStructureSummary: React.FC<PackageStructureSummaryProps> = (
                                 </td>
                                 <td className="px-6 py-4">
                                     <span className="text-xs font-semibold text-rosewood/80 bg-rosewood/5 px-2.5 py-1 rounded-full">
-                                        {t(bookingTypeLabels[pkg.code] || 'adminMandapam.packages.hoursBased')}
+                                        {t(packageCodeLabelKeys[pkg.code] || 'adminMandapam.packages.hoursBased')}
                                     </span>
                                 </td>
                             </tr>
@@ -130,7 +130,7 @@ export const PackageStructureSummary: React.FC<PackageStructureSummaryProps> = (
                                     {t('adminMandapam.packages.duration')}
                                 </span>
                                 <p className="text-rosewood/80 font-semibold mt-0.5">
-                                    {t(bookingTypeLabels[pkg.code] || 'adminMandapam.packages.hoursBased')}
+                                    {t(packageCodeLabelKeys[pkg.code] || 'adminMandapam.packages.hoursBased')}
                                 </p>
                             </div>
                         </div>

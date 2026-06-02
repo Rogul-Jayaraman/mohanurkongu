@@ -1,0 +1,8 @@
+export type { StepProps } from './types';
+export { default as Step1Personal } from './Step1Personal';
+export { default as Step2Combined } from './Step2Combined';
+export { default as Step3Family } from './Step3Family';
+export { default as Step4Assets } from './Step4Assets';
+export { default as Step5Horoscope } from './Step5Horoscope';
+export { default as Step6Gallery } from './Step6Gallery';
+export { default as Step7Review } from './Step7Review';

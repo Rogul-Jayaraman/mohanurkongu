@@ -14,9 +14,13 @@ import {
     SignupSubmitForm
 } from '@/components/forms/auth/SignupForm';
 import { OtpVerificationModal } from '@/components/modals/auth/OtpVerificationModal';
-import * as authApi from '@/api/auth.api';
 import { isAppError } from '@/lib/errors';
 import { toast } from 'sonner';
+import {
+  useSendOtpMutation,
+  useVerifyOtpMutation,
+  useRegisterMutation,
+} from '@/queries/useAuthMutations';
 
 export const signupContainerVariants = {
     hidden: { opacity: 0 },
@@ -148,6 +152,10 @@ export const SignupFormWrapper: React.FC = () => {
     const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
     const abortRef = useRef<AbortController | null>(null);
 
+    const sendOtpMutation = useSendOtpMutation();
+    const verifyOtpMutation = useVerifyOtpMutation();
+    const registerMutation = useRegisterMutation();
+
     useEffect(() => {
         if (otpTimer <= 0) {
             setCanResend(true);
@@ -169,7 +177,7 @@ export const SignupFormWrapper: React.FC = () => {
         abortRef.current = new AbortController();
 
         try {
-            await authApi.sendRegistrationOtp({ email: formData.email });
+            await sendOtpMutation.mutateAsync({ email: formData.email, kind: 'register' });
             setIsOTPSent(true);
             setIsOTPVerified(false);
             setIsOtpModalOpen(true);
@@ -189,7 +197,7 @@ export const SignupFormWrapper: React.FC = () => {
         setOtpError(null);
         setIsSendingOtp(true);
         try {
-            await authApi.sendRegistrationOtp({ email: formData.email });
+            await sendOtpMutation.mutateAsync({ email: formData.email, kind: 'register' });
             setOtpTimer(60);
             setCanResend(false);
         } catch (err) {
@@ -212,8 +220,12 @@ export const SignupFormWrapper: React.FC = () => {
         if (!otpValue || otpValue.length !== 6) return;
         setIsVerifyingOtp(true);
         try {
-            const result = await authApi.verifyRegistrationOtp({ email: formData.email, otp: otpValue });
-            setVerificationToken(result.verificationToken);
+            const result = await verifyOtpMutation.mutateAsync({
+                email: formData.email,
+                otp: otpValue,
+                kind: 'register',
+            });
+            setVerificationToken(result.verificationToken ?? null);
             setIsOTPVerified(true);
             setIsOtpModalOpen(false);
             setGeneralError(null);
@@ -289,7 +301,7 @@ export const SignupFormWrapper: React.FC = () => {
             setIsSigningUp(true);
             try {
                 const { confirmPassword: _cf, termsAccepted: _ta, ...cleanData } = formData;
-                await authApi.register({ ...cleanData, verificationToken: verificationToken! });
+                await registerMutation.mutateAsync({ ...cleanData, verificationToken: verificationToken! });
                 navigate('/manamaalai/login');
             } catch (err) {
                 if (isAppError(err) && err.details && Array.isArray(err.details)) {

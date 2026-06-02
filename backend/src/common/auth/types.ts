@@ -1,4 +1,5 @@
 import type { DeviceInfo } from '../utils/device.js';
+import type { CacheManager } from '../cache/CacheManager.js';
 
 export interface CapabilitySnapshot {
   planCode: string;
@@ -73,6 +74,22 @@ export interface PipelineContext {
   };
 
   capabilities?: CapabilitySnapshot;
+
+  cacheManager?: CacheManager;
+  cacheEnabled?: boolean;
+  cacheResolved?: boolean;
+  cacheReadResult?: Record<string, unknown>;
+  rawProfile?: unknown;
+  rawAccount?: unknown;
+  rawBrowseResult?: unknown;
+  rawMyProfiles?: unknown;
+  cacheInvalidations?: { tags: string[] };
+  cacheInvalidationsLog?: { tags: string[]; flushed: number };
+  logger?: {
+    warn?: (obj: object, msg?: string) => void;
+    info?: (obj: object, msg?: string) => void;
+    error?: (obj: object, msg?: string) => void;
+  };
 }
 
 export type StepFunction = (ctx: PipelineContext) => Promise<PipelineContext>;

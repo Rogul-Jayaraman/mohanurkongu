@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/context/LanguageContext';
-import { getBillingOverview } from '@/api/membership.api';
+import { useBillingOverviewQuery } from '@/queries/useMembershipQueries';
 import type { BillingOverview } from '@/api/membership.api';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/format';
@@ -886,15 +886,18 @@ const MyAccount: React.FC = () => {
         }
     }, [activeTab, searchParams, scrollToPlans]);
 
+    const billingQuery = useBillingOverviewQuery();
     useEffect(() => {
         if (activeTab !== 'membership') return;
-        setBillingLoading(true);
-        setBillingError(false);
-        getBillingOverview()
-            .then(setBilling)
-            .catch(() => setBillingError(true))
-            .finally(() => setBillingLoading(false));
-    }, [activeTab]);
+        if (billingQuery.data !== undefined) {
+            setBilling(billingQuery.data as BillingOverview);
+            setBillingLoading(false);
+            setBillingError(false);
+        } else if (billingQuery.error) {
+            setBillingLoading(false);
+            setBillingError(true);
+        }
+    }, [activeTab, billingQuery.data, billingQuery.error]);
 
     return (
         <div className="flex flex-col min-h-full">

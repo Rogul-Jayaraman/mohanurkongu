@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Clock, AlertTriangle, Sun, Moon, ChevronDown, Check, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Clock, AlertTriangle, ArrowRight } from 'lucide-react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { BookingFormData, PackageInfo, CalendarEntryInfo } from './bookingFormTypes';
 import { useLanguage } from '@/context/LanguageContext';
+import { to12, to24, parseTime, fmt12, calcDurationMinutes } from '@/utils/time';
 
 interface TimeConfigurationSectionProps {
   form: UseFormReturn<BookingFormData>;
@@ -11,33 +12,147 @@ interface TimeConfigurationSectionProps {
 }
 
 const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
-const MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
-const PERIODS = ['AM', 'PM'];
+const ALL_MINUTES = ['00', '15', '30', '45'];
 
-function to12(h: number) {
-  if (h === 0) return { h12: 12, mer: 'AM' as const };
-  if (h < 12) return { h12: h, mer: 'AM' as const };
-  if (h === 12) return { h12: 12, mer: 'PM' as const };
-  return { h12: h - 12, mer: 'PM' as const };
+interface TimeSegmentProps {
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  label: string;
+  disabled?: boolean;
 }
 
-function to24(h12: number, mer: 'AM' | 'PM') {
-  if (mer === 'AM') return h12 === 12 ? 0 : h12;
-  return h12 === 12 ? 12 : h12 + 12;
-}
+function TimeSegment({ value, options, onChange, label, disabled }: TimeSegmentProps) {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<'bottom' | 'top'>('bottom');
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const selectedIndex = options.indexOf(value);
+  const ITEM_HEIGHT = 36;
+  const VISIBLE_ITEMS = 7;
 
-function parseTime(t: string) {
-  if (!t) return null;
-  const [h, m] = t.split(':').map(Number);
-  if (isNaN(h) || isNaN(m)) return null;
-  return { h24: h, m };
-}
+  useEffect(() => {
+    if (!open || !listRef.current || selectedIndex < 0) return;
+    const top = selectedIndex * ITEM_HEIGHT;
+    listRef.current.scrollTop = Math.max(0, top - ITEM_HEIGHT * 3);
+  }, [open, selectedIndex]);
 
-function fmt12(t: string) {
-  const p = parseTime(t);
-  if (!p) return '';
-  const { h12, mer } = to12(p.h24);
-  return `${h12}:${String(p.m).padStart(2, '0')} ${mer}`;
+  useEffect(() => {
+    if (open) setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+  }, [open, selectedIndex]);
+
+  useEffect(() => {
+    if (!open || activeIndex < 0 || !listRef.current) return;
+    const container = listRef.current;
+    const itemTop = activeIndex * ITEM_HEIGHT;
+    if (itemTop < container.scrollTop || itemTop + ITEM_HEIGHT > container.scrollTop + container.clientHeight) {
+      container.scrollTop = Math.max(0, itemTop - ITEM_HEIGHT * 2);
+    }
+  }, [open, activeIndex]);
+
+  useEffect(() => {
+    if (!open || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const dropdownHeight = Math.min(options.length, VISIBLE_ITEMS) * ITEM_HEIGHT + 24;
+    setPosition(spaceAbove >= dropdownHeight ? 'top' : 'bottom');
+  }, [open, options.length]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const commit = useCallback((idx: number) => {
+    if (idx >= 0 && idx < options.length) {
+      onChange(options[idx]);
+      setOpen(false);
+    }
+  }, [options, onChange]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') { setOpen(false); return; }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (open) { commit(activeIndex); return; }
+      setOpen(true);
+      return;
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!open) { setOpen(true); return; }
+      const dir = e.key === 'ArrowDown' ? 1 : -1;
+      setActiveIndex(prev => Math.max(0, Math.min(options.length - 1, prev + dir)));
+    }
+  }, [open, activeIndex, options, commit]);
+
+  return (
+    <div ref={containerRef} className="relative flex-1 h-full flex items-stretch">
+      <button
+        type="button"
+        onClick={() => { if (!disabled) setOpen(p => !p); }}
+        onKeyDown={handleKeyDown}
+        role="combobox"
+        aria-label={label}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        disabled={disabled}
+        className="w-full h-full min-w-0 px-2 bg-transparent text-sm font-bold text-rosewood outline-none cursor-pointer flex items-center justify-center gap-1 transition-colors hover:text-rosewood/80 disabled:opacity-50"
+      >
+        <span className="tabular-nums tracking-tight leading-none">{value}</span>
+        <svg className={`w-3 h-3 shrink-0 text-rosewood/30 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        </svg>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40 sm:hidden" onClick={() => setOpen(false)} />
+          <div
+            ref={listRef}
+            role="listbox"
+            aria-label={label}
+            className={`z-50 absolute left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 bg-white border border-rosewood/10 rounded-xl shadow-xl overflow-y-auto min-w-[80px] p-1.5 animate-in fade-in duration-200 ${
+              position === 'bottom' ? 'top-full mt-1 slide-in-from-top-2' : 'bottom-full mb-1 slide-in-from-bottom-2'
+            }`}
+            style={{ maxHeight: `${ITEM_HEIGHT * VISIBLE_ITEMS}px` }}
+          >
+            {options.map((opt, idx) => {
+              const isSelected = opt === value;
+              const isActive = idx === activeIndex;
+              return (
+                <button
+                  key={opt}
+                  role="option"
+                  aria-selected={isSelected}
+                  type="button"
+                  onClick={() => commit(idx)}
+                  onMouseEnter={() => setActiveIndex(idx)}
+                  className={`w-full text-left px-3 rounded-lg text-sm cursor-pointer transition-all ${
+                    isActive
+                      ? 'bg-rosewood/10 text-rosewood font-bold'
+                      : isSelected
+                      ? 'bg-rosewood/8 text-rosewood font-bold'
+                      : 'text-rosewood/60 hover:bg-rosewood/5 font-medium'
+                  }`}
+                  style={{ height: `${ITEM_HEIGHT}px` }}
+                >
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 export const TimeConfigurationSection: React.FC<TimeConfigurationSectionProps> = ({ form, packageInfo, existingEntries }) => {
@@ -47,69 +162,52 @@ export const TimeConfigurationSection: React.FC<TimeConfigurationSectionProps> =
   const endTime = form.watch('endTime');
   const errors = form.formState.errors;
 
-  const [editing, setEditing] = useState<'start' | 'end' | null>(null);
-  const [hVal, setHVal] = useState('09');
-  const [mVal, setMVal] = useState('00');
-  const [pVal, setPVal] = useState<'AM' | 'PM'>('AM');
-  const inputRef = useRef<HTMLDivElement>(null);
+  const isFullyBooked = useMemo(() => existingEntries.some((e) => e.status === 'FULLY_BOOKED'), [existingEntries]);
+  const isBlocked = useMemo(() => existingEntries.some((e) => e.status === 'BLOCKED'), [existingEntries]);
 
-  const parsedStart = useMemo(() => startTime ? parseTime(startTime) : null, [startTime]);
-  const parsedEnd = useMemo(() => endTime ? parseTime(endTime) : null, [endTime]);
+  const bookedSlots = useMemo(
+    () =>
+      existingEntries
+        .filter((e) => e.status === 'PARTIALLY_BOOKED' && e.startTime && e.endTime)
+        .map((e) => ({ startTime: e.startTime!, endTime: e.endTime! })),
+    [existingEntries]
+  );
 
-  const isFullyBooked = useMemo(() =>
-    existingEntries.some(e => e.status === 'FULLY_BOOKED'),
-  [existingEntries]);
+  const hasConflict = useMemo(() => {
+    if (!startTime || !endTime || bookedSlots.length === 0) return false;
+    return bookedSlots.some((slot) => startTime < slot.endTime && endTime > slot.startTime);
+  }, [startTime, endTime, bookedSlots]);
 
-  const isBlocked = useMemo(() =>
-    existingEntries.some(e => e.status === 'BLOCKED'),
-  [existingEntries]);
-
-  const bookedSlots = useMemo(() =>
-    existingEntries
-      .filter(e => e.status === 'PARTIALLY_BOOKED' && e.startTime && e.endTime)
-      .map(e => ({ startTime: e.startTime!, endTime: e.endTime! })),
-  [existingEntries]);
+  const parsedStart = useMemo(() => (startTime ? parseTime(startTime) : null), [startTime]);
+  const parsedEnd = useMemo(() => (endTime ? parseTime(endTime) : null), [endTime]);
 
   const durationMinutes = useMemo(() => {
-    if (!parsedStart || !parsedEnd) return 0;
-    const diff = (parsedEnd.h24 * 60 + parsedEnd.m) - (parsedStart.h24 * 60 + parsedStart.m);
-    return diff > 0 ? diff : 0;
-  }, [parsedStart, parsedEnd]);
+    if (!startTime || !endTime) return 0;
+    return calcDurationMinutes(startTime, endTime);
+  }, [startTime, endTime]);
+
+  const startParsed = startTime ? to12(parseInt(startTime.split(':')[0], 10)) : { h12: 12, mer: 'AM' as const };
+  const startMin = startTime ? startTime.split(':')[1] : '00';
+  const endParsed = endTime ? to12(parseInt(endTime.split(':')[0], 10)) : { h12: 12, mer: 'AM' as const };
+  const endMin = endTime ? endTime.split(':')[1] : '00';
+
+  const [startHour, setStartHour] = useState(String(startParsed.h12).padStart(2, '0'));
+  const [startMinute, setStartMinute] = useState(ALL_MINUTES.includes(startMin) ? startMin : '00');
+  const [startPeriod, setStartPeriod] = useState<'AM' | 'PM'>(startParsed.mer);
+
+  const [endHour, setEndHour] = useState(String(endParsed.h12).padStart(2, '0'));
+  const [endMinute, setEndMinute] = useState(ALL_MINUTES.includes(endMin) ? endMin : '00');
+  const [endPeriod, setEndPeriod] = useState<'AM' | 'PM'>(endParsed.mer);
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (inputRef.current && !inputRef.current.contains(e.target as Node)) setEditing(null);
-    };
-    if (editing) { document.addEventListener('mousedown', handler); }
-    return () => document.removeEventListener('mousedown', handler);
-  }, [editing]);
+    const h = to24(parseInt(startHour, 10), startPeriod);
+    form.setValue('startTime', `${String(h).padStart(2, '0')}:${startMinute}`, { shouldValidate: false });
+  }, [startHour, startMinute, startPeriod]);
 
-  const applyTime = (field: 'startTime' | 'endTime') => {
-    const h24 = to24(parseInt(hVal, 10), pVal);
-    form.setValue(field, `${String(h24).padStart(2, '0')}:${mVal}`);
-    setEditing(null);
-  };
-
-  const openEditor = (field: 'start' | 'end', current: string) => {
-    const p = parseTime(current);
-    if (p) {
-      const { h12, mer } = to12(p.h24);
-      setHVal(String(h12).padStart(2, '0'));
-      setMVal(String(p.m).padStart(2, '0'));
-      setPVal(mer);
-    } else {
-      setHVal('09'); setMVal('00'); setPVal('AM');
-    }
-    setEditing(field);
-  };
-
-  const toggleMeridiem = (field: 'startTime' | 'endTime') => {
-    const current = form.getValues(field);
-    const p = parseTime(current);
-    if (!p) return;
-    const h = p.h24 < 12 ? p.h24 + 12 : p.h24 - 12;
-    form.setValue(field, `${String(h).padStart(2, '0')}:${String(p.m).padStart(2, '0')}`);
-  };
+  useEffect(() => {
+    const h = to24(parseInt(endHour, 10), endPeriod);
+    form.setValue('endTime', `${String(h).padStart(2, '0')}:${endMinute}`, { shouldValidate: false });
+  }, [endHour, endMinute, endPeriod]);
 
   if (isBlocked) {
     return (
@@ -134,241 +232,118 @@ export const TimeConfigurationSection: React.FC<TimeConfigurationSectionProps> =
   }
 
   return (
-    <div className="bg-rosewood/[0.02] border border-rosewood/10 rounded-2xl p-5 space-y-4">
+    <div className="bg-rosewood/[0.02] border border-rosewood/10 rounded-2xl p-5 space-y-5">
       <div className="flex items-center gap-2">
         <Clock size={15} className="text-rosewood/40" />
-        <p className="text-xs font-bold text-rosewood/30">
-          {isTamil ? 'நேரம்' : 'Time'}
-        </p>
+        <p className="text-xs font-bold text-rosewood/30">{isTamil ? 'நேரம்' : 'Time'}</p>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        {/* Start time chip */}
-        <div className="relative" ref={editing === 'start' ? inputRef : undefined}>
-          {editing === 'start' ? (
-            <div className="flex items-stretch bg-white border-2 border-gold rounded-xl overflow-hidden shadow-lg shadow-gold/10">
-              <div className="flex items-stretch">
-                {[HOURS, MINUTES].map((opts, si) => (
-                  <React.Fragment key={si}>
-                    {si > 0 && <div className="w-px self-stretch my-2 bg-gold/20" />}
-                    <div className="relative">
-                      <button
-                        type="button"
-                        className="h-9 px-2.5 text-xs font-bold text-rosewood bg-transparent flex items-center gap-1 hover:bg-gold/5 transition-colors"
-                        onClick={() => {}}
-                      >
-                        <span className="tabular-nums">{si === 0 ? hVal : mVal}</span>
-                        <ChevronDown size={12} className="text-rosewood/30" />
-                      </button>
-                      <div className="absolute left-0 top-full mt-0.5 z-50 bg-white border border-rosewood/10 rounded-xl shadow-xl max-h-[180px] overflow-y-auto min-w-[60px] p-1">
-                        {opts.map(o => (
-                          <button
-                            key={o}
-                            type="button"
-                            onClick={() => si === 0 ? setHVal(o) : setMVal(o)}
-                            className={`w-full text-center px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                              (si === 0 ? hVal : mVal) === o
-                                ? 'bg-rosewood/10 text-rosewood font-bold'
-                                : 'text-rosewood/60 hover:bg-rosewood/5'
-                            }`}
-                          >
-                            {o}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </React.Fragment>
-                ))}
-                <div className="w-px self-stretch my-2 bg-gold/20" />
-                <div className="relative">
-                  <button
-                    type="button"
-                    className={`h-9 px-2.5 text-xs font-bold flex items-center gap-1 transition-colors ${
-                      pVal === 'AM' ? 'bg-amber-50 text-amber-700' : 'bg-indigo-50 text-indigo-700'
-                    }`}
-                    onClick={() => setPVal(p => p === 'AM' ? 'PM' : 'AM')}
-                  >
-                    {pVal === 'AM' ? <Sun size={12} /> : <Moon size={12} />}
-                    <span>{pVal}</span>
-                  </button>
-                </div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        {/* Start Time */}
+        <div className="flex-1 w-full">
+          <label className="text-xs font-bold text-rosewood/50 mb-1.5 block">
+            {isTamil ? 'தொடக்க நேரம்' : 'Start Time'}
+          </label>
+          <div className={`flex items-stretch border-2 rounded-xl bg-white transition-all ${
+            errors.startTime ? 'border-red-400' : 'border-rosewood/10 hover:border-rosewood/30 focus-within:border-gold focus-within:ring-1 focus-within:ring-gold'
+          }`}>
+            <div className="flex-1 flex items-stretch min-w-0 h-[48px]">
+              <div className="flex-1 min-w-[60px] max-w-[80px] sm:max-w-[100px]">
+                <TimeSegment value={startHour} options={HOURS} onChange={setStartHour} label="Hour" />
               </div>
-              <button
-                type="button"
-                onClick={() => applyTime('startTime')}
-                className="px-3 bg-rosewood text-white text-xs font-bold flex items-center gap-1 hover:bg-rosewood/90 transition-colors"
-              >
-                <Check size={14} />
-              </button>
+              <div className="flex items-center justify-center shrink-0 w-4">
+                <span className="text-rosewood/20 font-bold text-sm leading-none select-none">:</span>
+              </div>
+              <div className="flex-1 min-w-[60px] max-w-[80px] sm:max-w-[100px]">
+                <TimeSegment value={startMinute} options={ALL_MINUTES} onChange={setStartMinute} label="Minute" />
+              </div>
+              <div className="w-px self-stretch my-2 bg-rosewood/10 shrink-0" />
+              <div className="flex-1 min-w-[50px] max-w-[70px] sm:max-w-[90px]">
+                <TimeSegment value={startPeriod} options={['AM', 'PM']} onChange={(v) => setStartPeriod(v as 'AM' | 'PM')} label="AM/PM" />
+              </div>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => openEditor('start', startTime || '')}
-              className={`group flex items-center gap-2.5 px-4 py-2.5 rounded-xl border-2 transition-all ${
-                errors.startTime
-                  ? 'border-red-400 bg-red-50'
-                  : startTime
-                    ? 'border-gold/30 bg-gold/5 hover:border-gold'
-                    : 'border-dashed border-rosewood/20 bg-transparent hover:border-rosewood/40'
-              }`}
-            >
-              <Clock size={14} className={startTime ? 'text-gold' : 'text-rosewood/30'} />
-              <span className={`text-sm font-black tabular-nums ${startTime ? 'text-rosewood' : 'text-rosewood/30'}`}>
-                {startTime ? fmt12(startTime) : (isTamil ? 'தொடக்கம்' : 'Start')}
-              </span>
-              {startTime && (
-                <span className="text-xs text-rosewood/30 group-hover:text-rosewood/60 font-bold transition-colors">
-                  {isTamil ? 'தொகு' : 'edit'}
-                </span>
-              )}
-            </button>
+          </div>
+          {errors.startTime && (
+            <p className="text-[10px] text-red-500 mt-1">{errors.startTime.message as string}</p>
           )}
         </div>
 
-        {/* Duration arrow */}
-        <div className="flex items-center gap-2 px-2 self-center">
+        {/* Duration */}
+        <div className="flex items-center gap-2 self-center sm:pt-6">
           <div className="h-px w-4 bg-rosewood/20 hidden sm:block" />
-          <span className="text-[11px] font-bold text-rosewood/40 tabular-nums whitespace-nowrap flex items-center gap-1">
-            <ArrowRight size={13} className="text-rosewood/30" />
+          <span className="text-xs font-bold text-rosewood/40 tabular-nums whitespace-nowrap flex items-center gap-1">
+            <ArrowRight size={14} className="text-rosewood/30" />
             {durationMinutes > 0
-              ? `${durationMinutes >= 60 ? (durationMinutes / 60).toFixed(1) : durationMinutes}${durationMinutes >= 60 ? (isTamil ? 'ம' : 'h') : (isTamil ? 'நி' : 'm')}`
+              ? `${durationMinutes >= 60
+                  ? (durationMinutes / 60).toFixed(durationMinutes % 60 === 0 ? 0 : 1)
+                  : durationMinutes}${durationMinutes >= 60 ? (isTamil ? 'ம' : 'h') : (isTamil ? 'நி' : 'm')}`
               : ''}
           </span>
           <div className="h-px w-4 bg-rosewood/20 hidden sm:block" />
         </div>
 
-        {/* End time chip */}
-        <div className="relative" ref={editing === 'end' ? inputRef : undefined}>
-          {editing === 'end' ? (
-            <div className="flex items-stretch bg-white border-2 border-gold rounded-xl overflow-hidden shadow-lg shadow-gold/10">
-              <div className="flex items-stretch">
-                {[HOURS, MINUTES].map((opts, si) => (
-                  <React.Fragment key={si}>
-                    {si > 0 && <div className="w-px self-stretch my-2 bg-gold/20" />}
-                    <div className="relative">
-                      <button
-                        type="button"
-                        className="h-9 px-2.5 text-xs font-bold text-rosewood bg-transparent flex items-center gap-1 hover:bg-gold/5 transition-colors"
-                      >
-                        <span className="tabular-nums">{si === 0 ? hVal : mVal}</span>
-                        <ChevronDown size={12} className="text-rosewood/30" />
-                      </button>
-                      <div className="absolute left-0 top-full mt-0.5 z-50 bg-white border border-rosewood/10 rounded-xl shadow-xl max-h-[180px] overflow-y-auto min-w-[60px] p-1">
-                        {opts.map(o => (
-                          <button
-                            key={o}
-                            type="button"
-                            onClick={() => si === 0 ? setHVal(o) : setMVal(o)}
-                            className={`w-full text-center px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                              (si === 0 ? hVal : mVal) === o
-                                ? 'bg-rosewood/10 text-rosewood font-bold'
-                                : 'text-rosewood/60 hover:bg-rosewood/5'
-                            }`}
-                          >
-                            {o}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </React.Fragment>
-                ))}
-                <div className="w-px self-stretch my-2 bg-gold/20" />
-                <div className="relative">
-                  <button
-                    type="button"
-                    className={`h-9 px-2.5 text-xs font-bold flex items-center gap-1 transition-colors ${
-                      pVal === 'AM' ? 'bg-amber-50 text-amber-700' : 'bg-indigo-50 text-indigo-700'
-                    }`}
-                    onClick={() => setPVal(p => p === 'AM' ? 'PM' : 'AM')}
-                  >
-                    {pVal === 'AM' ? <Sun size={12} /> : <Moon size={12} />}
-                    <span>{pVal}</span>
-                  </button>
-                </div>
+        {/* End Time */}
+        <div className="flex-1 w-full">
+          <label className="text-xs font-bold text-rosewood/50 mb-1.5 block">
+            {isTamil ? 'முடிவு நேரம்' : 'End Time'}
+          </label>
+          <div className={`flex items-stretch border-2 rounded-xl bg-white transition-all ${
+            errors.endTime ? 'border-red-400' : 'border-rosewood/10 hover:border-rosewood/30 focus-within:border-gold focus-within:ring-1 focus-within:ring-gold'
+          }`}>
+            <div className="flex-1 flex items-stretch min-w-0 h-[48px]">
+              <div className="flex-1 min-w-[60px] max-w-[80px] sm:max-w-[100px]">
+                <TimeSegment value={endHour} options={HOURS} onChange={setEndHour} label="Hour" />
               </div>
-              <button
-                type="button"
-                onClick={() => applyTime('endTime')}
-                className="px-3 bg-rosewood text-white text-xs font-bold flex items-center gap-1 hover:bg-rosewood/90 transition-colors"
-              >
-                <Check size={14} />
-              </button>
+              <div className="flex items-center justify-center shrink-0 w-4">
+                <span className="text-rosewood/20 font-bold text-sm leading-none select-none">:</span>
+              </div>
+              <div className="flex-1 min-w-[60px] max-w-[80px] sm:max-w-[100px]">
+                <TimeSegment value={endMinute} options={ALL_MINUTES} onChange={setEndMinute} label="Minute" />
+              </div>
+              <div className="w-px self-stretch my-2 bg-rosewood/10 shrink-0" />
+              <div className="flex-1 min-w-[50px] max-w-[70px] sm:max-w-[90px]">
+                <TimeSegment value={endPeriod} options={['AM', 'PM']} onChange={(v) => setEndPeriod(v as 'AM' | 'PM')} label="AM/PM" />
+              </div>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => openEditor('end', endTime || '')}
-              className={`group flex items-center gap-2.5 px-4 py-2.5 rounded-xl border-2 transition-all ${
-                errors.endTime
-                  ? 'border-red-400 bg-red-50'
-                  : endTime
-                    ? 'border-gold/30 bg-gold/5 hover:border-gold'
-                    : 'border-dashed border-rosewood/20 bg-transparent hover:border-rosewood/40'
-              }`}
-            >
-              <Clock size={14} className={endTime ? 'text-gold' : 'text-rosewood/30'} />
-              <span className={`text-sm font-black tabular-nums ${endTime ? 'text-rosewood' : 'text-rosewood/30'}`}>
-                {endTime ? fmt12(endTime) : (isTamil ? 'முடிவு' : 'End')}
-              </span>
-              {endTime && (
-                <span className="text-xs text-rosewood/30 group-hover:text-rosewood/60 font-bold transition-colors">
-                  {isTamil ? 'தொகு' : 'edit'}
-                </span>
-              )}
-            </button>
+          </div>
+          {errors.endTime && (
+            <p className="text-[10px] text-red-500 mt-1">{errors.endTime.message as string}</p>
           )}
         </div>
-
-        {/* AM/PM quick toggle when both set */}
-        {parsedStart && parsedEnd && !editing && (
-          <div className="flex gap-1 ml-auto">
-            <button
-              type="button"
-              onClick={() => toggleMeridiem('startTime')}
-              className="p-1.5 rounded-lg hover:bg-rosewood/5 transition-colors"
-              title={isTamil ? 'தொடக்க நேர AM/PM' : 'Toggle start AM/PM'}
-            >
-              {parsedStart.h24 < 12 ? <Sun size={13} className="text-amber-500" /> : <Moon size={13} className="text-indigo-400" />}
-            </button>
-            <button
-              type="button"
-              onClick={() => toggleMeridiem('endTime')}
-              className="p-1.5 rounded-lg hover:bg-rosewood/5 transition-colors"
-              title={isTamil ? 'முடிவு நேர AM/PM' : 'Toggle end AM/PM'}
-            >
-              {parsedEnd.h24 < 12 ? <Sun size={13} className="text-amber-500" /> : <Moon size={13} className="text-indigo-400" />}
-            </button>
-          </div>
-        )}
       </div>
-
-      {editing && (
-        <div className="text-[10px] text-rosewood/40 font-medium">
-          {isTamil ? 'மாற்றங்களை உறுதிப்படுத்த ✔ பொத்தானை அழுத்தவும்' : 'Press ✔ to confirm, click outside to cancel'}
-        </div>
-      )}
-
-      {errors.startTime && !editing && (
-        <p className="text-[10px] text-red-500">{errors.startTime.message}</p>
-      )}
 
       {/* Booked slots */}
       {bookedSlots.length > 0 && (
-        <div className="pt-2 border-t border-rosewood/5">
+        <div className="pt-3 border-t border-rosewood/5">
+          <p className="text-[10px] font-bold text-rosewood/40 mb-2">
+            {isTamil ? 'முன்பதிவு செய்யப்பட்ட நேரங்கள்' : 'Booked Slots'}
+          </p>
           <div className="flex flex-wrap gap-1.5">
             {bookedSlots.map((slot, i) => {
               const sP = parseTime(slot.startTime);
               const eP = parseTime(slot.endTime);
               const label = sP && eP ? `${fmt12(slot.startTime)} → ${fmt12(slot.endTime)}` : `${slot.startTime} → ${slot.endTime}`;
               return (
-                <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rosewood/5 rounded-lg text-[9px] font-bold text-rosewood/50 border border-rosewood/10">
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rosewood/5 rounded-lg text-[10px] font-bold text-rosewood/50 border border-rosewood/10"
+                >
                   <span className="w-1.5 h-1.5 rounded-full bg-rosewood/20 shrink-0" />
                   {label}
                 </span>
               );
             })}
           </div>
+          {hasConflict && (
+            <div className="mt-3 flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+              <AlertTriangle size={14} className="text-red-500 shrink-0" />
+              <p className="text-[11px] font-bold text-red-700">
+                {isTamil
+                  ? 'தேர்ந்தெடுக்கப்பட்ட நேரம் ஏற்கனவே முன்பதிவு செய்யப்பட்ட நேரத்துடன் முரண்படுகிறது'
+                  : 'Selected time conflicts with an existing booking'}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

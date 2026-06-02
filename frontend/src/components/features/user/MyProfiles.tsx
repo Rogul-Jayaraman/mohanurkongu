@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
@@ -6,10 +6,10 @@ import { UserProfileCard, UserProfileCardSkeleton } from '@/components/features/
 import { SearchBar } from '@/components/ui/SearchBar';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { useTranslation } from 'react-i18next';
-import { fetchMyProfiles, deleteDraft } from '@/api/profile.api';
 import { indexedDBStorage } from '@/lib/indexeddb';
 import { ConfirmationModal } from '@/modals/user/ConfirmationModal';
-import { toast } from 'sonner';
+import { useMyProfilesQuery } from '@/queries/useProfileQueries';
+import { useDeleteDraftMutation } from '@/queries/useProfileMutations';
 
 // ═══════════════════════════════════════════════════════════
 // MyProfilesSkeleton
@@ -75,13 +75,15 @@ const EmptyStateView: React.FC<{
 const MyProfiles: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation(['myprofiles', 'common']);
-    const [profiles, setProfiles] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [deletePending, setDeletePending] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [profileToDelete, setProfileToDelete] = useState<string | null>(null);
 
-    useEffect(() => { fetchMyProfiles(searchQuery || undefined).then(setProfiles).catch(() => toast.error(t('myprofiles:error_fetching'))).finally(() => setLoading(false)); }, [searchQuery]);
+    const myProfilesQuery = useMyProfilesQuery(searchQuery || undefined);
+    const deleteMutation = useDeleteDraftMutation();
+
+    const profiles: any[] = (myProfilesQuery.data as any[]) ?? [];
+    const loading = myProfilesQuery.isPending;
+    const deletePending = deleteMutation.isPending;
 
     const handleCreateNew = async () => {
         await indexedDBStorage.clearDraft();
@@ -93,14 +95,11 @@ const MyProfiles: React.FC = () => {
 
     const confirmDelete = () => {
         if (profileToDelete) {
-            setDeletePending(true);
-            deleteDraft(profileToDelete).then(() => {
-                setProfiles(prev => prev.filter(p => p.id !== profileToDelete));
-                toast.success(t('common:delete_success') || 'Profile deleted successfully');
-                setProfileToDelete(null);
-            }).catch(() => {
-                toast.error(t('common:delete_error') || 'Failed to delete profile');
-            }).finally(() => setDeletePending(false));
+            deleteMutation.mutate(profileToDelete, {
+                onSuccess: () => {
+                    setProfileToDelete(null);
+                },
+            });
         }
     };
 

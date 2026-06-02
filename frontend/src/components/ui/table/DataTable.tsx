@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LucideIcon, Inbox, AlertCircle } from 'lucide-react';
+import { Inbox, AlertCircle, RefreshCw } from 'lucide-react';
 import { TablePagination } from '@/components/ui/table/TablePagination';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -29,7 +29,7 @@ interface DataTableProps<T> {
     loading?: boolean;
     error?: string | null;
     emptyState?: {
-        icon?: LucideIcon;
+        icon?: React.ElementType;
         title?: string;
         description?: string;
     };
@@ -51,7 +51,7 @@ export function DataTable<T>({
     className = ""
 }: DataTableProps<T>) {
     const { t } = useLanguage();
-    
+
     const getRowKey = (item: T, index: number): string => {
         if (typeof rowKey === 'function') return rowKey(item);
         if (rowKey && item[rowKey]) return String(item[rowKey]);
@@ -60,17 +60,27 @@ export function DataTable<T>({
 
     const EmptyIcon = emptyState?.icon || Inbox;
 
+    const SkeletonRow = () => (
+        <tr className="animate-pulse">
+            {columns.map((_, idx) => (
+                <td key={idx} className="py-4 px-5">
+                    <div className="h-4 bg-gold/5 rounded-md skeleton" />
+                </td>
+            ))}
+        </tr>
+    );
+
     return (
         <div className={`space-y-4 ${className}`}>
-            <div className="bg-white rounded-xl shadow-sm border border-gold/10 overflow-hidden">
+            <div className="bg-white rounded-2xl border border-gold/10 overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
-                        <thead className="bg-ivory border-b border-gold/20 sticky top-0 z-10">
-                            <tr>
+                        <thead>
+                            <tr className="bg-gradient-to-r from-rosewood/[0.03] to-rosewood/[0.01] border-b border-gold/10">
                                 {columns.map((column, idx) => (
-                                    <th 
-                                        key={idx} 
-                                        className={`py-4 px-6 text-sm font-bold text-rosewood whitespace-nowrap ${column.headerClassName || ''}`}
+                                    <th
+                                        key={idx}
+                                        className={`py-4 px-5 text-[11px] font-black text-rosewood/50 uppercase tracking-wider whitespace-nowrap ${column.headerClassName || ''}`}
                                         style={{ width: column.width }}
                                     >
                                         {typeof column.header === 'string' ? column.header : String(column.header || '')}
@@ -79,90 +89,83 @@ export function DataTable<T>({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gold/5">
-                            <AnimatePresence mode="popLayout">
-                                {error ? (
-                                    <tr>
-                                        <td colSpan={columns.length} className="py-20 text-center">
-                                            <div className="flex flex-col items-center px-6">
-                                                <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4 text-red-500">
-                                                    <AlertCircle size={32} />
-                                                </div>
-                                                <h3 className="text-xl font-serif font-bold text-red-900/60 uppercase tracking-wider">
-                                                    {t('adminMatrimony.common.errorTitle') || 'Something went wrong'}
-                                                </h3>
-                                                <p className="text-sm text-red-600/60 mt-2 max-w-sm mx-auto">
-                                                    {error}
-                                                </p>
-                                                {onRetry && (
-                                                    <button 
-                                                        onClick={onRetry}
-                                                        className="mt-6 px-6 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-bold hover:bg-red-200 transition-colors"
-                                                    >
-                                                        {t('adminMatrimony.common.tryAgain') || 'Try Again'}
-                                                    </button>
-                                                )}
+                            {error ? (
+                                <tr>
+                                    <td colSpan={columns.length} className="py-20 text-center">
+                                        <div className="flex flex-col items-center px-6">
+                                            <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mb-4">
+                                                <AlertCircle size={28} className="text-rose-400" />
                                             </div>
-                                        </td>
-                                    </tr>
-                                ) : loading ? (
-                                    <tr>
-                                        <td colSpan={columns.length} className="py-20 text-center">
-                                            <div className="flex flex-col items-center">
-                                                <div className="w-10 h-10 border-4 border-gold/20 border-t-gold rounded-full animate-spin"></div>
-                                                <p className="mt-4 text-rosewood/60 font-medium">
-                                                    {t('adminMatrimony.common.loading') || 'Loading data...'}
-                                                </p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : data.length > 0 ? (
-                                    data.map((item, index) => (
+                                            <h3 className="text-base font-bold text-rose-600/80">
+                                                {t('adminMatrimony.common.errorTitle') || 'Something went wrong'}
+                                            </h3>
+                                            <p className="text-sm text-rose-500/60 mt-1 max-w-sm mx-auto">
+                                                {error}
+                                            </p>
+                                            {onRetry && (
+                                                <button
+                                                    onClick={onRetry}
+                                                    className="mt-5 px-5 py-2.5 bg-rose-50 text-rose-700 rounded-xl text-sm font-bold hover:bg-rose-100 transition-colors inline-flex items-center gap-2 border border-rose-200"
+                                                >
+                                                    <RefreshCw size={14} />
+                                                    {t('adminMatrimony.common.tryAgain') || 'Try Again'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : loading ? (
+                                Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
+                            ) : data.length > 0 ? (
+                                <AnimatePresence mode="popLayout">
+                                    {data.map((item, index) => (
                                         <motion.tr
                                             key={getRowKey(item, index)}
-                                            initial={{ opacity: 0, y: 5 }}
+                                            initial={{ opacity: 0, y: 4 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.02 }}
+                                            transition={{ delay: index * 0.02, duration: 0.2 }}
                                             onClick={() => onRowClick && onRowClick(item)}
-                                            className={`group hover:bg-ivory/30 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
+                                            className={`group transition-all duration-150 ${
+                                                index % 2 === 1 ? 'bg-ivory/30' : 'bg-white'
+                                            } hover:bg-rosewood/[0.02] ${onRowClick ? 'cursor-pointer' : ''}`}
                                         >
                                             {columns.map((column, colIdx) => (
-                                                <td 
-                                                    key={colIdx} 
-                                                    className={`py-3 px-6 text-sm text-slate-700 ${column.className || ''}`}
+                                                <td
+                                                    key={colIdx}
+                                                    className={`py-3.5 px-5 text-sm text-slate-700 group-hover:text-rosewood/90 transition-colors ${column.className || ''}`}
                                                 >
                                                     {column.render ? column.render(item, index) : (column.key ? String(item[column.key as keyof T] || '') : null)}
                                                 </td>
                                             ))}
                                         </motion.tr>
-                                    ))
-                                ) : (
-                                    <motion.tr
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                    >
-                                        <td colSpan={columns.length} className="py-20 text-center">
-                                            <div className="flex flex-col items-center">
-                                                <div className="w-16 h-16 rounded-full bg-ivory flex items-center justify-center mb-4">
-                                                    <EmptyIcon className="text-gold/40" size={32} />
-                                                </div>
-                                                <h3 className="text-xl font-serif font-bold text-rosewood/60">
-                                                    {emptyState?.title || t('adminMatrimony.common.noRecords') || 'No records found'}
-                                                </h3>
-                                                {emptyState?.description && (
-                                                    <p className="text-sm text-slate-400 mt-1 max-w-xs mx-auto">
-                                                        {emptyState.description}
-                                                    </p>
-                                                )}
+                                    ))}
+                                </AnimatePresence>
+                            ) : (
+                                <motion.tr
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                >
+                                    <td colSpan={columns.length} className="py-20 text-center">
+                                        <div className="flex flex-col items-center">
+                                            <div className="w-16 h-16 rounded-full bg-ivory flex items-center justify-center mb-4 border border-gold/10">
+                                                <EmptyIcon className="text-gold/30" size={28} />
                                             </div>
-                                        </td>
-                                    </motion.tr>
-                                )}
-                            </AnimatePresence>
+                                            <h3 className="text-base font-bold text-rosewood/50">
+                                                {emptyState?.title || t('adminMatrimony.common.noRecords') || 'No records found'}
+                                            </h3>
+                                            {emptyState?.description && (
+                                                <p className="text-sm text-rosewood/30 mt-1 max-w-xs mx-auto">
+                                                    {emptyState.description}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </td>
+                                </motion.tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
 
-                {/* Table Footer with Pagination */}
                 {pagination && data.length > 0 && (
                     <TablePagination
                         currentPage={pagination.currentPage}

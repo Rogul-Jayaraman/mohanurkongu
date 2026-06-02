@@ -18,10 +18,10 @@ import { useProfileUtils } from "@/hooks/useProfileUtils";
 import { KULAM_OPTIONS } from "@/constants/options";
 import { StatusBadge } from "@/components/ui/feedback/StatusBadge";
 import { useInitials } from "@/hooks/useInitials";
-import { toggleShortlist as toggleShortlistApi } from '@/api/profile.api';
 import { formatFullName } from "@/utils/formatName";
 import { getImageUrl } from "@/utils/getImageUrl";
 import { getAccessToken } from "@/lib/session";
+import { useToggleShortlistMutation } from '@/queries/useProfileMutations';
 
 interface UserProfileCardProps {
   profile: any;
@@ -51,11 +51,11 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
     const { getEnumLabel, getLocationLabel } = useProfileUtils();
     const navigate = useNavigate();
     const isOwner = isOwnProfile || profile.isOwner;
+    const toggleShortlistMut = useToggleShortlistMutation();
     const [isShortlisted, setIsShortlisted] = React.useState(
       !!profile.isShortlisted,
     );
-    const [isToggling, setIsToggling] = React.useState(false);
-    const [shortlistPending, setShortlistPending] = React.useState(false);
+    const isToggling = toggleShortlistMut.isPending;
 
     const { getInitials } = useInitials();
     const isTamil = i18n.language === "ta";
@@ -114,15 +114,15 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
         return;
       }
 
-      setIsToggling(true);
       const previousState = isShortlisted;
       setIsShortlisted(!previousState);
 
       try {
-        setShortlistPending(true);
-        const data = await toggleShortlistApi(profile.id, previousState ? 'remove' : 'add');
-        setShortlistPending(false);
-        const newState = data.isShortlisted;
+        const data = await toggleShortlistMut.mutateAsync({
+          profileId: profile.id,
+          action: previousState ? 'remove' : 'add',
+        });
+        const newState = (data as any).isShortlisted;
         setIsShortlisted(newState);
 
         if (newState) {
@@ -134,11 +134,9 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
         if (onToggleShortlist) {
           onToggleShortlist(profile.id, newState);
         }
-      } catch (error: any) {
+      } catch {
         setIsShortlisted(previousState);
         toast.error(t("common:error_shortlist"));
-      } finally {
-        setIsToggling(false);
       }
     };
 

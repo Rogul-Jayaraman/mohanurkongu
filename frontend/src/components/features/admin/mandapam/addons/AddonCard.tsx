@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 import { Edit2, Trash2 } from 'lucide-react';
+import { formatCurrency } from '@/utils/format';
 import type { MandapamAddon } from '@/types/mandapam';
 
 const ICON_FALLBACKS: Record<string, string> = {
@@ -14,9 +15,9 @@ const KNOWN_ICONS = new Set([
     'kitchen', 'bathtub', 'deck', 'outdoor_grill', 'music_note', 'videocam',
     'mic', 'theater_comedy', 'stadium', 'pool', 'child_care', 'accessible',
     'elevator', 'escalator', 'security', 'smoke_free', 'fire_extinguisher', 'eco',
-    'light', 'sound', 'restaurant', 'cake', 'diamond', 'star',
+    'light', 'surround_sound', 'restaurant', 'cake', 'diamond', 'star',
     'favorite', 'celebration', 'nightlight', 'sunny', 'cloud', 'water',
-    'forest', 'cabin', 'festival', 'spa', 'dance', 'camera_alt',
+    'forest', 'cabin', 'festival', 'spa', 'self_improvement', 'camera_alt',
     'album', 'auto_awesome', 'villa', 'home', 'business', 'checkroom',
     'luggage', 'pets', 'set_meal', 'brunch_dining', 'add',
 ]);
@@ -51,63 +52,64 @@ export const AddonCard: React.FC<AddonCardProps> = ({ addon, onEdit, onDelete, o
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-            className="rounded-2xl p-8 flex flex-col h-full transition-all duration-300 bg-ivory-tint border border-primary/30 shadow-sm hover:shadow-md"
+            className="relative bg-ivory border border-gold/20 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group"
         >
-            <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-ivory flex items-center justify-center border border-gold/20 shrink-0">
+            <div className="flex items-center gap-4">
+                <div className="size-12 rounded-2xl bg-rosewood/5 border border-gold/10 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-2xl text-rosewood">{resolveIcon(addon.iconName)}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                    <h3 className="font-heading text-lg font-bold text-rosewood">
-                        {displayName}
-                    </h3>
-                    <p className="mt-1 text-sm font-semibold text-gold/80">
-                        ₹{addon.amount.toLocaleString('en-IN')}
-                        <span className="text-[10px] text-slate-400 ml-0.5">
-                            {addon.pricingType === 'HOURLY' ? t('adminMandapam.addons.perHour') : t('adminMandapam.addons.perEvent')}
+                    <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-rosewood truncate">{displayName}</h3>
+                        {!addon.status && (
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider shrink-0">{t('adminMandapam.addons.inactive')}</span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1">
+                        <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
+                            addon.pricingType === 'PER_EVENT' ? 'bg-purple-100 text-purple-700'
+                            : addon.pricingType === 'PER_HOUR' ? 'bg-amber-100 text-amber-700'
+                            : 'bg-blue-100 text-blue-700'
+                        }`}>
+                            {addon.pricingType === 'PER_EVENT' ? (t('adminMandapam.addons.perEvent') || 'Per Event')
+                                : addon.pricingType === 'PER_HOUR' ? (t('adminMandapam.addons.perHour') || 'Per Hour')
+                                : (t('adminMandapam.addons.perDay') || 'Per Day')}
                         </span>
-                    </p>
+                        {addon.supportsQuantity && (
+                            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700">
+                                {t('adminMandapam.addons.supportsQuantity') || 'Qty'}
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {!addon.status && (
-                <span className="text-[10px] font-bold text-slate-400 mb-3">
-                    {t('adminMandapam.addons.inactive')}
-                </span>
-            )}
-
-            <div className="grow" />
-
-            <div className="space-y-3 pt-5 border-t border-primary/20">
-                <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-gray-400">
-                        {t('adminMandapam.common.status')}
+            <div className="mt-4 pt-4 border-t border-gold/10 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <span className={`w-1.5 h-1.5 rounded-full ${addon.status ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+                    <span className={`text-[10px] font-bold ${addon.status ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {addon.status ? t('adminMandapam.addons.active') : t('adminMandapam.addons.inactive')}
                     </span>
-                    <div className="flex items-center gap-2">
-                        <span className={`text-xs font-semibold ${addon.status ? 'text-emerald-600' : 'text-slate-400'}`}>
-                            {addon.status ? t('adminMandapam.addons.active') : t('adminMandapam.addons.inactive')}
-                        </span>
-                        <button
-                            onClick={() => onToggleStatus(addon.id, addon.status)}
-                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${addon.status ? 'bg-emerald-400' : 'bg-slate-300'}`}
-                        >
-                            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${addon.status ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
-                        </button>
-                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => onEdit(addon)}
-                        className="btn-shine flex-1 flex items-center justify-center gap-2 py-3 border border-gold-accent text-rosewood rounded-lg text-xs font-bold hover:bg-primary transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gold/20 rounded-xl text-[10px] font-bold text-rosewood/60 hover:text-rosewood hover:border-rosewood/30 transition-all"
                     >
-                        <Edit2 size={14} />
+                        <Edit2 size={12} />
                         {t('adminMandapam.common.edit')}
                     </button>
                     <button
                         onClick={() => onDelete(addon.id)}
-                        className="flex items-center justify-center gap-2 py-3 px-4 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors border border-red-200"
+                        className="flex items-center justify-center size-8 bg-red-50 border border-red-200 rounded-xl text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all"
                     >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
+                    </button>
+                    <button
+                        onClick={() => onToggleStatus(addon.id, addon.status)}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer hover:ring-2 hover:ring-rosewood/30 ${addon.status ? 'bg-emerald-400' : 'bg-slate-300'}`}
+                    >
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${addon.status ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
                     </button>
                 </div>
             </div>

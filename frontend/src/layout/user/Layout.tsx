@@ -26,7 +26,7 @@ export const UserLayout: React.FC = () => {
     return "tagline";
   };
 
-  const isFullWidthPage = location.pathname.includes("/new-profile") || location.pathname.includes("/my-account");
+  const isFullWidthPage = location.pathname.includes("/new-profile") || location.pathname.includes("/new-booking") || location.pathname.includes("/my-account");
 
   return (
     <div className="flex min-h-screen">

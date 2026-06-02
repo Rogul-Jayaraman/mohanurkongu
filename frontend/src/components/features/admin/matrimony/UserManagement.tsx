@@ -6,10 +6,8 @@ import { Eye, Phone, Search, UserX, Users as UsersIcon, XCircle, Crown, UserMinu
 import { SearchBar } from '@/components/ui/SearchBar';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
-
 import { DataTable, Column } from '@/components/ui/table/DataTable';
-import { fetchAdminAccounts, fetchAdminAccountDetail, suspendAccount, restoreAccount } from '@/api/admin-accounts.api';
-import { adminCancelSubscription } from '@/api/admin-membership.api';
+import { fetchAdminAccountDetail } from '@/api/admin-accounts.api';
 import { ConfirmationModal } from '@/components/modals/admin/ConfirmationModal';
 import { RejectionModal } from '@/components/modals/admin/RejectionModal';
 import CancelSubscriptionModal from './CancelSubscriptionModal';
@@ -17,6 +15,7 @@ import AssignPlanModal from './AssignPlanModal';
 import { useDateFormatter } from '@/hooks/useDateFormatter';
 import type { AdminAccount } from '@/types/admin-types';
 import { toast } from 'sonner';
+import { useAdminAccountsQuery, useSuspendAccountMutation, useRestoreAccountMutation, useAdminCancelSubscriptionMutation } from '@/queries/useAdminAccountQueries';
 
 // ═══════════════════════════════════════════════════════════
 // UserManagement (Main Orchestrator)
@@ -30,9 +29,12 @@ const UserManagement: React.FC = () => {
     const itemsPerPage = 8;
     const [searchQuery, setSearchQuery] = React.useState('');
 
-    const [data, setData] = React.useState<any>({ accounts: [], meta: { total: 0, totalPages: 1, page: 1, limit: itemsPerPage } });
-    const [isLoading, setIsLoading] = React.useState(true);
-    React.useEffect(() => { setIsLoading(true); fetchAdminAccounts({ page: currentPage, search: searchQuery }).then(setData).finally(() => setIsLoading(false)); }, [currentPage, searchQuery]);
+    const accountsQuery = useAdminAccountsQuery({ page: currentPage, search: searchQuery });
+    const data = accountsQuery.data || { accounts: [], meta: { total: 0, totalPages: 1, page: 1, limit: itemsPerPage } };
+    const isLoading = accountsQuery.isPending;
+    const cancelMut = useAdminCancelSubscriptionMutation();
+    const suspendMut = useSuspendAccountMutation();
+    const restoreMut = useRestoreAccountMutation();
 
     const [cancelTarget, setCancelTarget] = React.useState<{ userId: string; planName: string; revertableName: string | null } | null>(null);
     const [suspendTarget, setSuspendTarget] = React.useState<string | null>(null);
@@ -68,12 +70,11 @@ const UserManagement: React.FC = () => {
     const handleCancelConfirm = async (action: 'cancel' | 'revert') => {
         if (!cancelTarget) return;
         try {
-            await adminCancelSubscription(cancelTarget.userId, action);
+            await cancelMut.mutateAsync({ id: cancelTarget.userId, action });
             toast.success(action === 'cancel'
                 ? (isTamil ? 'இலவச திட்டத்திற்கு மாற்றப்பட்டது' : 'Downgraded to BRONZE plan')
                 : (isTamil ? 'முந்தைய திட்டத்திற்கு மாற்றப்பட்டது' : 'Reverted to previous plan'));
             setCancelTarget(null);
-            fetchAdminAccounts({ page: currentPage, search: searchQuery }).then(setData);
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Failed to cancel subscription');
         }
@@ -82,10 +83,8 @@ const UserManagement: React.FC = () => {
     const handleSuspend = async (reasonEn: string, reasonTa: string) => {
         if (!suspendTarget) return;
         try {
-            await suspendAccount(suspendTarget, reasonEn, reasonTa);
-            toast.success(t('adminMatrimony.users.suspendSuccess') || 'Account suspended');
+            await suspendMut.mutateAsync({ id: suspendTarget, reasonEn, reasonTa });
             setSuspendTarget(null);
-            fetchAdminAccounts({ page: currentPage, search: searchQuery }).then(setData);
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Failed to suspend');
         }
@@ -94,10 +93,8 @@ const UserManagement: React.FC = () => {
     const handleRestore = async () => {
         if (!restoreTarget) return;
         try {
-            await restoreAccount(restoreTarget);
-            toast.success(t('adminMatrimony.users.revokeSuccess') || 'Account restored');
+            await restoreMut.mutateAsync(restoreTarget);
             setRestoreTarget(null);
-            fetchAdminAccounts({ page: currentPage, search: searchQuery }).then(setData);
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Failed to restore');
         }
@@ -245,7 +242,10 @@ const UserManagement: React.FC = () => {
                 availablePlans={planTarget?.plans || []}
                 isOpen={!!planTarget}
                 onClose={() => setPlanTarget(null)}
-                onAssigned={() => { setPlanTarget(null); fetchAdminAccounts({ page: currentPage, search: searchQuery }).then(setData); }}
+                onAssigned={() => {
+                    setPlanTarget(null);
+                    accountsQuery.refetch();
+                }}
             />
         </motion.div>
     );

@@ -1,171 +1,405 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { packages as enPackages } from '@/locales/en/maaligai/packages';
 import { packages as taPackages } from '@/locales/ta/maaligai/packages';
+import { usePublicPackages, usePublicFacilities, usePublicAddons } from '@/queries/useMandapamQueries';
 import OrnamentalDivider from '@/components/ui/OrnamentalDivider';
 import DiamondDivider from '@/components/ui/DiamondDivider';
+import type { PublicPackage, PublicFacility, PublicAddon } from '@/types/mandapam';
+
+const KNOWN_ICONS = new Set([
+  'meeting_room', 'chair', 'table_restaurant', 'local_parking', 'wifi', 'ac_unit',
+  'kitchen', 'bathtub', 'deck', 'outdoor_grill', 'music_note', 'videocam',
+  'mic', 'theater_comedy', 'stadium', 'pool', 'child_care', 'accessible',
+  'elevator', 'escalator', 'security', 'smoke_free', 'fire_extinguisher', 'eco',
+  'light', 'surround_sound', 'restaurant', 'cake', 'diamond', 'star',
+  'favorite', 'celebration', 'nightlight', 'sunny', 'cloud', 'water',
+  'forest', 'cabin', 'festival', 'spa', 'self_improvement', 'camera_alt',
+  'album', 'auto_awesome', 'villa', 'home', 'business', 'checkroom',
+  'luggage', 'pets', 'set_meal', 'brunch_dining', 'add', 'bed',
+  'hotel_class', 'palette', 'photo_camera', 'restaurant_menu',
+]);
+
+const resolveIcon = (name: string): string => {
+  let icon = name
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+  return KNOWN_ICONS.has(icon) ? icon : 'add';
+};
+
+const VISIBLE_FUNCTIONS = 3;
 
 interface PackagesHeroProps {}
 interface PackagesCTAProps {}
 
 export const PackagesHero: React.FC<PackagesHeroProps> = () => {
   const navigate = useNavigate();
-    const { language: lang } = useLanguage();
-    const isTamil = lang === 'ta';
-    const t = isTamil ? taPackages : enPackages;
-    const content = t;
+  const { language: lang } = useLanguage();
+  const isTamil = lang === 'ta';
+  const langCode = isTamil ? 'TA' : 'EN';
+  const t = isTamil ? taPackages : enPackages;
 
-    const ls = (enClasses: string, taClasses: string) => isTamil ? taClasses : enClasses;
-    const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
-    const h2 = isTamil ? 'text-xl md:text-2xl lg:text-3xl' : 'text-2xl md:text-4xl lg:text-5xl';
-    const h3 = isTamil ? 'text-lg md:text-xl' : 'text-xl md:text-2xl';
-    const body = isTamil ? 'font-tamil-body text-sm md:text-base' : 'font-body text-base md:text-lg';
-    const weight = (en: string, ta: string = 'font-bold') => isTamil ? ta : en;
-    const tracking = isTamil ? 'tracking-normal' : 'tracking-widest';
+  const ls = (enClasses: string, taClasses: string) => isTamil ? taClasses : enClasses;
+  const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
+  const h2 = isTamil ? 'text-xl md:text-2xl lg:text-3xl' : 'text-2xl md:text-4xl lg:text-5xl';
+  const body = isTamil ? 'font-tamil-body text-sm md:text-base' : 'font-body text-base md:text-lg';
+  const weight = (en: string, ta: string = 'font-bold') => isTamil ? ta : en;
 
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const { data: pkgData, isLoading: loadingPkgs, error: pkgError, refetch: refetchPkgs } = usePublicPackages(langCode);
+  const { data: facData, isLoading: loadingFacs } = usePublicFacilities(langCode);
+  const { data: addonData, isLoading: loadingAddons } = usePublicAddons(langCode);
+
+  const packages = (pkgData?.packages as PublicPackage[]) ?? [];
+  const facilities = (facData?.items as PublicFacility[]) ?? [];
+  const addons = (addonData?.items as PublicAddon[]) ?? [];
+  const loading = loadingPkgs || loadingFacs || loadingAddons;
+  const error = pkgError ? (pkgError as Error).message : null;
+
+  const fetchAll = () => { refetchPkgs(); };
+
+  const toggleExpand = (code: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  };
+
+  const sortedPackages = [...packages].sort((a, b) => {
+    const order = ['STANDARD', 'ROYAL', 'GRAND'];
+    return order.indexOf(a.code) - order.indexOf(b.code);
+  });
+
+  const allFunctionNames = [...new Set(
+    sortedPackages.flatMap(p => p.functions.map(f => f.name))
+  )];
+
+  const isRoyal = (code: string) => code === 'ROYAL';
+
+  if (loading) {
     return (
-        <section className="section-spacing bg-ivory-tint">
-            <div className="px-6 text-center mb-16 md:mb-24 relative z-10">
-                <motion.h2
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6 }}
-                    className={`${fontSerif} text-rosewood ${h2} ${weight('font-bold')} mb-4`}
-                >
-                    {content.heroTitle}
-                </motion.h2>
-                <motion.p
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.2 }}
-                    className={`text-gray-600 max-w-2xl mx-auto ${body} mb-8 ${ls('leading-relaxed', 'leading-[1.6]')}`}
-                >
-                    {content.heroSubtitle}
-                </motion.p>
-                <div className="w-full max-w-sm mx-auto">
-                    <OrnamentalDivider
-                        stretch
-                        icon="local_florist"
-                        iconColor="text-gold-accent"
-                        lineColor="text-gold-accent"
-                        iconSize="text-xl md:text-2xl"
-                        className="mb-8 w-full"
-                    />
+      <section className="section-spacing bg-ivory-tint flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 animate-spin text-rosewood mx-auto mb-4" />
+          <p className="text-gray-500">{t.loading}</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="section-spacing bg-ivory-tint flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-md mx-auto px-6">
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h3 className={`${fontSerif} text-xl font-bold text-rosewood mb-2`}>{t.errorTitle}</h3>
+          <p className="text-gray-500 mb-6">{t.errorDesc}</p>
+          <button
+            onClick={fetchAll}
+            className="bg-rosewood text-white px-6 py-2.5 rounded-lg font-bold hover:bg-dark-rosewood transition-colors"
+          >
+            {t.retryBtn}
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  if (packages.length === 0) {
+    return (
+      <section className="section-spacing bg-ivory-tint flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-md mx-auto px-6">
+          <h3 className={`${fontSerif} text-xl font-bold text-rosewood mb-2`}>{t.emptyTitle}</h3>
+          <p className="text-gray-500">{t.emptySub}</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="section-spacing bg-ivory-tint">
+      {/* ── Section 1: Hero Header ── */}
+      <div className="px-6 text-center mb-16 md:mb-24 relative z-10">
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className={`${fontSerif} text-rosewood ${h2} ${weight('font-bold')} mb-4`}
+        >
+          {t.heroTitle}
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className={`text-gray-600 max-w-2xl mx-auto ${body} mb-8 ${ls('leading-relaxed', 'leading-[1.6]')}`}
+        >
+          {t.heroSubtitle}
+        </motion.p>
+        <div className="w-full max-w-sm mx-auto">
+          <OrnamentalDivider
+            stretch
+            icon="local_florist"
+            iconColor="text-gold-accent"
+            lineColor="text-gold-accent"
+            iconSize="text-xl md:text-2xl"
+            className="mb-8 w-full"
+          />
+        </div>
+      </div>
+
+      {/* ── Section 2: Package Cards ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-6 lg:px-20">
+        {sortedPackages.map((pkg, idx) => {
+          const isExpanded = expanded.has(pkg.code);
+          const displayed = isExpanded ? pkg.functions : pkg.functions.slice(0, VISIBLE_FUNCTIONS);
+          const remaining = pkg.functions.length - VISIBLE_FUNCTIONS;
+
+          return (
+            <motion.div
+              key={pkg.code}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: idx * 0.1 }}
+              whileHover={{ y: -5 }}
+              className={`rounded-2xl p-10 flex flex-col h-full transition-shadow relative ${
+                isRoyal(pkg.code)
+                  ? 'bg-white border-2 border-gold-accent shadow-lg'
+                  : 'bg-ivory-tint border border-primary/30 shadow-sm hover:shadow-md'
+              }`}
+            >
+              {isRoyal(pkg.code) && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gold-accent text-white text-[10px] font-bold px-4 py-1 rounded-full uppercase tracking-widest text-nowrap whitespace-nowrap">
+                  {t.mostPopularLabel}
                 </div>
-            </div>
+              )}
+              <h3 className={`${fontSerif} text-xl md:text-2xl font-bold text-rosewood mb-5`}>
+                {pkg.displayName}
+              </h3>
+              {t.suitableFor[pkg.code as keyof typeof t.suitableFor] && (
+                <p className="text-gold-accent font-bold text-sm mb-8">
+                  {ls('Suitable for ', 'ஏற்றது ')}{t.suitableFor[pkg.code as keyof typeof t.suitableFor]}
+                </p>
+              )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-6 lg:px-20">
-                {content.packages.map((pkg: any, idx: number) => {
-                    const isHighlighted = pkg.highlight;
+              <div className="space-y-3 mb-8 grow">
+                {displayed.map((fn, fIdx) => (
+                  <div key={fIdx} className="flex items-center gap-3">
+                    <CheckCircle2 className="text-gold-accent w-5 h-5 shrink-0" />
+                    <span className={`text-dark-gray ${ls('text-sm', 'text-xs')}`}>{fn.name}</span>
+                  </div>
+                ))}
+                {pkg.functions.length > VISIBLE_FUNCTIONS && (
+                  <button
+                    onClick={() => toggleExpand(pkg.code)}
+                    className="flex items-center gap-1 text-gold-accent font-bold text-sm hover:underline mt-2"
+                  >
+                    {isExpanded ? (
+                      <>{t.collapseBtn} <ChevronUp className="w-4 h-4" /></>
+                    ) : (
+                      <>{t.expandBtn.replace('N', String(remaining))} <ChevronDown className="w-4 h-4" /></>
+                    )}
+                  </button>
+                )}
+              </div>
 
-                    return (
-                        <motion.div
-                            key={pkg.id}
-                            initial={{ opacity: 0, y: 30 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.5, delay: idx * 0.1 }}
-                            whileHover={{ y: -5 }}
-                            className={`rounded-2xl p-10 flex flex-col h-full transition-shadow relative ${isHighlighted
-                                ? "bg-white border-t-4 border-gold-accent shadow-xl lg:scale-105 z-10"
-                                : "bg-ivory-tint border border-primary/30 shadow-sm hover:shadow-md"
-                                }`}
-                        >
-                            {isHighlighted && (
-                                <div className={`absolute -top-4 left-1/2 -translate-x-1/2 bg-gold-accent text-white ${ls('text-[10px]', 'text-[9px]')} ${weight('font-bold')} px-4 py-1 rounded-full uppercase ${tracking} text-nowrap whitespace-nowrap`}>
-                                    {pkg.highlightText}
-                                </div>
-                            )}
-                            <h3 className={`${fontSerif} ${h3} ${weight('font-bold')} text-rosewood mb-2`}>{pkg.title}</h3>
-                            <p className={`text-gray-500 ${weight('font-medium')} mb-6 uppercase ${ls('text-xs', 'text-[11px]')} ${tracking}`}>{pkg.subtitle}</p>
-                            <p className={`${fontSerif} text-xl ${weight('font-bold')} mb-8 text-rosewood`}>{pkg.price}</p>
-
-                            <ul className="space-y-4 mb-10 grow text-rosewood">
-                                {pkg.features.map((feature: string, fIdx: number) => (
-                                    <li key={fIdx} className={`flex items-center gap-3 ${ls('text-sm', 'text-xs')}`}>
-                                        <CheckCircle2 className="text-gold-accent w-5 h-5 shrink-0" />
-                                        <span>{feature}</span>
-                                    </li>
-                                ))}
-                            </ul>
-
-                            <button
-                                onClick={() => {
-                                    navigate('/maaligai/contact/#inquiry', {
-                                        state: {
-                                            subject: `Price enquiry for ${pkg.title}`,
-                                            date: '',
-                                            packageName: pkg.title,
-                                            packagePrice: pkg.price,
-                                            messageType: 'package'
-                                        }
-                                    });
-                                }}
-                                className={`btn-shine w-full py-3 px-6 ${weight('font-bold')} rounded-lg transition-colors ${ls('text-sm', 'text-xs')} ${isHighlighted
-                                ? "bg-gold-accent text-white hover:bg-gold-accent/90 shadow-md"
-                                : "border border-gold-accent text-rosewood hover:bg-primary"
-                                }`}>
-                                {pkg.buttonText}
-                            </button>
-                        </motion.div>
-                    );
+              <button
+                onClick={() => navigate('/maaligai/contact/#inquiry', {
+                  state: { subject: `Price enquiry for ${pkg.displayName}`, packageName: pkg.displayName, messageType: 'package' }
                 })}
-            </div>
-        </section>
-    );
-};
+                className={`btn-shine w-full py-3 px-6 font-bold rounded-lg transition-all text-sm ${
+                  isRoyal(pkg.code)
+                    ? 'bg-gold-accent text-white hover:bg-gold-accent/90 shadow-md'
+                    : 'border border-gold-accent text-rosewood hover:bg-primary'
+                }`}
+              >
+                {t.enquireBtn}
+              </button>
+            </motion.div>
+          );
+        })}
+      </div>
 
-export const PackagesCTA: React.FC<PackagesCTAProps> = () => {
-    const navigate = useNavigate();
-    const { language: lang } = useLanguage();
-    const isTamil = lang === 'ta';
-    const t = isTamil ? taPackages : enPackages;
-    const content = t;
+      {/* ── Section 3: Facilities ── */}
+      {facilities.length > 0 && (
+        <div className="mt-24 md:mt-32 px-6 lg:px-20">
+          <div className="text-center mb-10">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className={`${fontSerif} text-rosewood ${h2} ${weight('font-bold')}`}
+            >
+              {t.facilitiesTitle}
+            </motion.h2>
+          </div>
+          <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-6">
+            {facilities.map((facility, idx) => (
+              <motion.div
+                key={facility.name + idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: idx * 0.08 }}
+                className="flex flex-col items-center justify-center p-6 bg-white border border-primary/10 rounded-2xl shadow-sm min-w-[140px] flex-1 max-w-[180px] h-28 text-center"
+              >
+                <span className="material-symbols-outlined text-3xl text-rosewood mb-2">
+                  {resolveIcon(facility.iconName)}
+                </span>
+                <span className={`font-medium text-dark-gray text-sm text-center leading-tight`}>
+                  {facility.name}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
 
-    const ls = (enClasses: string, taClasses: string) => isTamil ? taClasses : enClasses;
-    const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
-    const h2 = isTamil ? 'text-xl md:text-2xl lg:text-3xl' : 'text-2xl md:text-4xl lg:text-5xl';
-    const body = isTamil ? 'font-tamil-body text-sm md:text-base' : 'font-body text-base md:text-lg';
-    const tracking = isTamil ? 'tracking-normal' : 'tracking-widest';
+      {/* ── Section 4: Optional Add-On Services ── */}
+      {addons.length > 0 && (
+        <div className="mt-24 md:mt-32 px-6 lg:px-20">
+          <div className="text-center mb-10">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className={`${fontSerif} text-rosewood ${h2} ${weight('font-bold')}`}
+            >
+              {t.addonsTitle}
+            </motion.h2>
+          </div>
+          <div className="flex flex-wrap justify-center gap-6 max-w-4xl mx-auto">
+            {addons.map((addon, idx) => (
+              <motion.div
+                key={addon.name + idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: idx * 0.1 }}
+                className="flex flex-col items-center justify-center p-6 bg-white border border-primary/10 rounded-2xl shadow-sm w-[200px] h-28 text-center"
+              >
+                <span className="material-symbols-outlined text-3xl text-rosewood mb-2">
+                  {resolveIcon(addon.iconName)}
+                </span>
+                <span className={`font-medium text-dark-gray ${ls('text-sm', 'text-xs')}`}>
+                  {addon.name}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
 
-    return (
-        <section className="section-spacing px-6 lg:px-20 relative overflow-hidden bg-ivory">
-            <div className="max-w-4xl mx-auto text-center relative z-10">
-                <DiamondDivider className="mb-12 -mt-12  md:-mt-20" />
-                <motion.h2
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6 }}
-                    className={`${fontSerif} text-rosewood ${h2} font-bold mb-4 leading-tight`}
-                >
-                    {content.hallCtaTitle}
-                </motion.h2>
-                <motion.p
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: 0.15 }}
-                    className={`text-gray-600 ${body} max-w-2xl mx-auto mb-10 ${ls('leading-relaxed', 'leading-[1.6]')}`}
-                >
-                    {content.hallCtaSub}
-                </motion.p>
-                <motion.button
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: 0.3 }}
-                    onClick={() => navigate('/maaligai/hall-availability')}
-                    className={`btn-shine bg-rosewood text-white px-12 py-4 rounded-full font-bold hover:bg-dark-rosewood transition-all duration-300 shadow-lg active:scale-95 ${ls('uppercase text-sm tracking-widest', 'text-xs md:text-sm tracking-normal')}`}
-                >
-                    {content.hallCtaBtn}
-                </motion.button>
-            </div>
-        </section>
-    );
+      {/* ── Section 5: Comparison Table ── */}
+      {packages.length >= 2 && allFunctionNames.length > 0 && (
+        <div className="mt-24 md:mt-32 px-6 lg:px-20">
+          <div className="text-center mb-12">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className={`${fontSerif} text-rosewood ${h2} ${weight('font-bold')}`}
+            >
+              {t.compareTitle}
+            </motion.h2>
+          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="overflow-x-auto max-w-4xl mx-auto"
+          >
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gold/20">
+                  <th className={`py-4 pr-4 ${fontSerif} text-rosewood font-bold text-sm`}>
+                    {ls('Feature', 'அம்சம்')}
+                  </th>
+                  {sortedPackages.map(p => (
+                    <th key={p.code} className={`py-4 px-4 text-center ${fontSerif} text-rosewood font-bold text-sm`}>
+                      {p.displayName}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {allFunctionNames.map((fnName, idx) => (
+                  <tr key={fnName} className={`border-b border-gold/10 ${idx % 2 === 0 ? 'bg-white/50' : ''}`}>
+                    <td className={`py-3 pr-4 text-dark-gray text-sm`}>{fnName}</td>
+                    {sortedPackages.map(p => {
+                      const has = p.functions.some(f => f.name === fnName);
+                      return (
+                        <td key={p.code} className={`py-3 px-4 text-center text-sm`}>
+                          {has ? (
+                            <CheckCircle2 className="inline w-5 h-5 text-gold-accent" />
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ── Section 6: Need Help Choosing? ── */}
+      <div className="mt-24 md:mt-32 px-6 lg:px-20">
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <DiamondDivider className="mb-10" />
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className={`${fontSerif} text-rosewood ${h2} font-bold mb-8 leading-tight`}
+          >
+            {t.helpTitle}
+          </motion.h2>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center"
+          >
+            <a
+              href="tel:+919999999999"
+              className="btn-shine bg-rosewood text-white px-8 py-3 rounded-lg font-bold hover:bg-dark-rosewood transition-all duration-300 shadow-lg active:scale-95 flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-lg">call</span>
+              {t.helpCallBtn}
+            </a>
+            <a
+              href="https://wa.me/919999999999"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-shine bg-green-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-green-700 transition-all duration-300 shadow-lg active:scale-95 flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-lg">chat</span>
+              {t.helpWhatsAppBtn}
+            </a>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
 };
 
 export { AvailabilityCalendar, SharedCalendar } from './HallAvailability';

@@ -18,12 +18,12 @@ export const TAMIL_MONTHS: TamilMonth[] = [
     { nameTa: "பங்குனி", start: { month: 2, day: 14 } }
 ];
 
-export type CalendarStatus = 'available' | 'selected' | 'booked' | 'blocked' | 'today' | 'disabled';
+export type CalendarStatus = 'available' | 'selected' | 'booked' | 'partiallyBooked' | 'blocked' | 'today' | 'disabled';
 
 export const CALENDAR_THEME: Record<CalendarStatus, { legend: string; legendText?: string; cell: string; textMain: string; textSub: string; textTa: string }> = {
     available: {
         legend: "bg-white border border-sage-green/70",
-        cell: "bg-white border border-sage-green/70 hover:border-primary hover:bg-primary/20 shadow-sm",
+        cell: "bg-white hover:bg-primary/15 shadow-sm",
         textMain: "text-rosewood",
         textSub: "text-rosewood",
         textTa: "text-rosewood/70"
@@ -31,29 +31,38 @@ export const CALENDAR_THEME: Record<CalendarStatus, { legend: string; legendText
     selected: {
         legend: "bg-rose-beige border border-rose-beige",
         legendText: "text-rosewood",
-        cell: "bg-rose-beige scale-95 z-10 border border-rose-beige",
+        cell: "bg-rose-beige scale-95 z-10 shadow-md",
         textMain: "text-rosewood",
         textSub: "text-rosewood/80",
         textTa: "text-rosewood/90"
     },
     booked: {
         legend: "bg-sage-green/90 border border-rosewood/70",
+        legendText: "text-rosewood",
         cell: "bg-sage-green/90 border border-rosewood/70",
         textMain: "text-rosewood",
         textSub: "text-rosewood",
         textTa: "text-rosewood/70"
     },
-    blocked: {
-        legend: "bg-rosewood border border-rosewood/70",
+    partiallyBooked: {
+        legend: "bg-linear-to-br from-ivory to-gold-soft/40 border border-gold-accent/40",
         legendText: "text-rosewood",
-        cell: "bg-rosewood border border-rosewood/70",
+        cell: "bg-linear-to-br from-ivory to-gold-soft/20 border border-gold-accent/30 hover:from-gold-soft/30 hover:to-gold-soft/10",
+        textMain: "text-rosewood",
+        textSub: "text-rosewood/80",
+        textTa: "text-rosewood/70"
+    },
+    blocked: {
+        legend: "bg-linear-to-br from-rosewood to-dark-rosewood",
+        legendText: "text-white",
+        cell: "bg-linear-to-br from-rosewood to-dark-rosewood",
         textMain: "text-white",
         textSub: "text-white/80",
         textTa: "text-white/80"
     },
     today: {
         legend: "bg-primary border border-rosewood/70",
-        cell: "bg-primary border border-rosewood/70 shadow-inner",
+        cell: "bg-primary shadow-inner",
         textMain: "text-rosewood",
         textSub: "text-rosewood",
         textTa: "text-rosewood/70"
@@ -61,7 +70,7 @@ export const CALENDAR_THEME: Record<CalendarStatus, { legend: string; legendText
     disabled: {
         legend: "bg-stone-50/50 border border-stone-200",
         legendText: "text-stone-400",
-        cell: "bg-stone-50/50 cursor-not-allowed border border-stone-200 opacity-40 grayscale",
+        cell: "bg-stone-50/50 opacity-40 grayscale",
         textMain: "text-stone-500",
         textSub: "text-stone-400/80",
         textTa: "text-stone-400"

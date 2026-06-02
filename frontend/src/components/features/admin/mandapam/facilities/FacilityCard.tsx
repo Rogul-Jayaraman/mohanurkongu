@@ -14,9 +14,9 @@ const KNOWN_ICONS = new Set([
     'kitchen', 'bathtub', 'deck', 'outdoor_grill', 'music_note', 'videocam',
     'mic', 'theater_comedy', 'stadium', 'pool', 'child_care', 'accessible',
     'elevator', 'escalator', 'security', 'smoke_free', 'fire_extinguisher', 'eco',
-    'light', 'sound', 'restaurant', 'cake', 'diamond', 'star',
+    'light', 'surround_sound', 'restaurant', 'cake', 'diamond', 'star',
     'favorite', 'celebration', 'nightlight', 'sunny', 'cloud', 'water',
-    'forest', 'cabin', 'festival', 'spa', 'dance', 'camera_alt',
+    'forest', 'cabin', 'festival', 'spa', 'self_improvement', 'camera_alt',
     'album', 'auto_awesome', 'villa', 'home', 'business', 'checkroom',
     'luggage', 'pets', 'set_meal', 'brunch_dining', 'add',
 ]);
@@ -51,57 +51,48 @@ export const FacilityCard: React.FC<FacilityCardProps> = ({ facility, onEdit, on
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-            className="rounded-2xl p-8 flex flex-col h-full transition-all duration-300 bg-ivory-tint border border-primary/30 shadow-sm hover:shadow-md"
+            className="relative bg-ivory border border-gold/20 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group"
         >
-            <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-ivory flex items-center justify-center border border-gold/20 shrink-0">
+            <div className="flex items-center gap-4">
+                <div className="size-12 rounded-2xl bg-rosewood/5 border border-gold/10 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-2xl text-rosewood">{resolveIcon(facility.iconName)}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                    <h3 className="font-heading text-lg font-bold text-rosewood">
-                        {displayName}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-rosewood truncate">{displayName}</h3>
+                        {!facility.status && (
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider shrink-0">{t('adminMandapam.facilities.inactive')}</span>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {!facility.status && (
-                <span className="text-[10px] font-bold text-slate-400 mb-3">
-                    {t('adminMandapam.facilities.inactive')}
-                </span>
-            )}
-
-            <div className="grow" />
-
-            <div className="space-y-3 pt-5 border-t border-primary/20">
-                <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-gray-400">
-                        {t('adminMandapam.common.status')}
+            <div className="mt-4 pt-4 border-t border-gold/10 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <span className={`w-1.5 h-1.5 rounded-full ${facility.status ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+                    <span className={`text-[10px] font-bold ${facility.status ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {facility.status ? t('adminMandapam.facilities.active') : t('adminMandapam.facilities.inactive')}
                     </span>
-                    <div className="flex items-center gap-2">
-                        <span className={`text-xs font-semibold ${facility.status ? 'text-emerald-600' : 'text-slate-400'}`}>
-                            {facility.status ? t('adminMandapam.facilities.active') : t('adminMandapam.facilities.inactive')}
-                        </span>
-                        <button
-                            onClick={() => onToggleStatus(facility.id, facility.status)}
-                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${facility.status ? 'bg-emerald-400' : 'bg-slate-300'}`}
-                        >
-                            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${facility.status ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
-                        </button>
-                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => onEdit(facility)}
-                        className="btn-shine flex-1 flex items-center justify-center gap-2 py-3 border border-gold-accent text-rosewood rounded-lg text-xs font-bold hover:bg-primary transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gold/20 rounded-xl text-[10px] font-bold text-rosewood/60 hover:text-rosewood hover:border-rosewood/30 transition-all"
                     >
-                        <Edit2 size={14} />
+                        <Edit2 size={12} />
                         {t('adminMandapam.common.edit')}
                     </button>
                     <button
                         onClick={() => onDelete(facility.id)}
-                        className="flex items-center justify-center gap-2 py-3 px-4 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors border border-red-200"
+                        className="flex items-center justify-center size-8 bg-red-50 border border-red-200 rounded-xl text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all"
                     >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
+                    </button>
+                    <button
+                        onClick={() => onToggleStatus(facility.id, facility.status)}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer hover:ring-2 hover:ring-rosewood/30 ${facility.status ? 'bg-emerald-400' : 'bg-slate-300'}`}
+                    >
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${facility.status ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
                     </button>
                 </div>
             </div>

@@ -14,7 +14,7 @@ interface Props {
   height?: number;
 }
 
-export const DonutCard: React.FC<Props> = ({ title, subtitle, data, centerLabel, loading, height = 280 }) => {
+export const DonutCard: React.FC<Props> = React.memo(({ title, subtitle, data, centerLabel, loading, height = 280 }) => {
   if (loading) {
     return (
       <div className="bg-white border border-gold/20 rounded-xl shadow-sm animate-pulse">
@@ -78,4 +78,6 @@ export const DonutCard: React.FC<Props> = ({ title, subtitle, data, centerLabel,
       </div>
     </div>
   );
-};
+});
+
+DonutCard.displayName = 'DonutCard';

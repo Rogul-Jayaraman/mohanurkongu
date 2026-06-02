@@ -8,7 +8,7 @@ interface Props {
   xKey: string; loading?: boolean; height?: number; stacked?: boolean;
 }
 
-export const StackedBarCard: React.FC<Props> = ({ title, subtitle, data, keys, xKey, loading, height = 300, stacked = true }) => {
+export const StackedBarCard: React.FC<Props> = React.memo(({ title, subtitle, data, keys, xKey, loading, height = 300, stacked = true }) => {
   if (loading) {
     return (
       <div className="bg-white border border-gold/20 rounded-xl shadow-sm animate-pulse">
@@ -44,4 +44,6 @@ export const StackedBarCard: React.FC<Props> = ({ title, subtitle, data, keys, x
       )}
     </div>
   );
-};
+});
+
+StackedBarCard.displayName = 'StackedBarCard';

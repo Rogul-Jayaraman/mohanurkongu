@@ -259,7 +259,9 @@ export const adminMandapamTa = {
       pricingHistory: 'விலை வரலாறு',
       pricingHistoryDesc: 'அனைத்து தொகுப்புகளின் விலை மாற்றங்களை காலவரிசையில் காண்க.',
       showLess: 'குறைவாக காட்டு',
+      more: 'மேலும்',
       functionsCount: 'அம்சங்கள்',
+      token: 'டோக்கன்',
     },
     facilities: {
       title: 'வசதிகள்',

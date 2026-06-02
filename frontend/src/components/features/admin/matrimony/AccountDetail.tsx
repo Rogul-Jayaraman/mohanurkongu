@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import {
-  fetchAdminAccountDetail, suspendAccount, restoreAccount,
+  fetchAdminAccountDetail,
 } from '@/api/admin-accounts.api';
 import type { AdminAccountDetailResponse, AdminAccountProfile, AdminShortlistedProfile } from '@/api/admin-accounts.api';
 import { ConfirmationModal } from '@/components/modals/admin/ConfirmationModal';
@@ -21,9 +21,14 @@ import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import AccountProfileCard from './AccountProfileCard';
 import AssignPlanModal from './AssignPlanModal';
 import CancelSubscriptionModal from './CancelSubscriptionModal';
-import { adminCancelSubscription } from '@/api/admin-membership.api';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import {
+  useAdminAccountDetailQuery,
+  useSuspendAccountMutation,
+  useRestoreAccountMutation,
+  useAdminCancelSubscriptionMutation,
+} from '@/queries/useAdminAccountQueries';
 
 const LoadingSkeleton: React.FC = () => (
   <div className="space-y-6 max-w-[1500px] mx-auto p-6">
@@ -47,77 +52,54 @@ const AccountDetail: React.FC = () => {
   const { t, language, translateError } = useLanguage();
   const isTamil = language === 'ta';
 
-  const [data, setData] = useState<AdminAccountDetailResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [suspendModal, setSuspendModal] = useState(false);
   const [restoreConfirm, setRestoreConfirm] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    try {
-      const result = await fetchAdminAccountDetail(id);
-      setData(result);
-    } catch {
-      toast.error(t('common.error') || 'Failed to load account details');
-    } finally {
-      setLoading(false);
-    }
-  }, [id, t]);
+  const accountQuery = useAdminAccountDetailQuery(id);
+  const suspendMutation = useSuspendAccountMutation();
+  const restoreMutation = useRestoreAccountMutation();
+  const cancelSubMutation = useAdminCancelSubscriptionMutation();
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const data: AdminAccountDetailResponse | null = (accountQuery.data as AdminAccountDetailResponse) ?? null;
+  const loading = accountQuery.isPending && !data;
+  const actionLoading = suspendMutation.isPending || restoreMutation.isPending || cancelSubMutation.isPending;
 
   const handleCancelSubscription = async (action: 'cancel' | 'revert') => {
     if (!id) return;
-    setActionLoading(true);
     try {
-      await adminCancelSubscription(id, action);
+      await cancelSubMutation.mutateAsync({ id, action });
       const msg = action === 'cancel'
         ? (isTamil ? 'இலவச திட்டத்திற்கு மாற்றப்பட்டது' : 'Downgraded to BRONZE plan')
         : (isTamil ? 'முந்தைய திட்டத்திற்கு மாற்றப்பட்டது' : 'Reverted to previous plan');
       toast.success(msg);
       setCancelModalOpen(false);
-      fetchData();
     } catch (err: any) {
       toast.error(translateError(err) || 'Failed to cancel subscription');
-    } finally {
-      setActionLoading(false);
     }
   };
 
   const handleSuspend = async (reasonEn: string, reasonTa: string) => {
     if (!id) return;
-    setActionLoading(true);
     try {
-      await suspendAccount(id, reasonEn, reasonTa);
+      await suspendMutation.mutateAsync({ id, reasonEn, reasonTa });
       toast.success(t('adminMatrimony:users.suspendSuccess') || 'Account suspended');
       setSuspendModal(false);
-      fetchData();
     } catch (err: any) {
       toast.error(translateError(err) || t('adminMatrimony:users.suspendError') || 'Failed to suspend');
-    } finally {
-      setActionLoading(false);
     }
   };
 
   const handleRestore = async () => {
     if (!id) return;
-    setActionLoading(true);
     try {
-      await restoreAccount(id);
+      await restoreMutation.mutateAsync(id);
       toast.success(t('adminMatrimony:users.revokeSuccess') || 'Account restored');
       setRestoreConfirm(false);
-      fetchData();
     } catch (err: any) {
       toast.error(translateError(err) || t('adminMatrimony:users.revokeError') || 'Failed to restore');
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -521,7 +503,7 @@ const AccountDetail: React.FC = () => {
         availablePlans={availablePlans || []}
         isOpen={assignModalOpen}
         onClose={() => setAssignModalOpen(false)}
-        onAssigned={fetchData}
+        onAssigned={() => accountQuery.refetch()}
       />
 
       <RejectionModal

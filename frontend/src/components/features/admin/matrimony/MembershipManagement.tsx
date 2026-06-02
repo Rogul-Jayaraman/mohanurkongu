@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ToggleLeft, ToggleRight, RotateCcw } from 'lucide-react';
@@ -6,44 +7,44 @@ import { AdminMembershipCard } from './AdminMembershipCard';
 import { EditPlanModal } from './EditPlanModal';
 import { adminListPlans, adminGetSetting, adminUpdateSetting } from '@/api/admin-membership.api';
 import type { MembershipPlan } from '@/api/membership.api';
+import { queryKeys } from '@/queries/queryKeys';
+import { showErrorToast } from '@/queries/mutationUtils';
 
 const MembershipManagement: React.FC = () => {
   const { t } = useTranslation();
-
-  const [plans, setPlans] = useState<MembershipPlan[]>([]);
-  const [membershipEnabled, setMembershipEnabled] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
   const [editingPlan, setEditingPlan] = useState<MembershipPlan | null>(null);
-  const [toggling, setToggling] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [{ plans: planData }, { membershipEnabled: enabled }] = await Promise.all([
-        adminListPlans(),
-        adminGetSetting(),
-      ]);
-      setPlans(planData);
-      setMembershipEnabled(enabled);
-    } catch {
-      // handled by interceptor
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const plansQuery = useQuery({
+    queryKey: [...queryKeys.membership.all, 'admin', 'plans'] as const,
+    queryFn: async () => (await adminListPlans()).plans as MembershipPlan[],
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const settingQuery = useQuery({
+    queryKey: [...queryKeys.membership.all, 'admin', 'setting'] as const,
+    queryFn: async () => (await adminGetSetting()).membershipEnabled,
+  });
 
-  const handleToggle = async () => {
-    setToggling(true);
-    try {
-      const { membershipEnabled: newVal } = await adminUpdateSetting(!membershipEnabled);
-      setMembershipEnabled(newVal);
-    } finally {
-      setToggling(false);
-    }
+  const toggleMutation = useMutation({
+    mutationFn: (next: boolean) => adminUpdateSetting(next).then((r) => r.membershipEnabled),
+    onSuccess: (newVal) => {
+      qc.setQueryData([...queryKeys.membership.all, 'admin', 'setting'], newVal);
+      qc.invalidateQueries({ queryKey: queryKeys.membership.all });
+    },
+    onError: (err) => showErrorToast(err, 'Could not update setting'),
+  });
+
+  const plans: MembershipPlan[] = plansQuery.data ?? [];
+  const membershipEnabled = settingQuery.data ?? true;
+  const loading = plansQuery.isPending || settingQuery.isPending;
+  const toggling = toggleMutation.isPending;
+
+  const refreshAll = useCallback(() => {
+    qc.invalidateQueries({ queryKey: [...queryKeys.membership.all, 'admin'] });
+  }, [qc]);
+
+  const handleToggle = () => {
+    toggleMutation.mutate(!membershipEnabled);
   };
 
   if (loading) {
@@ -87,13 +88,13 @@ const MembershipManagement: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-4">
         {plans.map((plan, i) => (
           <motion.div key={plan.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}>
-            <AdminMembershipCard plan={plan} onEdit={setEditingPlan} onRefresh={fetchData} />
+            <AdminMembershipCard plan={plan} onEdit={setEditingPlan} onRefresh={refreshAll} />
           </motion.div>
         ))}
       </div>
 
       {editingPlan && (
-        <EditPlanModal plan={editingPlan} onClose={() => setEditingPlan(null)} onSaved={fetchData} />
+        <EditPlanModal plan={editingPlan} onClose={() => setEditingPlan(null)} onSaved={refreshAll} />
       )}
     </motion.div>
   );

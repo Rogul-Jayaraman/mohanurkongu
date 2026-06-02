@@ -33,3 +33,31 @@ export function getErrorMessage(err: unknown, fallback = 'An unexpected error oc
   if (err instanceof Error) return err.message;
   return fallback;
 }
+
+export type ErrorType = 'NOT_FOUND' | 'FORBIDDEN' | 'NETWORK_ERROR' | 'UNKNOWN' | null;
+
+export function resolveErrorType(err: unknown): { type: ErrorType; message: string } {
+  if (isAppError(err)) {
+    switch (err.code) {
+      case 'NOT_FOUND': return { type: 'NOT_FOUND', message: err.message };
+      case 'FORBIDDEN':
+      case 'UNAUTHORIZED': return { type: 'FORBIDDEN', message: err.message };
+      case 'NETWORK_ERROR':
+      case 'INTERNAL_ERROR': return { type: 'NETWORK_ERROR', message: err.message };
+      default: return { type: 'UNKNOWN', message: err.message };
+    }
+  }
+
+  const status = (err as any)?.status ?? (err as any)?.response?.status;
+  const message = (err as any)?.message ?? (err as any)?.statusText ?? 'An unexpected error occurred';
+
+  if (status === 404) return { type: 'NOT_FOUND', message: 'This profile does not exist or has been removed.' };
+  if (status === 403) return { type: 'FORBIDDEN', message: 'You do not have permission to view this profile.' };
+  if (status === 401) return { type: 'FORBIDDEN', message: 'Please sign in to view this profile.' };
+
+  if (err instanceof TypeError && (err.message === 'Failed to fetch' || err.message === 'NetworkError')) {
+    return { type: 'NETWORK_ERROR', message: 'Unable to connect. Please check your connection.' };
+  }
+
+  return { type: 'UNKNOWN', message };
+}

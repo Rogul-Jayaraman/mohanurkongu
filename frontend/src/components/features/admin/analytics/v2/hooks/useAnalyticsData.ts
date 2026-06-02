@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchManamaalaiAnalytics, fetchMandapamAnalytics, fetchMembershipAnalytics, fetchOperationsAnalytics } from '@/api/analytics.api';
-import type { ManamaalaiAnalytics, MandapamAnalytics, MembershipAnalytics, OperationsAnalytics } from '@/types/analytics';
+import { fetchManamaalaiAnalytics, fetchMandapamAnalytics } from '@/api/analytics.api';
+import type { ManamaalaiAnalytics, MandapamAnalytics } from '@/types/analytics';
 
-export type SectionKey = 'manamaalai' | 'mandapam' | 'membership' | 'operations';
+export type SectionKey = 'manamaalai' | 'mandapam';
 
 interface SectionState<T> {
   data: T | null;
@@ -13,10 +13,7 @@ interface SectionState<T> {
 
 type AnalyticsState = {
   [K in SectionKey]: SectionState<
-    K extends 'manamaalai' ? ManamaalaiAnalytics :
-    K extends 'mandapam' ? MandapamAnalytics :
-    K extends 'membership' ? MembershipAnalytics :
-    OperationsAnalytics
+    K extends 'manamaalai' ? ManamaalaiAnalytics : MandapamAnalytics
   >;
 };
 
@@ -28,106 +25,77 @@ interface UseAnalyticsDataResult {
   refetchSection: (section: SectionKey) => void;
   manamaalai: ManamaalaiAnalytics | null;
   mandapam: MandapamAnalytics | null;
-  membership: MembershipAnalytics | null;
-  operations: OperationsAnalytics | null;
   activeSection: SectionKey;
   setActiveSection: (s: SectionKey) => void;
 }
 
-const TTL_MS = 5 * 60 * 1000;
+const FETCH_TIMEOUT_MS = 25_000;
 
 const SECTION_FETCHERS: Record<SectionKey, () => Promise<any>> = {
   manamaalai: fetchManamaalaiAnalytics,
   mandapam: fetchMandapamAnalytics,
-  membership: fetchMembershipAnalytics,
-  operations: fetchOperationsAnalytics,
 };
 
-const INITIAL_SECTION: SectionState<any> = { data: null, loading: true, error: null, cachedAt: null };
+const INITIAL_SECTION: SectionState<any> = { data: null, loading: false, error: null, cachedAt: null };
 
 function initialAnalyticsState(): AnalyticsState {
   return {
-    manamaalai: { ...INITIAL_SECTION },
+    manamaalai: { ...INITIAL_SECTION, loading: true },
     mandapam: { ...INITIAL_SECTION },
-    membership: { ...INITIAL_SECTION },
-    operations: { ...INITIAL_SECTION },
   };
+}
+
+function fetchWithTimeout<T>(fetcher: () => Promise<T>, timeoutMs: number): Promise<T> {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  return fetcher().finally(() => clearTimeout(timer));
 }
 
 export function useAnalyticsData(): UseAnalyticsDataResult {
   const [activeSection, setActiveSection] = useState<SectionKey>('manamaalai');
   const [sections, setSections] = useState<AnalyticsState>(initialAnalyticsState);
-  const mountedRef = useRef(true);
+  const fetchIdRef = useRef(0);
 
-  useEffect(() => {
-    return () => { mountedRef.current = false; };
+  const safeSet = useCallback((key: SectionKey, updater: (prev: SectionState<any>) => SectionState<any>) => {
+    setSections(prev => ({ ...prev, [key]: updater(prev[key]) }));
   }, []);
 
-  const fetchSection = useCallback(async (key: SectionKey) => {
-    const cached = sections[key];
-    if (cached.data && cached.cachedAt && Date.now() - cached.cachedAt < TTL_MS) {
-      return;
-    }
-    setSections(prev => ({ ...prev, [key]: { ...prev[key], loading: true, error: null } }));
-    try {
-      const data = await SECTION_FETCHERS[key]();
-      if (mountedRef.current) {
-        setSections(prev => ({ ...prev, [key]: { data, loading: false, error: null, cachedAt: Date.now() } }));
-      }
-    } catch (err: any) {
-      if (mountedRef.current) {
-        setSections(prev => ({ ...prev, [key]: { ...prev[key], loading: false, error: err?.message ?? `Failed to load ${key}` } }));
-      }
-    }
-  }, [sections]);
+  const fetchOne = useCallback((key: SectionKey) => {
+    const id = ++fetchIdRef.current;
 
-  const fetchAll = useCallback(() => {
-    (Object.keys(SECTION_FETCHERS) as SectionKey[]).forEach(key => {
-      setSections(prev => ({ ...prev, [key]: { ...prev[key], loading: true, error: null } }));
-      SECTION_FETCHERS[key]()
-        .then((data: any) => {
-          if (mountedRef.current) {
-            setSections(prev => ({ ...prev, [key]: { data, loading: false, error: null, cachedAt: Date.now() } }));
-          }
-        })
-        .catch((err: any) => {
-          if (mountedRef.current) {
-            setSections(prev => ({ ...prev, [key]: { ...prev[key], loading: false, error: err?.message ?? `Failed to load ${key}` } }));
-          }
-        });
-    });
-  }, []);
+    safeSet(key, s => ({ ...s, loading: true, error: null }));
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
-
-  const refetchSection = useCallback((key: SectionKey) => {
-    setSections(prev => ({ ...prev, [key]: { ...prev[key], loading: true, error: null, cachedAt: null } }));
-    SECTION_FETCHERS[key]()
+    fetchWithTimeout(SECTION_FETCHERS[key], FETCH_TIMEOUT_MS)
       .then((data: any) => {
-        if (mountedRef.current) {
-          setSections(prev => ({ ...prev, [key]: { data, loading: false, error: null, cachedAt: Date.now() } }));
+        if (id === fetchIdRef.current) {
+          safeSet(key, () => ({ data, loading: false, error: null, cachedAt: Date.now() }));
         }
       })
       .catch((err: any) => {
-        if (mountedRef.current) {
-          setSections(prev => ({ ...prev, [key]: { ...prev[key], loading: false, error: err?.message ?? `Failed to load ${key}` } }));
+        if (id === fetchIdRef.current) {
+          const message = err?.message ?? `Failed to load ${key}`;
+          console.error(`[Analytics] ${key} fetch failed:`, err);
+          safeSet(key, s => ({ ...s, loading: false, error: message }));
         }
       });
-  }, []);
+  }, [safeSet]);
 
-  const anyLoading = Object.values(sections).some(s => s.loading);
-  const anyError = Object.values(sections).find(s => s.error)?.error ?? null;
+  useEffect(() => { fetchOne(activeSection); }, [activeSection, fetchOne]);
+
+  const refetch = useCallback(() => { fetchOne(activeSection); }, [activeSection, fetchOne]);
+
+  const refetchSection = useCallback((key: SectionKey) => { fetchOne(key); }, [fetchOne]);
+
+  const activeState = sections[activeSection];
 
   return {
     sections,
-    loading: anyLoading,
-    error: anyError,
-    refetch: fetchAll,
+    loading: activeState.loading,
+    error: activeState.error,
+    refetch,
     refetchSection,
     manamaalai: sections.manamaalai.data,
     mandapam: sections.mandapam.data,
-    membership: sections.membership.data,
-    operations: sections.operations.data,
     activeSection,
     setActiveSection,
   };

@@ -6,9 +6,10 @@ export interface TranslationPair {
 export interface MandapamPackage {
   id: string;
   code: 'STANDARD' | 'ROYAL' | 'GRAND';
-  bookingType: 'HOURLY' | 'DAY_BASED';
+  bookingType: 'HOURLY' | 'ONE_DAY' | 'TWO_DAY';
   durationType: 'CUSTOM_HOURS' | 'FIXED_DAY';
   durationValue: number | null;
+  tokenCount: number;
   status: boolean;
   createdAt: string;
   updatedAt: string;
@@ -51,7 +52,6 @@ export interface PackagePricing {
 export interface MandapamFacility {
   id: string;
   iconName: string;
-  chargeType: 'GENERAL' | 'ADDITIONAL';
   status: boolean;
   createdAt: string;
   updatedAt: string;
@@ -67,8 +67,8 @@ export interface FacilityTranslation {
 export interface MandapamAddon {
   id: string;
   iconName: string;
-  pricingType: 'HOURLY' | 'FIXED';
-  amount: number;
+  pricingType: 'PER_EVENT' | 'PER_HOUR' | 'PER_DAY';
+  supportsQuantity: boolean;
   status: boolean;
   createdAt: string;
   updatedAt: string;
@@ -83,12 +83,8 @@ export interface AddonTranslation {
 
 export interface PublicPackage {
   code: string;
-  bookingType: string;
-  durationType: string;
-  durationValue: number | null;
   displayName: string;
   functions: { name: string }[];
-  pricing: { amount: number; currencyCode: string; pricingType: string } | null;
 }
 
 export interface PublicFacility {
@@ -98,14 +94,14 @@ export interface PublicFacility {
 
 export interface PublicAddon {
   iconName: string;
-  pricingType: string;
-  amount: number;
   name: string;
 }
 
 // ── Booking Types ──
 
 export type BookingStatus = 'CONFIRMED' | 'EVENT_IN_PROGRESS' | 'EVENT_COMPLETED' | 'SETTLEMENT_PENDING' | 'COMPLETED' | 'CANCELLED';
+export type BookingType = 'HOURLY' | 'ONE_DAY' | 'TWO_DAY';
+export type EventType = 'MARRIAGE' | 'RECEPTION' | 'ENGAGEMENT' | 'BIRTHDAY' | 'BABY_SHOWER' | 'EAR_PIERCING' | 'PUBERTY_FUNCTION' | 'OTHER';
 export type BookingMethod = 'NORMAL_BOOKING' | 'TOKEN_BOOKING';
 export type CalendarEntryStatus = 'AVAILABLE' | 'PARTIALLY_BOOKED' | 'FULLY_BOOKED' | 'BLOCKED';
 export type PaymentEntryType = 'ADVANCE' | 'INSTALLMENT' | 'FINAL_PAYMENT';
@@ -140,8 +136,9 @@ export interface BookingAddonSnapshot {
   bookingId: string;
   addonId: string;
   addonName: LocalizedText;
-  pricingType: 'HOURLY' | 'FIXED';
-  quantity: number;
+  pricingType: 'PER_EVENT' | 'PER_HOUR' | 'PER_DAY';
+  quantity: number | null;
+  units: number | null;
   amount: number;
 }
 
@@ -223,6 +220,8 @@ export interface Booking {
   customerEmail: string | null;
   eventTitle: LocalizedText;
   eventAddress: LocalizedText | null;
+  bookingType: BookingType;
+  eventType: EventType;
   status: BookingStatus;
   bookingMethod: BookingMethod;
   packageCode: string;

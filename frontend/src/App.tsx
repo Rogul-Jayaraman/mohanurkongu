@@ -23,6 +23,7 @@ const BrowseProfiles = React.lazy(() => import('@/pages/user/BrowseProfiles'));
 const ShortlistedProfiles = React.lazy(() => import('@/pages/user/Shortlist'));
 const MyProfiles = React.lazy(() => import('@/pages/user/MyProfiles'));
 const NewProfile = React.lazy(() => import('@/pages/user/NewProfile'));
+const NewBooking = React.lazy(() => import('@/pages/user/NewBooking'));
 const ProfileView = React.lazy(() => import('@/pages/user/ProfileView'));
 
 const AdminLayout = React.lazy(() => import('@/layout/admin/Layout'));
@@ -108,6 +109,7 @@ const router = createBrowserRouter([
               { path: "manamaalai/my-profiles", element: <MyProfiles /> },
               { path: "manamaalai/my-account", element: <MyAccount /> },
               { path: "manamaalai/new-profile", element: <NewProfile /> },
+              { path: "manamaalai/new-booking", element: <NewBooking /> },
               { path: "manamaalai/view-profile/:id", element: <ProfileView /> },
               { path: "manamaalai/plan-upgrade", element: <PlanUpgrade /> },
             ],
@@ -138,6 +140,7 @@ const router = createBrowserRouter([
               { path: "admin/mandapam/packages", element: <Packages /> },
               { path: "admin/mandapam/availability", element: <HallAvailability /> },
               { path: "admin/mandapam/bookings", element: <Bookings /> },
+              { path: "admin/mandapam/new-booking", element: <NewBooking /> },
               { path: "admin/settings", element: <SystemSettings /> },
             ],
           },

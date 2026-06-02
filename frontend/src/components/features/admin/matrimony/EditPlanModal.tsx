@@ -4,7 +4,7 @@ import { ModalShell } from '@/components/ui/modals/ModalShell';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { MembershipPlan } from '@/api/membership.api';
-import { adminUpdatePlan } from '@/api/admin-membership.api';
+import { useAdminUpdatePlanMutation } from '@/queries/useAdminMembershipMutations';
 
 interface EditPlanModalProps {
   plan: MembershipPlan | null;
@@ -18,7 +18,8 @@ const viewDetailsLevels = ['BASIC', 'EXTENDED', 'ADVANCED', 'FULL'];
 export const EditPlanModal: React.FC<EditPlanModalProps> = ({ plan, onClose, onSaved }) => {
   const { t } = useTranslation();
   const isOpen = !!plan;
-  const [saving, setSaving] = useState(false);
+  const updatePlanMut = useAdminUpdatePlanMutation();
+  const saving = updatePlanMut.isPending;
   const [form, setForm] = useState<Record<string, any>>({});
 
   useEffect(() => {
@@ -40,16 +41,13 @@ export const EditPlanModal: React.FC<EditPlanModalProps> = ({ plan, onClose, onS
 
   const handleSave = async () => {
     if (!plan) return;
-    setSaving(true);
     try {
-      await adminUpdatePlan(plan.id, form);
+      await updatePlanMut.mutateAsync({ planId: plan.id, data: form });
       toast.success(t('adminMatrimony:plans.saveSuccess'));
       onSaved();
       onClose();
     } catch {
       toast.error(t('adminMatrimony:plans.saveError'));
-    } finally {
-      setSaving(false);
     }
   };
 

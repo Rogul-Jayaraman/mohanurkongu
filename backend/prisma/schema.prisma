@@ -106,8 +106,16 @@ enum RefundType {
 }
 
 enum TokenState {
+  ISSUED
+  RESERVED
   CONSUMED
   REVERSED
+}
+
+enum TokenStatus {
+  NOTUSED
+  RESERVED
+  USED
 }
 
 enum SettlementState {
@@ -176,6 +184,10 @@ enum Gender {
 enum ReviewAction {
   APPROVED
   REJECTED
+  UPDATE
+  ARCHIVE
+  RESTORE
+  DELETE
 }
 
 enum Diet {
@@ -218,7 +230,19 @@ enum ResidenceType {
 
 enum BookingType {
   HOURLY
-  DAY_BASED
+  ONE_DAY
+  TWO_DAY
+}
+
+enum EventType {
+  MARRIAGE
+  RECEPTION
+  ENGAGEMENT
+  BIRTHDAY
+  BABY_SHOWER
+  EAR_PIERCING
+  PUBERTY_FUNCTION
+  OTHER
 }
 
 enum DurationType {
@@ -231,10 +255,13 @@ enum PricingType {
   FIXED
 }
 
-enum FacilityChargeType {
-  GENERAL
-  ADDITIONAL
+enum AddonPricingType {
+  ITEM
+  PER_EVENT
+  PER_HOUR
+  PER_DAY
 }
+
 
 enum HoroscopeMode {
   GENERATED
@@ -267,6 +294,7 @@ model Account {
 
   @@index([accountNo])
   @@index([currentState])
+  @@index([createdAt])
   @@map("accounts")
 }
 
@@ -318,7 +346,7 @@ model Role {
 }
 
 model AccountRole {
-  accountId  String   @db.Uuid
+  accountId String      @db.Uuid
   roleId     Int
   assignedAt DateTime @default(now())
 
@@ -401,6 +429,7 @@ model Subscription {
   @@index([planId])
   @@index([status])
   @@index([expiresAt])
+  @@index([expiresAt, status])
   @@map("subscriptions")
 }
 
@@ -448,13 +477,13 @@ model ProfileOpen {
 
 model AccountStatusHistory {
   id        String       @id @default(uuid())
-  accountId String       @db.Uuid
+  accountId String?      @db.Uuid
   state     AccountStatus
   reason    String?
   changedBy String?      @db.VarChar(50)
   changedAt DateTime     @default(now())
 
-  account Account @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  account Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   @@index([accountId, changedAt])
   @@map("account_status_history")
@@ -761,6 +790,7 @@ model Profile {
 
   @@index([accountId])
   @@index([currentStatus])
+  @@index([createdAt])
   @@map("profiles")
 }
 
@@ -1008,6 +1038,7 @@ model VerificationQueue {
 
   @@index([assignedTo])
   @@index([completedAt])
+  @@index([createdAt])
   @@map("verification_queue")
 }
 
@@ -1025,6 +1056,7 @@ model ProfileReview {
   reviewer Account @relation(fields: [reviewerId], references: [id])
 
   @@index([profileId, createdAt])
+  @@index([createdAt])
   @@map("profile_reviews")
 }
 
@@ -1074,6 +1106,8 @@ model MandapamBooking {
   eventAddress  Json?         @db.JsonB
   status        BookingStatus @default(CONFIRMED)
   bookingMethod BookingMethod @default(NORMAL_BOOKING)
+  bookingType   BookingType
+  eventType     EventType     @default(OTHER)
   packageCode   String        @db.VarChar(50)
   bookingConfig Json          @db.JsonB
   notes         String?       @db.Text
@@ -1088,6 +1122,7 @@ model MandapamBooking {
   paymentEntries  MandapamPaymentLedger[]
   refundEntries   MandapamRefundLedger[]
   tokenEntries    MandapamTokenConsumption[]
+  tokens          MandapamToken[]
   settlement      MandapamSettlement?
   timeline        MandapamBookingTimeline[]
   invoice         MandapamInvoice?
@@ -1117,14 +1152,15 @@ model MandapamBookingPackageSnapshot {
 }
 
 model MandapamBookingAddonSnapshot {
-  id          String      @id @default(uuid()) @db.Uuid
-  bookingId   String      @db.Uuid
-  addonId     String      @db.Uuid
-  addonName   Json        @db.JsonB
-  pricingType PricingType @default(FIXED)
-  quantity    Int         @default(1)
-  amount      Decimal     @db.Decimal(12, 2)
-  createdAt   DateTime    @default(now())
+  id           String           @id @default(uuid()) @db.Uuid
+  bookingId    String           @db.Uuid
+  addonId      String           @db.Uuid
+  addonName    Json             @db.JsonB
+  pricingType  AddonPricingType @default(PER_EVENT)
+  quantity     Int?
+  units        Int?
+  amount       Decimal          @db.Decimal(12, 2)
+  createdAt    DateTime         @default(now())
 
   booking MandapamBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
@@ -1134,7 +1170,9 @@ model MandapamBookingAddonSnapshot {
 
 model MandapamCalendarEntry {
   id        String              @id @default(uuid()) @db.Uuid
-  date      DateTime            @unique
+  date      DateTime
+  startTime DateTime?           @db.Time
+  endTime   DateTime?           @db.Time
   status    CalendarEntryStatus @default(AVAILABLE)
   reasonEn  String?             @db.VarChar(500)
   reasonTa  String?             @db.VarChar(500)
@@ -1145,6 +1183,7 @@ model MandapamCalendarEntry {
   booking MandapamBooking? @relation(fields: [bookingId], references: [id])
 
   @@index([date])
+  @@index([date, status])
   @@index([status])
   @@map("mandapam_calendar_entries")
 }
@@ -1162,6 +1201,7 @@ model MandapamFinancialLedger {
 
   @@index([bookingId])
   @@index([source])
+  @@index([createdAt])
   @@map("mandapam_financial_ledgers")
 }
 
@@ -1209,6 +1249,21 @@ model MandapamTokenConsumption {
 
   @@index([bookingId])
   @@map("mandapam_token_consumptions")
+}
+
+model MandapamToken {
+  id        String      @id @default(uuid()) @db.Uuid
+  tokenId   String      @unique @db.VarChar(20)
+  status    TokenStatus @default(NOTUSED)
+  bookingId String?     @db.Uuid
+  booking   MandapamBooking? @relation(fields: [bookingId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@index([status])
+  @@map("mandapam_tokens")
 }
 
 model MandapamSettlement {
@@ -1302,6 +1357,7 @@ model MandapamPackage {
   bookingType   BookingType
   durationType  DurationType
   durationValue Int?
+  tokenCount    Int          @default(0)
   status        Boolean      @default(true)
 
   createdAt DateTime @default(now())
@@ -1381,10 +1437,9 @@ model MandapamPackagePricing {
 }
 
 model MandapamFacility {
-  id         String             @id @default(uuid()) @db.Uuid
-  iconName   String             @db.VarChar(100)
-  chargeType FacilityChargeType @default(GENERAL)
-  status     Boolean            @default(true)
+  id       String   @id @default(uuid()) @db.Uuid
+  iconName String   @db.VarChar(100)
+  status   Boolean  @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1410,11 +1465,11 @@ model MandapamFacilityTranslation {
 }
 
 model MandapamAddonService {
-  id          String      @id @default(uuid()) @db.Uuid
-  iconName    String      @db.VarChar(100)
-  pricingType PricingType @default(FIXED)
-  amount      Decimal     @db.Decimal(12, 2) @default(0)
-  status      Boolean     @default(true)
+  id               String           @id @default(uuid()) @db.Uuid
+  iconName         String           @db.VarChar(100)
+  pricingType      AddonPricingType @default(PER_EVENT)
+  supportsQuantity Boolean          @default(false)
+  status           Boolean          @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

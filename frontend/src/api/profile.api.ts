@@ -19,13 +19,11 @@ export async function deleteUpload(uploadId: string): Promise<void> {
 
 export async function saveDraft(dto: Record<string, unknown>): Promise<{ profileId: string }> {
   const res = await api.post('/profiles/draft', dto) as any;
-  console.log('[saveDraft] response type=%s value=%o', typeof res, res);
   return res;
 }
 
 export async function resumeDraft(profileId: string): Promise<Record<string, unknown>> {
   const res = await api.get(`/profiles/draft/${profileId}`) as any;
-  console.log('[resumeDraft] raw response type=%s keys=%s', typeof res, res ? Object.keys(res).join(', ') : 'null/undefined');
   if (!res || typeof res !== 'object') {
     console.error('[resumeDraft] unexpected response shape — expected object, got %s', typeof res);
     throw new Error('Unexpected response from resumeDraft');
@@ -35,7 +33,6 @@ export async function resumeDraft(profileId: string): Promise<Record<string, unk
 
 export async function createProfile(dto: Record<string, unknown>): Promise<{ regNo?: string; profileId: string; status: string }> {
   const res = await api.post('/profiles/create', dto) as any;
-  console.log('[createProfile] response=%o', res);
   return res;
 }
 
@@ -48,8 +45,8 @@ export async function fetchMyProfiles(q?: string): Promise<any[]> {
   return api.get('/profiles/my-profiles', { params }) as any;
 }
 
-export async function fetchProfile(id: string): Promise<any> {
-  return api.get(`/profiles/${id}`) as any;
+export async function fetchProfile(id: string, signal?: AbortSignal): Promise<any> {
+  return api.get(`/profiles/${id}`, { signal }) as any;
 }
 
 export async function browseProfiles(params: BrowseProfilesParams): Promise<BrowseProfileData> {

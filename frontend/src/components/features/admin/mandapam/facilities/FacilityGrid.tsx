@@ -15,13 +15,12 @@ export const FacilityGrid: React.FC<FacilityGridProps> = ({ facilities, onEdit, 
 
     if (facilities.length === 0) {
         return (
-            <div className="text-center py-16 bg-ivory-tint border-2 border-dashed border-primary/20 rounded-2xl">
-                <p className="text-rosewood/60 font-medium">
-                    {t('adminMandapam.facilities.noFacilitiesFound')}
-                </p>
-                <p className="text-rosewood/40 text-sm mt-2">
-                    {t('adminMandapam.facilities.noFacilitiesDesc')}
-                </p>
+            <div className="flex flex-col items-center justify-center py-16 bg-ivory border-2 border-dashed border-gold/20 rounded-2xl">
+                <div className="size-14 rounded-2xl bg-rosewood/5 border border-gold/10 flex items-center justify-center mb-4">
+                    <span className="material-symbols-outlined text-3xl text-rosewood/30">add</span>
+                </div>
+                <p className="text-rosewood/60 font-bold">{t('adminMandapam.facilities.noFacilitiesFound')}</p>
+                <p className="text-rosewood/40 text-sm mt-1">{t('adminMandapam.facilities.noFacilitiesDesc')}</p>
             </div>
         );
     }

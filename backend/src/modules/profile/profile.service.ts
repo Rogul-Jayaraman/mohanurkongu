@@ -749,7 +749,6 @@ export class ProfileService {
     if (rasi) horoscopeFilter.rasi = { code: rasi };
     if (nakshatra) horoscopeFilter.nakshatra = { code: nakshatra };
     if (laganam) horoscopeFilter.lagna = { code: laganam };
-    if (dosham) horoscopeFilter.dosham = dosham;
     if (Object.keys(horoscopeFilter).length > 0) {
       where.horoscope = horoscopeFilter;
     }
@@ -1070,35 +1069,58 @@ export class ProfileService {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profileId)) {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
-    const profile = await this.repo.findFullWithDetails(profileId);
-    if (!profile) {
+
+    // Phase 1: lightweight meta fetch for status/ownership check
+    // (avoids pulling all relations before we know the viewer's level)
+    const meta = await this.repo.findProfileMeta(profileId);
+    if (!meta) {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
 
-    const owner = profile.accountId === accountId;
-    if (profile.currentStatus === 'DELETED') {
+    const owner = meta.accountId === accountId;
+    if (meta.currentStatus === 'DELETED') {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
-    if (profile.currentStatus === 'ARCHIVED' && !owner) {
+    if (meta.currentStatus === 'ARCHIVED' && !owner) {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
-    if (profile.currentStatus === 'REJECTED' && !owner) {
+    if (meta.currentStatus === 'REJECTED' && !owner) {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
-    if ((profile.currentStatus === 'DRAFT' || profile.currentStatus === 'PENDING') && !owner) {
+    if ((meta.currentStatus === 'DRAFT' || meta.currentStatus === 'PENDING') && !owner) {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
-    if (profile.account.currentState === 'SUSPENDED' && !owner) {
+    if (meta.account.currentState === 'SUSPENDED' && !owner) {
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
 
-    // ─── Membership: track open + check quota ──────────────
+    // ─── Membership: resolve capabilities before full fetch ─
+    const levels = ['BASIC', 'EXTENDED', 'ADVANCED', 'FULL'];
+    let viewDetails: 'BASIC' | 'EXTENDED' | 'ADVANCED' | 'FULL' = 'FULL';
+    let canPrintProfile = false;
+    let canPrintHoroscope = false;
     if (!owner && this.membershipGuard) {
       const { allowed } = await this.membershipGuard.checkOpenQuota(accountId);
       if (!allowed) {
         throw new AppError(403, ErrorCodes.MEMBERSHIP_QUOTA_EXCEEDED, 'MEMBERSHIP_QUOTA_EXCEEDED');
       }
       await this.membershipGuard.consumeOpenQuota(accountId, profileId);
+      const caps = await this.membershipGuard.resolveCapabilities(accountId);
+      viewDetails = caps?.viewDetails ?? 'BASIC';
+      canPrintProfile = caps?.printProfile ?? false;
+      canPrintHoroscope = caps?.printHoroscope ?? false;
+    }
+    // Owners always get full access
+    if (owner) {
+      canPrintProfile = true;
+      canPrintHoroscope = true;
+      viewDetails = 'FULL';
+    }
+
+    // Phase 2: full fetch segmented by membership level
+    const profile: any = await this.repo.findFullWithDetails(profileId, viewDetails);
+    if (!profile) {
+      throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
 
     const b = profile.basic;
@@ -1110,35 +1132,28 @@ export class ProfileService {
     const a = profile.assets;
     const pp = profile.partnerPreference;
 
-    const enTrans = profile.translations?.find(t => t.language === 'EN');
-    const taTrans = profile.translations?.find(t => t.language === 'TA');
+    const enTrans = profile.translations?.find((t: any) => t.language === 'EN');
+    const taTrans = profile.translations?.find((t: any) => t.language === 'TA');
 
-    // ─── Membership gating ────────────────────────────────
-    const levels = ['BASIC', 'EXTENDED', 'ADVANCED', 'FULL'];
-    let viewDetails = 'FULL';
-    if (this.membershipGuard) {
-      const caps = await this.membershipGuard.resolveCapabilities(accountId);
-      viewDetails = caps?.viewDetails ?? 'BASIC';
-    }
     const vd = (lvl: string) => levels.indexOf(viewDetails) >= levels.indexOf(lvl);
 
-    // Determine which fields to hide
-    const hideProfessional = !vd('EXTENDED') && !owner;
-    const hideFamily = !vd('EXTENDED') && !owner;
-    const hideHoroscopeLabels = !vd('EXTENDED') && !owner;
-    const hideHoroscopeCharts = !vd('ADVANCED') && !owner;
-    const hideContact = !vd('FULL') && !owner;
-    const hideGallery = !vd('EXTENDED') && !owner;
+    const showProfessional = owner || vd('EXTENDED');
+    const showFamily = owner || vd('EXTENDED');
+    const showHoroscopeLabels = owner || vd('EXTENDED');
+    const showHoroscopeCharts = owner || vd('ADVANCED');
+    const showContact = owner || vd('FULL');
+    const showGallery = owner || vd('EXTENDED');
 
     const result: any = {
       // Identity
       id: profile.id,
-      regNo: profile.regNo ?? '-',
-      status: profile.currentStatus,
+      canPrintProfile,
+      canPrintHoroscope,
+      regNo: meta.regNo ?? '-',
+      status: meta.currentStatus,
       isOwner: owner,
-      rejectionReasonEn: profile.rejectionReasonEn ?? null,
-      rejectionReasonTa: profile.rejectionReasonTa ?? null,
-      dosham: null,
+      rejectionReasonEn: meta.rejectionReasonEn ?? null,
+      rejectionReasonTa: meta.rejectionReasonTa ?? null,
 
       // Name
       firstNameEn: enTrans?.firstName ?? null,
@@ -1166,71 +1181,81 @@ export class ProfileService {
       community: c?.community?.code ?? null,
       caste: c?.caste?.code ?? null,
       kulam: c?.kulam?.code ?? null,
-      religion: null,
-      subCaste: null,
-      gothram: null,
       kuladeivamEn: enTrans?.kuladeivam ?? null,
       kuladeivamTa: taTrans?.kuladeivam ?? null,
       birthPlaceEn: (h?.horoscopeJson as any)?.input?.location?.displayName ?? null,
       birthPlaceTa: (h?.horoscopeJson as any)?.input?.location?.displayName ?? null,
+    };
 
-      // Professional (gated)
-      education: hideProfessional ? null : (prof?.education ?? null),
-      jobDetail: hideProfessional ? null : (prof?.jobDetail ?? null),
-      jobSector: hideProfessional ? null : (prof?.jobSector?.code ?? null),
-      companyName: hideProfessional ? null : (prof?.companyName ?? null),
-      jobLocationEn: hideProfessional ? null : (prof?.jobLocation ?? null),
-      jobLocationTa: hideProfessional ? null : (prof?.jobLocation ?? null),
-      salaryMonthly: hideProfessional ? null : (prof?.monthlySalary ? Number(prof.monthlySalary) : null),
-      profession: hideProfessional ? null : (prof?.jobDetail ?? null),
+    // --- Sections gated by membership level ---
+    // Professional (gated: BASIC→hidden, EXTENDED+→visible)
+    if (showProfessional) {
+      result.education = prof?.education ?? null;
+      result.jobDetail = prof?.jobDetail ?? null;
+      result.jobSector = prof?.jobSector?.code ?? null;
+      result.companyName = prof?.companyName ?? null;
+      result.jobLocationEn = prof?.jobLocation ?? null;
+      result.jobLocationTa = prof?.jobLocation ?? null;
+      result.salaryMonthly = prof?.monthlySalary ? Number(prof.monthlySalary) : null;
+      result.profession = prof?.jobDetail ?? null;
+    } else if (prof != null) {
+      result.professionalLocked = true;
+    }
 
-      // Family (gated)
-      fatherNameEn: hideFamily ? null : (enTrans?.fatherName ?? null),
-      fatherNameTa: hideFamily ? null : (taTrans?.fatherName ?? null),
-      fatherJob: hideFamily ? null : (f?.fatherJob ?? null),
-      fatherSalary: hideFamily ? null : (f?.fatherSalary ?? null),
-      fatherIsLate: hideFamily ? null : (f != null ? !f.fatherAlive : null),
-      motherNameEn: hideFamily ? null : (enTrans?.motherName ?? null),
-      motherNameTa: hideFamily ? null : (taTrans?.motherName ?? null),
-      motherJob: hideFamily ? null : (f?.motherJob ?? null),
-      motherSalary: hideFamily ? null : (f?.motherSalary ?? null),
-      motherIsLate: hideFamily ? null : (f != null ? !f.motherAlive : null),
-      noOfBrother: hideFamily ? null : (f?.noOfBrother ?? null),
-      noOfBrothers: hideFamily ? null : (f?.noOfBrother ?? null),
-      noOfSister: hideFamily ? null : (f?.noOfSister ?? null),
-      noOfSisters: hideFamily ? null : (f?.noOfSister ?? null),
+    // Family (gated: BASIC→hidden, EXTENDED+→visible)
+    if (showFamily) {
+      result.fatherNameEn = enTrans?.fatherName ?? null;
+      result.fatherNameTa = taTrans?.fatherName ?? null;
+      result.fatherJob = f?.fatherJob ?? null;
+      result.fatherSalary = f?.fatherSalary ?? null;
+      result.fatherIsLate = f != null ? !f.fatherAlive : null;
+      result.motherNameEn = enTrans?.motherName ?? null;
+      result.motherNameTa = taTrans?.motherName ?? null;
+      result.motherJob = f?.motherJob ?? null;
+      result.motherSalary = f?.motherSalary ?? null;
+      result.motherIsLate = f != null ? !f.motherAlive : null;
+      result.noOfBrother = f?.noOfBrother ?? null;
+      result.noOfSister = f?.noOfSister ?? null;
+    } else if (f != null) {
+      result.familyLocked = true;
+    }
 
-      // Assets (always visible now)
-      residence: a?.residenceType ?? null,
-      landEn: a?.land ?? null,
-      landTa: null,
-      otherAssetsEn: a?.otherAssets ?? null,
-      otherAssetsTa: null,
-      vehicle: a?.vehicle ?? null,
+    // Assets (always visible)
+    result.residence = a?.residenceType ?? null;
+    result.landEn = a?.land ?? null;
+    result.otherAssetsEn = a?.otherAssets ?? null;
+    result.vehicle = a?.vehicle ?? null;
 
-      // Partner Preference
-      ageMin: pp?.ageMin ?? null,
-      ageMax: pp?.ageMax ?? null,
-      heightMinId: pp?.heightMin?.valueCm ?? null,
-      heightMaxId: pp?.heightMax?.valueCm ?? null,
-      monthlySalary: pp?.monthlySalary ? Number(pp.monthlySalary) : null,
-      expectationNoteEn: pp?.expectationNote ?? null,
-      expectationNoteTa: null,
-      preferredLocationEn: pp?.preferredLocation ?? null,
-      preferredLocationTa: null,
+    // Partner Preference
+    result.ageMin = pp?.ageMin ?? null;
+    result.ageMax = pp?.ageMax ?? null;
+    result.heightMinId = pp?.heightMin?.valueCm ?? null;
+    result.heightMaxId = pp?.heightMax?.valueCm ?? null;
+    result.monthlySalary = pp?.monthlySalary ? Number(pp.monthlySalary) : null;
+    result.expectationNoteEn = pp?.expectationNote ?? null;
+    result.preferredLocationEn = pp?.preferredLocation ?? null;
 
-      // Contact (gated: FULL only)
-      phone: hideContact ? null : (!owner ? profile.account.credential?.phone ?? null : null),
-      email: hideContact ? null : (!owner ? profile.account.credential?.email ?? null : null),
-      contactLocked: hideContact,
+    // Contact (gated: ADVANCED→hidden, FULL/OWNER→visible)
+    if (showContact) {
+      result.phone = !owner ? profile.account?.credential?.phone ?? null : null;
+      result.email = !owner ? profile.account?.credential?.email ?? null : null;
+      result.contactLocked = false;
+    } else {
+      result.contactLocked = true;
+    }
 
-      // Horoscope codes (labels gated: EXTENDED+)
-      star: hideHoroscopeLabels ? null : (h?.nakshatra?.code ?? null),
-      rasi: hideHoroscopeLabels ? null : (h?.rasi?.code ?? null),
-      lagnam: hideHoroscopeLabels ? null : (h?.lagna?.code ?? null),
+    // Horoscope codes (gated: BASIC→hidden, EXTENDED+→visible)
+    if (showHoroscopeLabels) {
+      result.star = h?.nakshatra?.code ?? null;
+      result.rasi = h?.rasi?.code ?? null;
+      result.lagnam = h?.lagna?.code ?? null;
+    } else if (h != null) {
+      result.horoscopeLabelsLocked = true;
+    }
 
-      // Horoscope full data (charts gated: ADVANCED+)
-      horoscope: h && !hideHoroscopeCharts ? {
+    // Horoscope full data (gated: chart images ADVANCED+, full object BASIC/EXTENDED→locked)
+    if (h && showHoroscopeCharts) {
+      result.horoscope = {
         mode: h.mode ?? null,
         birthTime: (h.horoscopeJson as any)?.input
           ? `${(h.horoscopeJson as any).input.dateOfBirth}T${(h.horoscopeJson as any).input.timeOfBirth}:00.000Z`
@@ -1243,25 +1268,27 @@ export class ProfileService {
           ? { url: `/media/${h.navamsaChart.objectKey}`, width: h.navamsaChart.width, height: h.navamsaChart.height }
           : null,
         horoscopeJson: h.horoscopeJson ?? null,
-      } : h ? { mode: h.mode, birthPlace: null, rasi: null, navamsa: null, horoscopeJson: null, locked: true } : null,
-      horoscopeLocked: hideHoroscopeCharts && !!h,
-      horoscopeLabelsLocked: hideHoroscopeLabels && !!h,
+      };
+    } else if (h) {
+      result.horoscope = { mode: h.mode, locked: true };
+      result.horoscopeLocked = true;
+    }
 
-      // Photo
-      profilePhoto: ph?.primaryUpload?.objectKey
-        ? { url: `/media/${ph.primaryUpload.objectKey}`, width: ph.primaryUpload.width, height: ph.primaryUpload.height }
-        : null,
-      photo: null,
-      // Gallery (gated: EXTENDED+)
-      gallery: hideGallery
-        ? []
-        : (ph?.gallery
-            ?.map(g => g.upload?.objectKey
-              ? { url: `/media/${g.upload.objectKey}`, width: g.upload.width, height: g.upload.height }
-              : null)
-            .filter(Boolean) ?? []),
-      galleryLocked: hideGallery && (ph?.gallery?.length ?? 0) > 0,
-    };
+    // Photo
+    result.profilePhoto = ph?.primaryUpload?.objectKey
+      ? { url: `/media/${ph.primaryUpload.objectKey}`, width: ph.primaryUpload.width, height: ph.primaryUpload.height }
+      : null;
+
+    // Gallery (gated: BASIC→hidden, EXTENDED+→visible)
+    if (showGallery) {
+      result.gallery = ph?.gallery
+        ?.map((g: any) => g.upload?.objectKey
+          ? { url: `/media/${g.upload.objectKey}`, width: g.upload.width, height: g.upload.height }
+          : null)
+        .filter(Boolean) ?? [];
+    } else if ((ph?.gallery?.length ?? 0) > 0) {
+      result.galleryLocked = true;
+    }
 
     return result;
   }

@@ -13,7 +13,17 @@ export class AdminProfilesController {
       const limit = parseInt(req.query.limit as string) || 20;
       const search = req.query.search as string | undefined;
       const status = req.query.status as string | undefined;
-      const result = await this.adminProfilesService.listProfiles({ page, limit, search, status });
+      const sortBy = (req.query.sortBy as string) || 'createdAt';
+      const sortOrder = (req.query.sortOrder as string) || 'desc';
+      const communityId = req.query.communityId as string | undefined;
+      const regNo = req.query.regNo as string | undefined;
+      const createdAtFrom = req.query.createdAtFrom as string | undefined;
+      const createdAtTo = req.query.createdAtTo as string | undefined;
+      const result = await this.adminProfilesService.listProfiles({
+        page, limit, search, status,
+        sortBy, sortOrder, communityId, regNo,
+        createdAtFrom, createdAtTo,
+      });
       sendSuccess(res, result);
     } catch (err) {
       next(err);
@@ -80,6 +90,16 @@ export class AdminProfilesController {
       const adminId = req.account.sub;
       const ipAddress = req.ip;
       const result = await this.adminProfilesService.restoreProfile(adminId, profileId, ipAddress);
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  audit = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const profileId = req.params.id as string;
+      const result = await this.adminProfilesService.getAuditTrail(profileId);
       sendSuccess(res, result);
     } catch (err) {
       next(err);

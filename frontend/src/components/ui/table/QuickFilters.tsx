@@ -11,12 +11,6 @@ interface QuickFiltersProps {
     className?: string;
 }
 
-/**
- * QuickFilters Component
- * 
- * Provides a modern, iconographic horizontal scrollable list of common filters.
- * Uses interactive Dropdown components for direct filtering inline, and supports legacy onFilterClick.
- */
 export const QuickFilters: React.FC<QuickFiltersProps> = ({ 
     onFilterClick,
     filters = {},
@@ -61,38 +55,6 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
             onFilterClick(key);
         }
     };
-
-    // If we only have onFilterClick but no filters/onFilterChange, render legacy buttons
-    if (!onFilterChange) {
-        const legacyFilters = [
-            { key: 'sort_newest', icon: 'new_releases', label: t('browse:sort_newest') },
-            { key: 'sort_age', icon: 'sort', label: t('browse:sort_age_low_high') },
-            { key: 'filter_kulam', icon: 'groups', label: t('browse:kulam') }
-        ];
-
-        return (
-            <div className={`overflow-hidden ${className}`}>
-                <div className="flex flex-wrap items-center gap-2 pb-1">
-                    {legacyFilters.map((f) => (
-                        <button
-                            key={f.key}
-                            type="button"
-                            onClick={() => onFilterClick?.(f.key)}
-                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/80 border border-gold/20 text-[10px] font-bold text-slate-600 hover:bg-gold/5 active:bg-gold/10 whitespace-nowrap transition-all duration-300 shadow-[0_2px_10px_-4px_rgba(184,134,11,0.1)] hover:shadow-md group"
-                        >
-                            <span className="material-symbols-outlined text-sm transition-colors group-hover:text-gold">
-                                {f.icon}
-                            </span>
-                            <span>{f.label}</span>
-                            <span className="material-symbols-outlined text-[12px] opacity-40 ml-0.5">
-                                keyboard_arrow_down
-                            </span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-        );
-    }
 
     const getOptionLabel = (optionsArr: any[], value: string, fallbackEn: string, fallbackTa: string) => {
         if (!value) return lang === 'ta' ? fallbackTa : fallbackEn;

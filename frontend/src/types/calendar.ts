@@ -4,6 +4,7 @@ export interface LegendProps {
   available: string;
   selected: string;
   booked: string;
+  partiallyBooked?: string;
   blocked?: string;
   today?: string;
   disabled?: string;
@@ -18,6 +19,7 @@ export interface SharedCalendarProps {
   onSelectDay: (day: number | null) => void;
   bookedDays: number[];
   blockedDays?: number[];
+  partiallyBookedDays?: number[];
   isAdmin?: boolean;
   language: string;
   legend: LegendProps;

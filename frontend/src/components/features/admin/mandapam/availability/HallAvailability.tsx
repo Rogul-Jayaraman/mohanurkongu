@@ -1,37 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from '../../../../../context/LanguageContext';
 import { ActionPanel } from '@/components/features/admin/mandapam/ActionPanel';
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { adminGetCalendar } from '@/api/mandapam.api';
-import { getTamilDateInfo, type CalendarStatus } from '@/constants/calendar';
-
-const CALENDAR_THEME: Record<CalendarStatus, { cell: string; chip: string }> = {
-    available: {
-        cell: "bg-white/90 border-gold/20 hover:bg-linear-to-br hover:from-gold-soft/20 hover:to-gold-soft/5 hover:border-gold-accent",
-        chip: "bg-white border-gold/20",
-    },
-    selected: {
-        cell: "bg-linear-to-br from-gold-accent to-gold border-gold-accent ring-2 ring-gold/30 scale-[0.95] z-10",
-        chip: "bg-linear-to-br from-gold-accent to-gold border-gold-accent",
-    },
-    booked: {
-        cell: "bg-sage/10 border-sage/30",
-        chip: "bg-sage/20 border-sage/30",
-    },
-    blocked: {
-        cell: "bg-linear-to-br from-rosewood/10 to-rosewood/5 border-rosewood/30",
-        chip: "bg-linear-to-br from-rosewood/15 to-rosewood/5 border-rosewood/30",
-    },
-    today: {
-        cell: "bg-linear-to-br from-gold/10 to-ivory border-gold border-2",
-        chip: "bg-linear-to-br from-gold/10 to-gold/20 border-gold",
-    },
-    disabled: {
-        cell: "bg-stone-50/50 cursor-not-allowed border-stone-200 opacity-30 grayscale",
-        chip: "bg-stone-50 border-stone-200",
-    }
-};
+import { useAdminCalendar } from '@/queries/useMandapamQueries';
+import {
+    getTamilDateInfo,
+    CALENDAR_THEME,
+    type CalendarStatus
+} from '@/constants/calendar';
+import type { CalendarEntry } from '@/types/mandapam';
 
 const HallAvailability: React.FC = () => {
     const { t, language } = useLanguage();
@@ -39,49 +17,51 @@ const HallAvailability: React.FC = () => {
     const [currentDate, setCurrentDate] = React.useState(new Date());
     const [selectedDays, setSelectedDays] = React.useState<number[]>([]);
 
-    const [entries, setEntries] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    useEffect(() => {
-        const y = currentDate.getFullYear();
-        const m = currentDate.getMonth();
-        const from = new Date(y, m, 1).toLocaleDateString('en-CA');
-        const to = new Date(y, m + 1, 0).toLocaleDateString('en-CA');
-        adminGetCalendar(from, to).then(res => setEntries(res.entries)).finally(() => setIsLoading(false));
-    }, [currentDate]);
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const from = new Date(year, month, 1).toLocaleDateString('en-CA');
+    const to = new Date(year, month + 1, 0).toLocaleDateString('en-CA');
+    const { data: calendarData, isLoading, refetch: refreshCalendar } = useAdminCalendar(from, to);
+    const entries = (calendarData?.entries ?? []) as CalendarEntry[];
 
-    const bookedDays = React.useMemo(() => {
+    const dateEntryMap = useMemo(() => {
+        const map = new Map<string, CalendarEntry>();
+        for (const e of entries) {
+            map.set(e.date.split('T')[0], e);
+        }
+        return map;
+    }, [entries]);
+
+    const { fullyBookedDays, partiallyBookedDays, blockedDays } = useMemo(() => {
         const currentMonth = currentDate.getMonth() + 1;
         const currentYear = currentDate.getFullYear();
-        return entries.filter((e: any) => {
-            if (e.status !== 'FULLY_BOOKED' && e.status !== 'PARTIALLY_BOOKED') return false;
-            const [year, month] = e.date.split('-').map(Number);
-            return year === currentYear && month === currentMonth;
-        }).map((e: any) => parseInt(e.date.split('-')[2]));
+        const fb: number[] = [];
+        const pb: number[] = [];
+        const bl: number[] = [];
+        for (const e of entries) {
+            const [y, m, d] = e.date.split('-').map(Number);
+            if (y !== currentYear || m !== currentMonth) continue;
+            if (e.status === 'FULLY_BOOKED') fb.push(d);
+            else if (e.status === 'PARTIALLY_BOOKED') pb.push(d);
+            else if (e.status === 'BLOCKED') bl.push(d);
+        }
+        return { fullyBookedDays: fb, partiallyBookedDays: pb, blockedDays: bl };
     }, [entries, currentDate]);
 
-    const blockedDays = React.useMemo(() => {
-        const currentMonth = currentDate.getMonth() + 1;
-        const currentYear = currentDate.getFullYear();
-        return entries.filter((e: any) => {
-            if (e.status !== 'BLOCKED') return false;
-            const [year, month] = e.date.split('-').map(Number);
-            return year === currentYear && month === currentMonth;
-        }).map((e: any) => parseInt(e.date.split('-')[2]));
-    }, [entries, currentDate]);
-
-    const getDayEntryStatus = (day: number): 'AVAILABLE' | 'BOOKED' | 'BLOCKED' => {
+    const getDayEntryStatus = (day: number): 'AVAILABLE' | 'PARTIALLY_BOOKED' | 'FULLY_BOOKED' | 'BLOCKED' => {
         const dateStr = new Date(year, month, day).toLocaleDateString('en-CA');
-        const entry = entries.find((e: any) => e.date.split('T')[0] === dateStr);
+        const entry = dateEntryMap.get(dateStr);
         if (!entry) return 'AVAILABLE';
         if (entry.status === 'BLOCKED') return 'BLOCKED';
-        if (entry.status === 'FULLY_BOOKED' || entry.status === 'PARTIALLY_BOOKED') return 'BOOKED';
+        if (entry.status === 'PARTIALLY_BOOKED') return 'PARTIALLY_BOOKED';
+        if (entry.status === 'FULLY_BOOKED') return 'FULLY_BOOKED';
         return 'AVAILABLE';
     };
 
     const handleToggleDay = (day: number) => {
         setSelectedDays(prev => {
             const hasNonAvail = prev.some(d => getDayEntryStatus(d) !== 'AVAILABLE');
-            const clickingNonAvail = ['BLOCKED', 'BOOKED'].includes(getDayEntryStatus(day));
+            const clickingNonAvail = ['BLOCKED', 'FULLY_BOOKED'].includes(getDayEntryStatus(day));
 
             if ((clickingNonAvail && !hasNonAvail && prev.length > 0) ||
                 (!clickingNonAvail && hasNonAvail)) {
@@ -105,8 +85,6 @@ const HallAvailability: React.FC = () => {
         setSelectedDays([]);
     };
 
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const startOffset = new Date(year, month, 1).getDay();
     const endOffset = (7 - ((startOffset + daysInMonth) % 7)) % 7;
@@ -126,7 +104,10 @@ const HallAvailability: React.FC = () => {
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
 
-    const selectedDateObjs = selectedDays.map(d => new Date(year, month, d));
+    const selectedDateObjs = useMemo(() => selectedDays.map(d => new Date(year, month, d)), [selectedDays, year, month]);
+    const handleRefresh = useCallback(() => { refreshCalendar(); }, [refreshCalendar]);
+    const handleClearSelection = useCallback(() => setSelectedDays([]), []);
+    const handleRemoveDate = useCallback((date: Date) => setSelectedDays(prev => prev.filter(d => d !== date.getDate())), []);
 
     const daysOfWeek = isTamil
         ? ['ஞாயி', 'திங்', 'செவ்', 'புத', 'வியா', 'வெள்', 'சனி']
@@ -174,58 +155,49 @@ const HallAvailability: React.FC = () => {
                         </button>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-6 py-3 px-4 bg-white/40 backdrop-blur-sm rounded-xl border border-gold/10 w-full max-w-2xl">
-                        <div className="flex items-center gap-2">
-                            <div className={`w-2.5 h-2.5 rounded-sm ${CALENDAR_THEME.selected.chip}`} />
-                            <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.12em] text-rosewood/50">
-                                {t('adminMandapam.calendar.selected') || 'Selected'}
-                            </span>
+                    <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 mb-5 text-[9px] md:text-[10px] font-bold text-rosewood/50">
+                        <div className="flex items-center gap-1.5">
+                            <div className={`w-2 h-2 rounded-sm ${CALENDAR_THEME.selected.legend}`} />
+                            <span>{t('adminMandapam.calendar.selected') || 'Selected'}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div className={`w-2.5 h-2.5 rounded-sm ${CALENDAR_THEME.booked.chip}`} />
-                            <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.12em] text-rosewood/50">
-                                {t('adminMandapam.calendar.booked') || 'Booked'}
-                            </span>
+                        <div className="flex items-center gap-1.5">
+                            <div className={`w-2 h-2 rounded-sm ${CALENDAR_THEME.booked.legend}`} />
+                            <span>{t('adminMandapam.calendar.booked') || 'Booked'}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div className={`w-2.5 h-2.5 rounded-sm ${CALENDAR_THEME.available.chip}`} />
-                            <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.12em] text-rosewood/50">
-                                {t('adminMandapam.calendar.available') || 'Available'}
-                            </span>
+                        <div className="flex items-center gap-1.5">
+                            <div className={`w-2 h-2 rounded-sm ${CALENDAR_THEME.partiallyBooked.legend}`} />
+                            <span>{t('adminMandapam.calendar.partiallyBooked') || (isTamil ? 'பகுதியாக முன்பதிவு' : 'Partial')}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div className={`w-2.5 h-2.5 rounded-sm ${CALENDAR_THEME.blocked.chip}`} />
-                            <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.12em] text-rosewood/50">
-                                {t('adminMandapam.calendar.blocked') || 'Blocked'}
-                            </span>
+                        <div className="flex items-center gap-1.5">
+                            <div className={`w-2 h-2 rounded-sm ${CALENDAR_THEME.available.legend}`} />
+                            <span>{t('adminMandapam.calendar.available') || 'Available'}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div className={`w-2.5 h-2.5 rounded-sm ${CALENDAR_THEME.today.chip}`} />
-                            <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.12em] text-rosewood/50">
-                                {t('adminMandapam.calendar.today') || (isTamil ? 'இன்று' : 'Today')}
-                            </span>
+                        <div className="flex items-center gap-1.5">
+                            <div className={`w-2 h-2 rounded-sm ${CALENDAR_THEME.blocked.legend}`} />
+                            <span>{t('adminMandapam.calendar.blocked') || 'Blocked'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className={`w-2 h-2 rounded-sm ${CALENDAR_THEME.today.legend}`} />
+                            <span>{t('adminMandapam.calendar.today') || (isTamil ? 'இன்று' : 'Today')}</span>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-7 gap-px sm:gap-1 w-full max-w-2xl bg-gold/5 rounded-xl overflow-hidden p-px">
+                    <div className="grid grid-cols-7 gap-px w-full max-w-2xl bg-gold/20 rounded-xl overflow-hidden">
                         {daysOfWeek.map((d: string) => (
-                            <div key={d} className="text-center py-2 text-[9px] md:text-[10px] font-black text-gold-accent uppercase tracking-[0.12em] bg-rosewood/5 border border-rosewood/10 rounded-lg m-px">
+                            <div key={d} className="text-center py-2 text-[9px] md:text-[10px] font-black text-rosewood/50 uppercase tracking-[0.12em] bg-white/60">
                                 {d}
                             </div>
                         ))}
                         {Array.from({ length: startOffset }).map((_, i) => (
-                            <div key={`empty-${i}`} className="aspect-square rounded-lg bg-white/40 m-px" />
-                        ))}
-
-                        {Array.from({ length: startOffset }).map((_, i) => (
-                            <div key={`empty-${i}`} className="aspect-square rounded-lg" />
+                            <div key={`empty-${i}`} className="aspect-square bg-stone-100/40" />
                         ))}
 
                         {days.map((day, idx) => {
                             const dateObj = new Date(year, month, day);
 
                             const isPast = dateObj.getTime() < todayDate.getTime();
-                            const isBooked = bookedDays.includes(day);
+                            const isFullyBooked = fullyBookedDays.includes(day);
+                            const isPartiallyBooked = partiallyBookedDays.includes(day);
                             const isBlocked = blockedDays.includes(day);
                             const isSelected = selectedDays.includes(day);
                             const isToday = todayDate.getTime() === dateObj.getTime();
@@ -237,7 +209,8 @@ const HallAvailability: React.FC = () => {
                             let status: CalendarStatus = 'available';
                             if (isBlocked) status = 'blocked';
                             else if (isSelected) status = 'selected';
-                            else if (isBooked) status = 'booked';
+                            else if (isFullyBooked) status = 'booked';
+                            else if (isPartiallyBooked) status = 'partiallyBooked';
                             else if (isPast) status = 'disabled';
                             if (isToday && status === 'available') status = 'today';
 
@@ -255,16 +228,16 @@ const HallAvailability: React.FC = () => {
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ duration: 0.25, delay: (idx % 14) * 0.03 }}
                                     disabled={isDisabled}
-                                    className={`aspect-square relative flex flex-col items-center justify-center transition-all rounded-xl border-2 ${theme.cell} ${isClickable ? 'active:scale-90 cursor-pointer' : 'cursor-default'} m-px`}
+                                    className={`aspect-square relative flex flex-col items-center justify-center transition-all rounded-sm ${theme.cell} ${isClickable ? 'active:scale-90 cursor-pointer' : 'cursor-default'}`}
                                 >
-                                    <span className={`font-heading text-lg md:text-2xl font-black leading-none ${status === 'selected' ? 'text-ivory' : status === 'disabled' ? 'text-stone-400' : 'text-rosewood'}`}>
+                                    <span className={`font-heading text-lg md:text-2xl font-black leading-none ${theme.textMain}`}>
                                         {day}
                                     </span>
-                                    <span className={`absolute top-0.5 right-1 leading-none ${status === 'selected' ? 'text-ivory/80' : status === 'disabled' ? 'text-stone-400/60' : 'text-rosewood/60'} text-[9px] md:text-xs font-black`}>
+                                    <span className={`absolute top-0.5 right-1 leading-none ${theme.textSub} text-[9px] md:text-xs font-black`}>
                                         {tInfo.tDate}
                                     </span>
                                     {showTamilLabel && (
-                                        <span className={`absolute bottom-0.5 left-1 leading-none max-w-[90%] truncate ${status === 'selected' ? 'text-ivory/70' : status === 'disabled' ? 'text-stone-400/50' : 'text-rosewood/50'} text-[7px] md:text-[10px] font-black`}>
+                                        <span className={`absolute bottom-0.5 left-1 leading-none max-w-[90%] truncate ${theme.textTa} text-[7px] md:text-[10px] font-black`}>
                                             {tInfo.nameTa}
                                         </span>
                                     )}
@@ -273,13 +246,13 @@ const HallAvailability: React.FC = () => {
                         })}
 
                         {Array.from({ length: endOffset }).map((_, i) => (
-                            <div key={`empty-end-${i}`} className="aspect-square rounded-lg bg-white/40 m-px" />
+                            <div key={`empty-end-${i}`} className="aspect-square bg-stone-100/40" />
                         ))}
                     </div>
                 </div>
             </div>
 
-            <ActionPanel t={t} language={language} selectedDates={selectedDateObjs} entries={entries} onRefresh={() => adminGetCalendar().then(res => setEntries(res.entries))} onClearSelection={() => setSelectedDays([])} onRemoveDate={(date) => setSelectedDays(prev => prev.filter(d => d !== date.getDate()))} />
+            <ActionPanel t={t} language={language} selectedDates={selectedDateObjs} entries={entries} onRefresh={handleRefresh} onClearSelection={handleClearSelection} onRemoveDate={handleRemoveDate} />
         </motion.div>
     );
 };

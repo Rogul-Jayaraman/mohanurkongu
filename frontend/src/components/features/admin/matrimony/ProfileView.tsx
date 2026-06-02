@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
-import { approveProfile, rejectProfile, fetchAdminProfileDetail, archiveProfile, restoreProfile, deleteProfile } from '@/api/verification.api';
+import { useAdminProfileDetailQuery } from '@/queries/useProfileQueries';
+import { useApproveProfileMutation, useRejectProfileMutation, useArchiveProfileMutation, useRestoreProfileMutation, useDeleteProfileMutation } from '@/queries/useAdminMutations';
 import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
 import { RejectionModal } from '@/modals/admin/RejectionModal';
 import { ConfirmationModal } from '@/modals/admin/ConfirmationModal';
@@ -957,12 +958,10 @@ const AdminProfileView: React.FC = () => {
   const isTamil = language === 'ta';
   const { getEnumLabel, formatSalary, getLocationLabel } = useProfileUtils();
 
-  const [profile, setProfile] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isError, setIsError] = useState(false);
-  const fetchProfile = (profileId: string) => { setIsLoading(true); fetchAdminProfileDetail(profileId).then((res: any) => setProfile(res)).catch(() => setIsError(true)).finally(() => setIsLoading(false)); };
-  useEffect(() => { if (id) fetchProfile(id); }, [id]);
-  const refetch = () => { if (id) fetchProfile(id); };
+  const profileQuery = useAdminProfileDetailQuery(id);
+  const profile = profileQuery.data ?? null;
+  const isLoading = profileQuery.isPending;
+  const isError = profileQuery.isError;
 
   const [editSection, setEditSection] = useState<SectionKey | null>(null);
   const [rejectionModal, setRejectionModal] = React.useState<{ open: boolean; mode: 'REJECT' | 'ARCHIVE' }>({ open: false, mode: 'REJECT' });
@@ -1023,13 +1022,15 @@ const AdminProfileView: React.FC = () => {
   const hasGallery = galleryImages.length > 0;
   const hasOwner = !!profile?.owner;
 
+  const approveMut = useApproveProfileMutation();
+  const rejectMut = useRejectProfileMutation();
+  const archiveMut = useArchiveProfileMutation();
+  const restoreMut = useRestoreProfileMutation();
+  const deleteMut = useDeleteProfileMutation();
+
   const handleVerify = () => {
     if (!id) return;
-    approveProfile(id).then(
-      () => toast.success(t('adminMatrimony.users.verifySuccess'))
-    ).catch(
-      (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.verifyError'))
-    );
+    approveMut.mutate(id);
   };
 
   const handleToggleStatus = () => {
@@ -1043,46 +1044,38 @@ const AdminProfileView: React.FC = () => {
 
   const handleActionClick = (mode: 'REJECT' | 'ARCHIVE') => setRejectionModal({ open: true, mode });
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!id) return;
-    deleteProfile(id).then(
-      () => {
-        toast.success(t('adminMatrimony.users.deleteSuccess') || 'Profile deleted');
-        setDeleteModal({ open: false });
-        navigate('/admin/matrimony/profiles');
-      }
-    ).catch(
-      (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
-    );
+    try {
+      await deleteMut.mutateAsync(id);
+      setDeleteModal({ open: false });
+      navigate('/admin/matrimony/profiles');
+    } catch {
+      // error handled by mutation
+    }
   };
 
-  const handleConfirmRestore = () => {
+  const handleConfirmRestore = async () => {
     if (!id) return;
-    restoreProfile(id).then(
-      () => {
-        toast.success(t('adminMatrimony.users.statusUpdateSuccess') || 'Profile restored');
-        setRestoreModal({ open: false });
-        refetch();
-      }
-    ).catch(
-      (error: any) => toast.error(translateError(error) || t('adminMatrimony.users.statusUpdateError'))
-    );
+    try {
+      await restoreMut.mutateAsync(id);
+      setRestoreModal({ open: false });
+    } catch {
+      // error handled by mutation
+    }
   };
 
-  const handleConfirmAction = (reasonEn: string, reasonTa: string) => {
+  const handleConfirmAction = async (reasonEn: string, reasonTa: string) => {
     if (!id) return;
-    if (rejectionModal.mode === 'REJECT') {
-      rejectProfile(id, reasonEn, reasonTa).then(
-        () => { toast.success(t('adminMatrimony.users.rejectSuccess')); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); }
-      ).catch(
-        (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.rejectFailed'))
-      );
-    } else if (rejectionModal.mode === 'ARCHIVE') {
-      archiveProfile(id, reasonEn, reasonTa).then(
-        () => { toast.success(t('adminMatrimony.users.blockSuccess') || 'Profile archived'); setRejectionModal({ open: false, mode: 'REJECT' }); refetch(); }
-      ).catch(
-        (error: any) => toast.error(translateError(error) || t('adminMatrimony.common.failedFetch'))
-      );
+    try {
+      if (rejectionModal.mode === 'REJECT') {
+        await rejectMut.mutateAsync({ id, reasonEn, reasonTa });
+      } else if (rejectionModal.mode === 'ARCHIVE') {
+        await archiveMut.mutateAsync({ id, reasonEn, reasonTa });
+      }
+      setRejectionModal({ open: false, mode: 'REJECT' });
+    } catch {
+      // error handled by mutation
     }
   };
 
@@ -1293,7 +1286,7 @@ const AdminProfileView: React.FC = () => {
         onClose={() => setEditSection(null)}
         section={editSection || 'basic'}
         profile={profile}
-        onSaved={refetch}
+            onSaved={() => profileQuery.refetch()}
       />
     </div>
   );

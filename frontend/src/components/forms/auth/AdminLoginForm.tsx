@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { adminLogin } from '@/api/admin.api';
+import { useAdminLoginMutation } from '@/queries/useAuthMutations';
 import { Input } from '@/components/ui/forms/Input';
 import { PasswordField } from '@/components/ui/forms/PasswordField';
 import { Spinner as LoadingSpinner } from '@/components/ui/feedback/Spinner';
@@ -31,8 +31,9 @@ const itemVariants = {
 export const AdminLoginForm: React.FC = () => {
     const navigate = useNavigate();
     const auth = useAuth();
+    const adminLoginMut = useAdminLoginMutation();
     const { t, translateError } = useTranslations(['adminLogin', 'errors']);
-    const [isPending, setIsPending] = useState(false);
+    const isPending = adminLoginMut.isPending;
     const [formData, setFormData] = useState<LoginData>({
         identifier: '',
         password: '',
@@ -60,23 +61,20 @@ export const AdminLoginForm: React.FC = () => {
             return;
         }
 
-        setIsPending(true);
         try {
-            const result = await adminLogin({
+            const result = await adminLoginMut.mutateAsync({
                 identifier: formData.identifier,
                 password: formData.password,
             });
 
-            await auth.login(result.accessToken, 'ADMIN');
+            await auth.login((result as any).accessToken, 'ADMIN');
 
             toast.success(t('auth:login.success') || 'Login successful');
             navigate('/admin/dashboard');
-        } catch (err) {
-            const message = isAppError(err) ? translateError(err, err.code) : getErrorMessage(err, 'login_failed');
+        } catch (err: any) {
+            const message = err ? (isAppError(err) ? translateError(err, err.code) : getErrorMessage(err, 'login_failed')) : 'Login failed';
             toast.error(message);
             setGeneralError(message);
-        } finally {
-            setIsPending(false);
         }
     };
 

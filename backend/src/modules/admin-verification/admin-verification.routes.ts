@@ -21,12 +21,14 @@ const adminMutationLimiter = rateLimit({
 export function createAdminVerificationRoutes(controller: AdminVerificationController): Router {
   const router = Router();
 
-  router.use(requireSession, requireRole('ADMIN'));
+  router.use(requireSession);
 
-  router.get('/verification/queue', controller.getQueue);
-  router.get('/verification/stats', controller.getStats);
-  router.post('/verification/:id/approve', adminMutationLimiter, controller.approve);
-  router.post('/verification/:id/reject', adminMutationLimiter, controller.reject);
+  router.get('/verification/queue', requireRole('ADMIN'), controller.getQueue);
+  router.get('/verification/stats', requireRole('ADMIN'), controller.getStats);
+  router.post('/verification/:id/approve', requireRole('ADMIN'), adminMutationLimiter, controller.approve);
+  router.post('/verification/:id/reject', requireRole('ADMIN'), adminMutationLimiter, controller.reject);
+  router.post('/verification/:id/claim', requireRole('ADMIN'), adminMutationLimiter, controller.claim);
+  router.post('/verification/:id/unclaim', requireRole('ADMIN'), adminMutationLimiter, controller.unclaim);
 
   return router;
 }

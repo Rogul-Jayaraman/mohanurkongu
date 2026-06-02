@@ -20,6 +20,52 @@ This project is indexed by GitNexus as **mohanurkongu** (6211 symbols, 10720 rel
 - NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
 - NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
 
+## Phase 6 — Frontend API Query/Mutation Migration
+
+### Session (May 31 – Jun 1)
+Migrated all remaining frontend components from ad-hoc API calls to dedicated query/mutation hooks:
+
+| Component | Hook(s) |
+|-----------|---------|
+| `Shortlist.tsx` | `useShortlistedQuery` |
+| `MyAccount.tsx` | `useBillingOverviewQuery` |
+| `ChangePasswordForm.tsx` | `useChangePasswordMutation` |
+| `AdminMembershipCard.tsx` | `useAdminUpdatePlanMutation` |
+| `EditPlanModal.tsx` | `useAdminUpdatePlanMutation` |
+| `AssignPlanModal.tsx` | `useAdminAssignSubscriptionMutation` |
+| `UserManagement.tsx` | `useAdminAccountsQuery` + 3 mutations |
+| `AdminLoginForm.tsx` | `useAdminLoginMutation` |
+| `VerificationQueuePreview.tsx` | `useVerificationQueueQuery` + 2 mutations |
+| `AuditPanel.tsx` | `useAuditTrailQuery` |
+| `ProfileView.tsx` (admin) | `useAdminProfileDetailQuery` + 5 mutations |
+| `Dashboard.tsx` | `useQuery(stats)` + `useVerificationQueueQuery` |
+| `MatrimonialProfiles.tsx` | `useShowcaseQuery` |
+| `UserProfileCard.tsx` | `useToggleShortlistMutation` |
+| `SectionEditModal.tsx` | `useAdminUpdateProfileMutation` |
+| `ProfileManagement.tsx` | Cleaned up unused import |
+
+Created `useAdminMembershipMutations.ts`, added `sendPasswordResetOtp`/`verifyPasswordResetOtp` to `useAuthMutations.ts`, added `useAdminLoginMutation`. Fixed double-toast issues in `useToggleShortlistMutation` and `useAdminUpdateProfileMutation`.
+
+### Session (Jun 2) — Mandapam Cache Pipeline Wiring
+
+Implemented cache pipeline for the mandapam (hall booking) module:
+
+- Extended `MandapamPipelineContext` with cache fields (`cacheManager`, `cacheEnabled`, `cacheResolved`, `cacheReadResult`, `cacheInvalidations`)
+- Created cache step functions: `mandapamCacheRead`, `mandapamCacheWrite`, `mandapamFlushCacheInvalidations`, `addCacheInvalidationTag`
+- Created `mandapam-cache-tags.ts` with tag builders and TTL constants for all mandapam entities (calendar, booking, catalog, packages)
+- Wired cache invalidation into 5 step-based pipelines (booking-create, status, settlement, addon, financial-transaction)
+- Added inline caching to direct-query pipelines: calendar-view (3 fns), booking-get, booking-list, catalog-entity, calendar-block, package-update
+- Added `CacheManager` to `MandapamController` constructor and passed to all pipeline functions
+- Public endpoints (packages, facilities, addons, calendar) now cache responses with language-aware keys
+- Catalog entity CRUD steps cache LIST/PUBLIC_LIST reads and invalidate on CREATE/UPDATE/DELETE
+
+Key design decisions:
+- Cache is optional — pipelines work without it (graceful degradation)
+- All cache failures are non-critical (logged, swallowed)
+- Step-based pipelines use invalidation tags + flush in post-steps
+- Direct-query pipelines use inline read/write pattern
+- TTLs: 60s (booking list) to 1800s (catalog, public packages)
+
 ## Resources
 
 | Resource | Use for |

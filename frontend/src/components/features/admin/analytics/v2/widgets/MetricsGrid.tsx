@@ -35,7 +35,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'Approvals Today': ShieldCheck,
 };
 
-export const MetricsGrid: React.FC<Props> = ({ metrics, loading }) => {
+export const MetricsGrid: React.FC<Props> = React.memo(({ metrics, loading }) => {
   if (metrics.length === 0 && !loading) return null;
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
@@ -51,4 +51,6 @@ export const MetricsGrid: React.FC<Props> = ({ metrics, loading }) => {
       ))}
     </div>
   );
-};
+});
+
+MetricsGrid.displayName = 'MetricsGrid';

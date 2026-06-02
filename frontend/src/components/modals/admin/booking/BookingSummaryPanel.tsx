@@ -1,4 +1,5 @@
 import React from 'react';
+import { Wallet } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/utils/format';
 import type { PackageInfo } from './bookingFormTypes';
@@ -9,6 +10,9 @@ interface BookingSummaryPanelProps {
   durationHours: number;
   addonIds: string[];
   addons: any[];
+  addonAmounts?: Record<string, number>;
+  addonQuantities?: Record<string, number>;
+  addonUnits?: Record<string, number>;
   addonCharge: number;
   totalCharge: number;
   advanceAmount: number;
@@ -19,6 +23,7 @@ interface BookingSummaryPanelProps {
 
 export const BookingSummaryPanel: React.FC<BookingSummaryPanelProps> = ({
   bookingType, packageInfo, durationHours, addons,
+  addonAmounts = {}, addonQuantities = {}, addonUnits = {},
   addonCharge, totalCharge, advanceAmount, outstanding,
   bookingMethod, tokenNumber, addonIds,
 }) => {
@@ -26,6 +31,7 @@ export const BookingSummaryPanel: React.FC<BookingSummaryPanelProps> = ({
   const isTamil = language === 'ta';
 
   const selectedAddons = addons.filter((a: any) => addonIds.includes(a.id));
+  const isToken = bookingMethod === 'TOKEN_BOOKING';
 
   return (
     <div className="bg-gradient-to-br from-rosewood/5 to-rosewood/[0.02] rounded-2xl border border-rosewood/10 p-6 space-y-4 sticky top-6">
@@ -43,86 +49,137 @@ export const BookingSummaryPanel: React.FC<BookingSummaryPanelProps> = ({
           </span>
         </div>
 
-        {packageInfo && (
-          <div className="flex justify-between text-xs">
-            <span className="text-rosewood/50 font-bold">{isTamil ? 'தொகுப்பு' : 'Package'}</span>
-            <span className="text-rosewood font-black">
-              {isTamil ? packageInfo.name.ta : packageInfo.name.en}
+        <div className="flex justify-between text-xs">
+          <span className="text-rosewood/50 font-bold">{isTamil ? 'தொகுப்பு' : 'Package'}</span>
+          {isToken ? (
+            <span className="text-emerald-700 text-[10px] font-bold flex items-center gap-1">
+              <span className="material-symbols-outlined text-xs">check_circle</span>
+              {isTamil ? 'டோக்கனில்' : 'Token'}
             </span>
+          ) : (
+            <span className="text-rosewood font-black">
+              {isTamil ? packageInfo?.name.ta : packageInfo?.name.en}
+            </span>
+          )}
+        </div>
+
+        {isToken && tokenNumber && (
+          <div className="flex justify-between text-xs">
+            <span className="text-rosewood/50 font-bold">{isTamil ? 'டோக்கன்' : 'Token'}</span>
+            <span className="text-rosewood font-mono font-black">{tokenNumber}</span>
           </div>
         )}
 
         {durationHours > 0 && (
           <div className="flex justify-between text-xs">
             <span className="text-rosewood/50 font-bold">{isTamil ? 'காலம்' : 'Duration'}</span>
-            <span className="text-rosewood font-black">{durationHours} {isTamil ? 'மணி' : 'hrs'}</span>
+            <span className="text-rosewood font-black">{durationHours.toFixed(2)} {isTamil ? 'மணி' : 'hrs'}</span>
           </div>
         )}
 
-        {selectedAddons.length > 0 && (
-          <div className="pt-2 border-t border-rosewood/10">
-            <p className="text-xs font-bold text-rosewood/40 mb-2">
-              {isTamil ? 'கூடுதல் சேவைகள்' : 'Selected Addons'}
-            </p>
-            {selectedAddons.map((a: any) => {
-              const name = a.translations?.find((t: any) => t.language === (isTamil ? 'TA' : 'EN'))?.name || '';
-              return (
-                <div key={a.id} className="flex justify-between text-[11px] py-1">
-                  <span className="text-rosewood/60 font-bold">{name}</span>
-                  <span className="text-rosewood font-black">{formatCurrency(Number(a.amount))}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="pt-3 border-t border-rosewood/10 space-y-2">
-          <div className="flex justify-between text-xs">
-            <span className="text-rosewood/50 font-bold">
-              {bookingType === 'HOURLY'
-                ? (isTamil ? 'மணிநேர கட்டணம்' : 'Hourly Rate')
-                : (isTamil ? 'தொகுப்பு கட்டணம்' : 'Package Charge')}
-            </span>
-            <span className="text-rosewood font-black">
-              {bookingType === 'HOURLY'
-                ? `${formatCurrency(packageInfo?.price || 0)} × ${durationHours}${isTamil ? 'ம' : 'h'}`
-                : formatCurrency(packageInfo?.price || 0)}
-            </span>
-          </div>
-          {addonCharge > 0 && (
-            <div className="flex justify-between text-xs">
-              <span className="text-rosewood/50 font-bold">{isTamil ? 'கூடுதல் கட்டணம்' : 'Addon Charge'}</span>
-              <span className="text-rosewood font-black">{formatCurrency(addonCharge)}</span>
+        {isToken ? (
+          <>
+            <div className="pt-2 border-t border-dashed border-rosewood/10">
+              <p className="text-[10px] font-bold text-rosewood/50 mb-1.5 flex items-center gap-1">
+                <Wallet size={12} />
+                {isTamil ? 'வாடிக்கையாளர் செலுத்த' : 'Customer to Pay'}
+              </p>
+              <div className="space-y-1.5">
+                {selectedAddons.map((a: any) => {
+                  const name = a.translations?.find((t: any) => t.language === (isTamil ? 'TA' : 'EN'))?.name || '';
+                  const price = addonAmounts?.[a.id] ?? 0;
+                  const qty = addonQuantities?.[a.id] ?? 1;
+                  const units = addonUnits?.[a.id] ?? 1;
+                  const lineTotal = price * qty * units;
+                  return (
+                    <div key={a.id} className="flex justify-between text-[11px]">
+                      <span className="text-rosewood/60 font-bold">{name}</span>
+                      <span className="text-rosewood font-black">{formatCurrency(lineTotal)}</span>
+                    </div>
+                  );
+                })}
+                {addonCharge > 0 && (
+                  <div className="flex justify-between text-xs pt-1 border-t border-dashed border-rosewood/10">
+                    <span className="text-rosewood/60 font-bold">{isTamil ? 'கூடுதல் மொத்தம்' : 'Addon Total'}</span>
+                    <span className="text-rosewood/70 font-black">{formatCurrency(addonCharge)}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-          <div className="flex justify-between text-sm pt-2 border-t border-rosewood/20">
-            <span className="text-rosewood font-black">{isTamil ? 'மொத்தம்' : 'Total'}</span>
-            <span className="text-rosewood font-black">{formatCurrency(totalCharge)}</span>
-          </div>
-        </div>
-
-        {bookingMethod === 'NORMAL_BOOKING' && advanceAmount > 0 && (
-          <div className="space-y-2 pt-2 border-t border-rosewood/10">
-            <div className="flex justify-between text-xs">
-              <span className="text-rosewood/50 font-bold">{isTamil ? 'முன்பணம்' : 'Advance'}</span>
-              <span className="text-emerald-700 font-black">- {formatCurrency(advanceAmount)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-rosewood font-black">{isTamil ? 'மீதி' : 'Outstanding'}</span>
-              <span className={`font-black ${outstanding <= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                {formatCurrency(outstanding)}
+            {advanceAmount > 0 && (
+              <div className="flex justify-between text-xs">
+                <span className="text-rosewood/50 font-bold">{isTamil ? 'முன்பணம்' : 'Advance'}</span>
+                <span className="text-emerald-700 font-black">- {formatCurrency(advanceAmount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm pt-2 border-t-2 border-rosewood/20">
+              <span className="text-rosewood font-black">{isTamil ? 'மீதி' : 'Balance Due'}</span>
+              <span className={`font-black ${(addonCharge - (advanceAmount || 0)) <= 0 ? 'text-emerald-700' : 'text-rosewood/70'}`}>
+                {formatCurrency(addonCharge - (advanceAmount || 0))}
               </span>
             </div>
-          </div>
-        )}
-
-        {bookingMethod === 'TOKEN_BOOKING' && tokenNumber && (
-          <div className="pt-2 border-t border-rosewood/10">
-            <div className="flex justify-between text-xs">
-              <span className="text-rosewood/50 font-bold">{isTamil ? 'டோக்கன்' : 'Token'}</span>
-              <span className="text-rosewood font-mono font-black">{tokenNumber}</span>
+          </>
+        ) : (
+          <>
+            {selectedAddons.length > 0 && (
+              <div className="pt-2 border-t border-rosewood/10">
+                <p className="text-xs font-bold text-rosewood/40 mb-2">
+                  {isTamil ? 'கூடுதல் சேவைகள்' : 'Selected Addons'}
+                </p>
+                {selectedAddons.map((a: any) => {
+                  const name = a.translations?.find((t: any) => t.language === (isTamil ? 'TA' : 'EN'))?.name || '';
+                  const price = addonAmounts?.[a.id] ?? 0;
+                  const qty = addonQuantities?.[a.id] ?? 1;
+                  const units = addonUnits?.[a.id] ?? 1;
+                  const lineTotal = price * qty * units;
+                  return (
+                    <div key={a.id} className="flex justify-between text-[11px] py-1">
+                      <span className="text-rosewood/60 font-bold">{name}</span>
+                      <span className="text-rosewood font-black">{formatCurrency(lineTotal)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="pt-3 border-t border-rosewood/10 space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-rosewood/50 font-bold">
+                  {bookingType === 'HOURLY'
+                    ? (isTamil ? 'மணிநேர கட்டணம்' : 'Hourly Rate')
+                    : (isTamil ? 'தொகுப்பு கட்டணம்' : 'Package Charge')}
+                </span>
+                <span className="text-rosewood font-black">
+                  {bookingType === 'HOURLY'
+                    ? `${formatCurrency(packageInfo?.price || 0)} × ${durationHours.toFixed(2)}${isTamil ? 'ம' : 'h'}`
+                    : formatCurrency(packageInfo?.price || 0)}
+                </span>
+              </div>
+              {addonCharge > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-rosewood/50 font-bold">{isTamil ? 'கூடுதல் கட்டணம்' : 'Addon Charge'}</span>
+                  <span className="text-rosewood font-black">{formatCurrency(addonCharge)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm pt-2 border-t border-rosewood/20">
+                <span className="text-rosewood font-black">{isTamil ? 'மொத்தம்' : 'Total'}</span>
+                <span className="text-rosewood font-black">{formatCurrency(totalCharge)}</span>
+              </div>
             </div>
-          </div>
+            {advanceAmount > 0 && (
+              <div className="space-y-2 pt-2 border-t border-rosewood/10">
+                <div className="flex justify-between text-xs">
+                  <span className="text-rosewood/50 font-bold">{isTamil ? 'முன்பணம்' : 'Advance'}</span>
+                  <span className="text-emerald-700 font-black">- {formatCurrency(advanceAmount)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-rosewood font-black">{isTamil ? 'மீதி' : 'Outstanding'}</span>
+                  <span className={`font-black ${outstanding <= 0 ? 'text-emerald-700' : 'text-rosewood/70'}`}>
+                    {formatCurrency(outstanding)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

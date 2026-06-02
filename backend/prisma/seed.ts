@@ -121,6 +121,7 @@ async function main() {
   await seedMandapamPackages();
   await seedMandapamFacilities();
   await seedMandapamAddons();
+  await seedMandapamTokens();
   await seedDefaultAdmin();
   await setDevCascade();
 
@@ -398,7 +399,7 @@ async function seedMandapamPackages() {
     },
     {
       code: 'ROYAL',
-      bookingType: 'DAY_BASED' as const,
+      bookingType: 'ONE_DAY' as const,
       durationType: 'FIXED_DAY' as const,
       durationValue: 1,
       pricingType: 'FIXED' as const,
@@ -411,7 +412,7 @@ async function seedMandapamPackages() {
     },
     {
       code: 'GRAND',
-      bookingType: 'DAY_BASED' as const,
+      bookingType: 'TWO_DAY' as const,
       durationType: 'FIXED_DAY' as const,
       durationValue: 2,
       pricingType: 'FIXED' as const,
@@ -492,25 +493,27 @@ async function seedMandapamPackages() {
 
 async function seedMandapamFacilities() {
   const facilities = [
-    { iconName: 'meeting_room', chargeType: 'GENERAL' as const, nameEn: 'Main Hall', nameTa: 'பிரதான மண்டபம்' },
-    { iconName: 'restaurant', chargeType: 'GENERAL' as const, nameEn: 'Dining Hall', nameTa: 'உணவு மண்டபம்' },
-    { iconName: 'buffet', chargeType: 'GENERAL' as const, nameEn: 'Buffet Hall', nameTa: 'பூஃபே மண்டபம்' },
-    { iconName: 'local_parking', chargeType: 'GENERAL' as const, nameEn: 'General Parking Space', nameTa: 'பொது வாகன நிறுத்தம்' },
-    { iconName: 'meeting_room', chargeType: 'GENERAL' as const, nameEn: 'Bride & Groom Rooms', nameTa: 'மணமகன் மற்றும் மணமகள் அறைகள்' },
-    { iconName: 'kitchen', chargeType: 'GENERAL' as const, nameEn: 'Kitchen', nameTa: 'சமையலறை' },
-    { iconName: 'hotel_class', chargeType: 'ADDITIONAL' as const, nameEn: 'Extra Premium Rooms (If Required)', nameTa: 'கூடுதல் பிரீமியம் அறைகள் (தேவைப்பட்டால்)' },
-    { iconName: 'local_parking', chargeType: 'ADDITIONAL' as const, nameEn: 'Additional Parking Space (If Required)', nameTa: 'கூடுதல் வாகன நிறுத்தம் (தேவைப்பட்டால்)' },
-    { iconName: 'ac_unit', chargeType: 'ADDITIONAL' as const, nameEn: 'Air Conditioning (AC) Facility', nameTa: 'ஏர் கண்டிஷனிங் (ஏசி) வசதி' },
+    { iconName: 'meeting_room', nameEn: 'Main Hall', nameTa: 'பிரதான மண்டபம்' },
+    { iconName: 'restaurant', nameEn: 'Dining Hall', nameTa: 'உணவு மண்டபம்' },
+    { iconName: 'buffet', nameEn: 'Buffet Hall', nameTa: 'பூஃபே மண்டபம்' },
+    { iconName: 'local_parking', nameEn: 'General Parking Space', nameTa: 'பொது வாகன நிறுத்தம்' },
+    { iconName: 'meeting_room', nameEn: 'Bride & Groom Rooms', nameTa: 'மணமகன் மற்றும் மணமகள் அறைகள்' },
+    { iconName: 'kitchen', nameEn: 'Kitchen', nameTa: 'சமையலறை' },
+    { iconName: 'hotel_class', nameEn: 'Extra Premium Rooms (If Required)', nameTa: 'கூடுதல் பிரீமியம் அறைகள் (தேவைப்பட்டால்)' },
+    { iconName: 'local_parking', nameEn: 'Additional Parking Space (If Required)', nameTa: 'கூடுதல் வாகன நிறுத்தம் (தேவைப்பட்டால்)' },
+    { iconName: 'ac_unit', nameEn: 'Air Conditioning (AC) Facility', nameTa: 'ஏர் கண்டிஷனிங் (ஏசி) வசதி' },
   ];
 
   for (const facility of facilities) {
     const existing = await prisma.mandapamFacility.findFirst({
-      where: { iconName: facility.iconName, chargeType: facility.chargeType },
+      where: {
+        translations: { some: { language: 'EN', name: facility.nameEn } },
+      },
     });
     if (!existing) {
       await prisma.$transaction(async (tx) => {
         const created = await tx.mandapamFacility.create({
-          data: { iconName: facility.iconName, chargeType: facility.chargeType, status: true },
+          data: { iconName: facility.iconName, status: true },
         });
         await tx.mandapamFacilityTranslation.create({
           data: { facilityId: created.id, language: 'EN', name: facility.nameEn },
@@ -527,11 +530,11 @@ async function seedMandapamFacilities() {
 
 async function seedMandapamAddons() {
   const addons = [
-    { iconName: 'restaurant_menu', pricingType: 'FIXED' as const, amount: 15000, nameEn: 'Catering Service', nameTa: 'கேட்டரிங் சேவை' },
-    { iconName: 'photo_camera', pricingType: 'FIXED' as const, amount: 8000, nameEn: 'Photography', nameTa: 'புகைப்படம்' },
-    { iconName: 'music_note', pricingType: 'HOURLY' as const, amount: 3000, nameEn: 'DJ Service', nameTa: 'டிஜே சேவை' },
-    { iconName: 'videocam', pricingType: 'FIXED' as const, amount: 12000, nameEn: 'Videography', nameTa: 'வீடியோகிராபி' },
-    { iconName: 'palette', pricingType: 'FIXED' as const, amount: 10000, nameEn: 'Flower Decoration', nameTa: 'மலர் அலங்காரம்' },
+    { iconName: 'restaurant_menu', pricingType: 'PER_EVENT' as const, supportsQuantity: false, nameEn: 'Catering Service', nameTa: 'கேட்டரிங் சேவை' },
+    { iconName: 'photo_camera', pricingType: 'PER_EVENT' as const, supportsQuantity: false, nameEn: 'Photography', nameTa: 'புகைப்படம்' },
+    { iconName: 'music_note', pricingType: 'PER_HOUR' as const, supportsQuantity: false, nameEn: 'DJ Service', nameTa: 'டிஜே சேவை' },
+    { iconName: 'videocam', pricingType: 'PER_EVENT' as const, supportsQuantity: false, nameEn: 'Videography', nameTa: 'வீடியோகிராபி' },
+    { iconName: 'palette', pricingType: 'PER_EVENT' as const, supportsQuantity: false, nameEn: 'Flower Decoration', nameTa: 'மலர் அலங்காரம்' },
   ];
 
   for (const addon of addons) {
@@ -541,7 +544,7 @@ async function seedMandapamAddons() {
     if (!existing) {
       await prisma.$transaction(async (tx) => {
         const created = await tx.mandapamAddonService.create({
-          data: { iconName: addon.iconName, pricingType: addon.pricingType, amount: addon.amount, status: true },
+          data: { iconName: addon.iconName, pricingType: addon.pricingType, supportsQuantity: addon.supportsQuantity, status: true },
         });
         await tx.mandapamAddonServiceTranslation.create({
           data: { addonId: created.id, language: 'EN', name: addon.nameEn },
@@ -554,6 +557,23 @@ async function seedMandapamAddons() {
   }
 
   console.log(`Seeded ${addons.length} mandapam addons`);
+}
+
+async function seedMandapamTokens() {
+  const count = await prisma.mandapamToken.count();
+  if (count > 0) {
+    console.log(`MandapamTokens already seeded (${count} records). Skipping.`);
+    return;
+  }
+
+  const statuses: ('NOTUSED' | 'USED')[] = ['NOTUSED', 'NOTUSED', 'NOTUSED', 'NOTUSED', 'USED'];
+  const tokens = Array.from({ length: 6000 }, (_, i) => {
+    const tokenId = `MK${String(i + 1).padStart(4, '0')}`;
+    return { tokenId, status: statuses[Math.floor(Math.random() * statuses.length)] as 'NOTUSED' | 'USED' };
+  });
+
+  await prisma.mandapamToken.createMany({ data: tokens });
+  console.log(`Seeded ${tokens.length} MandapamTokens (${tokens.filter(t => t.status === 'NOTUSED').length} available, ${tokens.filter(t => t.status === 'USED').length} used)`);
 }
 
 async function seedDefaultAdmin() {

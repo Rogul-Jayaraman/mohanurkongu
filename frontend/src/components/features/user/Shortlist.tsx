@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserProfileCard, UserProfileCardSkeleton } from '@/components/features/user/UserProfileCard';
 import { PageHeader } from '@/components/ui/layout/PageHeader';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
-import { fetchShortlisted } from '@/api/profile.api';
+import { useShortlistedQuery } from '@/queries/useProfileQueries';
 import type { ProfileSummary } from '@/types/profile';
 
 
@@ -84,32 +84,20 @@ const ErrorStateView: React.FC<{
 const Shortlist: React.FC = () => {
     const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState('');
-    const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
-    const loadShortlisted = useCallback(async (q?: string) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const params: Record<string, any> = {};
-        if (q?.trim()) params.q = q.trim();
-        const data = await fetchShortlisted(params);
-        setProfiles(data.profiles);
-      } catch (err: any) {
-        setError(err?.message || 'Failed to load shortlisted profiles');
-      } finally {
-        setLoading(false);
-      }
-    }, []);
+    const params: Record<string, any> = {};
+    if (searchQuery?.trim()) params.q = searchQuery.trim();
+    const shortlistedQuery = useShortlistedQuery(params);
 
-    useEffect(() => { loadShortlisted(searchQuery); }, [searchQuery, loadShortlisted]);
-
+    const profiles: ProfileSummary[] = (shortlistedQuery.data as any)?.profiles ?? [];
+    const loading = shortlistedQuery.isPending;
+    const error = shortlistedQuery.error ? (shortlistedQuery.error as Error).message : null;
     const isSearching = searchQuery.trim().length > 0;
 
     const handleToggleShortlist = (profileId: string, isShortlisted: boolean) => {
       if (!isShortlisted) {
-        setProfiles(prev => prev.filter(p => p.id !== profileId));
+        // optimistic removal handled by cache invalidation
+        shortlistedQuery.refetch();
       }
     };
 
@@ -146,7 +134,7 @@ const Shortlist: React.FC = () => {
                     {loading && !profiles.length ? (
                         <ShortlistSkeleton />
                     ) : error ? (
-                        <ErrorStateView t={t} onRetry={() => loadShortlisted()} />
+                        <ErrorStateView t={t} onRetry={() => shortlistedQuery.refetch()} />
                     ) : profiles.length > 0 ? (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 pt-4">
                             {profiles.map((profile: any) => (

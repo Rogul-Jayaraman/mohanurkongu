@@ -18,8 +18,8 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
 }) => {
     const getVisiblePages = () => {
         const delta = 2;
-        const range = [];
-        const rangeWithDots = [];
+        const range: (number | string)[] = [];
+        const rangeWithDots: (number | string)[] = [];
 
         for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
             range.push(i);
@@ -43,41 +43,45 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
     };
 
     return (
-        <div className="bg-ivory border-t border-gold-soft/10 px-4 py-2">
+        <div className="bg-gradient-to-r from-ivory to-white border-t border-gold/10 px-5 py-3">
             <div className="flex items-center justify-between gap-4">
-                {/* Results info */}
                 <div className="flex items-center gap-3">
-                    <div className="text-[10px] font-bold text-rosewood uppercase tracking-widest bg-gold-soft/5 px-2 py-0.5 rounded-full border border-gold-soft/10">
-                        {totalItems === 0 ? 'No records' : 
+                    <div className="text-[11px] font-bold text-rosewood/40 bg-white rounded-lg px-3 py-1.5 border border-gold/10">
+                        {totalItems === 0 ? 'No records' :
                          `${itemsPerPage * (currentPage - 1) + 1}-${Math.min(itemsPerPage * currentPage, totalItems)} of ${totalItems}`}
                     </div>
                 </div>
 
-                {/* Pagination controls */}
                 <div className="flex items-center gap-1">
-                    {/* Previous page */}
+                    <button
+                        onClick={() => onPageChange(1)}
+                        disabled={currentPage === 1}
+                        className="w-8 h-8 flex items-center justify-center text-rosewood/40 hover:text-rosewood hover:bg-rosewood/5 rounded-lg transition-all disabled:opacity-20 disabled:cursor-not-allowed border border-transparent"
+                        title="First page"
+                    >
+                        <ChevronsLeft size={14} />
+                    </button>
                     <button
                         onClick={() => onPageChange(currentPage - 1)}
                         disabled={currentPage === 1}
-                        className="w-7 h-7 flex items-center justify-center text-rosewood/60 hover:text-rosewood hover:bg-gold-soft/10 rounded-lg transition-all disabled:opacity-20 disabled:cursor-not-allowed border border-transparent hover:border-gold-soft/20"
+                        className="w-8 h-8 flex items-center justify-center text-rosewood/40 hover:text-rosewood hover:bg-rosewood/5 rounded-lg transition-all disabled:opacity-20 disabled:cursor-not-allowed border border-transparent"
                         title="Previous page"
                     >
                         <ChevronLeft size={14} />
                     </button>
 
-                    {/* Page numbers */}
                     <div className="hidden sm:flex items-center gap-1 mx-1">
                         {getVisiblePages().map((page, index) => (
                             <React.Fragment key={index}>
                                 {page === '...' ? (
-                                    <span className="w-4 text-center text-rosewood/40 text-[10px] font-black">...</span>
+                                    <span className="w-5 text-center text-rosewood/30 text-[10px] font-bold">...</span>
                                 ) : (
                                     <button
                                         onClick={() => onPageChange(page as number)}
-                                        className={`w-7 h-7 flex items-center justify-center text-[10px] font-black rounded-lg transition-all ${
+                                        className={`min-w-[32px] h-8 flex items-center justify-center text-[11px] font-bold rounded-lg transition-all active:scale-95 ${
                                             currentPage === page
-                                                ? 'bg-rosewood text-white shadow-sm ring-2 ring-rosewood/10'
-                                                : 'text-rosewood/60 hover:text-rosewood hover:bg-gold-soft/10 border border-transparent hover:border-gold-soft/20'
+                                                ? 'bg-rosewood text-white shadow-sm'
+                                                : 'text-rosewood/50 hover:text-rosewood hover:bg-rosewood/5 border border-transparent'
                                         }`}
                                     >
                                         {page}
@@ -87,19 +91,25 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
                         ))}
                     </div>
 
-                    {/* Compact mobile page info */}
-                    <div className="sm:hidden text-[10px] font-black text-rosewood px-2 tabular-nums">
+                    <div className="sm:hidden text-[11px] font-bold text-rosewood/60 px-2 tabular-nums">
                         {currentPage} / {totalPages}
                     </div>
 
-                    {/* Next page */}
                     <button
                         onClick={() => onPageChange(currentPage + 1)}
                         disabled={currentPage === totalPages}
-                        className="w-7 h-7 flex items-center justify-center text-rosewood/60 hover:text-rosewood hover:bg-gold-soft/10 rounded-lg transition-all disabled:opacity-20 disabled:cursor-not-allowed border border-transparent hover:border-gold-soft/20"
+                        className="w-8 h-8 flex items-center justify-center text-rosewood/40 hover:text-rosewood hover:bg-rosewood/5 rounded-lg transition-all disabled:opacity-20 disabled:cursor-not-allowed border border-transparent"
                         title="Next page"
                     >
                         <ChevronRight size={14} />
+                    </button>
+                    <button
+                        onClick={() => onPageChange(totalPages)}
+                        disabled={currentPage === totalPages}
+                        className="w-8 h-8 flex items-center justify-center text-rosewood/40 hover:text-rosewood hover:bg-rosewood/5 rounded-lg transition-all disabled:opacity-20 disabled:cursor-not-allowed border border-transparent"
+                        title="Last page"
+                    >
+                        <ChevronsRight size={14} />
                     </button>
                 </div>
             </div>

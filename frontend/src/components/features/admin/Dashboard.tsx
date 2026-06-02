@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 import { useDateFormatter } from '@/hooks/useDateFormatter';
@@ -15,9 +15,9 @@ import { EmptyState } from '@/components/ui/feedback/EmptyState';
 import { ContentCard } from '@/components/ui/cards/ContentCard';
 import { AdminProfileCard } from '@/components/features/admin/matrimony/ProfileCard';
 import { AdminProfileCardSkeleton } from '@/components/features/admin/matrimony/ProfileCardSkeleton';
-import { fetchVerificationQueue } from '@/api/verification.api';
+import { useQuery } from '@tanstack/react-query';
 import { fetchAdminStats } from '@/api/admin-dashboard.api';
-import type { AdminManagedProfile } from '@/types/admin-types';
+import { useVerificationQueueQuery } from '@/queries/useProfileQueries';
 
 // ═══════════════════════════════════════════════════════════
 // AdminWelcomeHeader
@@ -160,10 +160,9 @@ const TodaysBookings: React.FC<{ recentBookings: MandapamEvent[]; isLoading: boo
 const VerificationQueuePreview: React.FC = () => {
     const { t } = useLanguage();
     const navigate = useNavigate();
-    const [data, setData] = useState<{ profiles: any[] }>({ profiles: [] });
-    const [isLoading, setIsLoading] = useState(true);
-    useEffect(() => { fetchVerificationQueue({ limit: 4 }).then((res: any) => setData({ profiles: res.profiles || [] })).finally(() => setIsLoading(false)); }, []);
-    const profiles = (data as any)?.profiles || [];
+    const queueQuery = useVerificationQueueQuery({ limit: 4 });
+    const profiles: any[] = (queueQuery.data as any)?.profiles ?? [];
+    const isLoading = queueQuery.isPending;
 
     return (
         <div className="w-full space-y-6">
@@ -214,20 +213,22 @@ const QuickActions: React.FC = () => {
 // ═══════════════════════════════════════════════════════════
 const AdminDashboard: React.FC = () => {
     const { t } = useLanguage();
-    const [statsData, setStatsData] = useState<any>({ stats: { totalUsers: 0, totalProfiles: 0, totalBookings: 0, totalRevenue: 0, newUsers: 0, pendingVerifications: 0 }, recentBookings: [] });
-    const [loading, setLoading] = useState(true);
-    const [isError, setIsError] = useState(false);
-    const [error, setError] = useState<any>(null);
-    const refetch = () => { setLoading(true); fetchAdminStats().then(setStatsData).catch((e) => { setError(e); setIsError(true); }).finally(() => setLoading(false)); };
-    useEffect(() => { refetch(); }, []);
+    const statsQuery = useQuery({
+        queryKey: ['admin', 'dashboard', 'stats'],
+        queryFn: fetchAdminStats,
+        staleTime: 30_000,
+    });
+    const statsData = statsQuery.data ?? { stats: { totalUsers: 0, totalProfiles: 0, totalBookings: 0, totalRevenue: 0, newUsers: 0, pendingVerifications: 0 }, recentBookings: [] };
+    const loading = statsQuery.isPending;
+    const isError = statsQuery.isError;
 
-    if (isError && !statsData) {
+    if (isError && !statsQuery.data) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
                 <AlertCircle className="w-16 h-16 text-red-500/50" />
                 <h3 className="text-2xl font-serif font-bold text-rosewood">{t('adminMatrimony.dashboard.systemOffline')}</h3>
-                <p className="text-gray-500 max-w-md text-center">{(error as any)?.message || t('adminMatrimony.dashboard.loadError')}</p>
-                <button onClick={() => refetch()} className="mt-4 px-8 py-3 bg-rosewood text-white font-bold rounded-xl hover:shadow-lg transition-all">{t('adminMatrimony.dashboard.retryConnection')}</button>
+                <p className="text-gray-500 max-w-md text-center">{(statsQuery.error as any)?.message || t('adminMatrimony.dashboard.loadError')}</p>
+                <button onClick={() => statsQuery.refetch()} className="mt-4 px-8 py-3 bg-rosewood text-white font-bold rounded-xl hover:shadow-lg transition-all">{t('adminMatrimony.dashboard.retryConnection')}</button>
             </div>
         );
     }

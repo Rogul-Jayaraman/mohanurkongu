@@ -10,8 +10,12 @@ import {
   ForgotPasswordIdentifyForm,
   ForgotPasswordResetForm,
 } from '@/components/forms/auth/ForgotPasswordForm';
-import * as authApi from '@/api/auth.api';
 import { isAppError } from '@/lib/errors';
+import {
+  useSendOtpMutation,
+  useVerifyOtpMutation,
+  useResetPasswordMutation,
+} from '@/queries/useAuthMutations';
 
 type RecoveryStep = 'IDENTIFY' | 'VERIFY' | 'RESET' | 'SUCCESS';
 
@@ -55,6 +59,10 @@ export const ForgotPasswordForm: React.FC = () => {
   const [canResend, setCanResend] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ password?: string; confirmPassword?: string }>({});
 
+  const sendOtpMutation = useSendOtpMutation();
+  const verifyOtpMutation = useVerifyOtpMutation();
+  const resetPasswordMutation = useResetPasswordMutation();
+
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (timer > 0) {
@@ -70,7 +78,7 @@ export const ForgotPasswordForm: React.FC = () => {
     setError(null);
     setIsSending(true);
     try {
-      await authApi.sendPasswordResetOtp({ email });
+      await sendOtpMutation.mutateAsync({ email, kind: 'reset' });
       setTimer(60);
       setCanResend(false);
       setStep('VERIFY');
@@ -86,7 +94,7 @@ export const ForgotPasswordForm: React.FC = () => {
     setIsSending(true);
     setOtpError(null);
     try {
-      await authApi.sendPasswordResetOtp({ email });
+      await sendOtpMutation.mutateAsync({ email, kind: 'reset' });
       setTimer(60);
       setCanResend(false);
       toast.success(t('signup.sent'));
@@ -103,8 +111,8 @@ export const ForgotPasswordForm: React.FC = () => {
     setOtpError(null);
 
     try {
-      const result = await authApi.verifyPasswordResetOtp({ email, otp: otpValue });
-      setResetToken(result.resetToken);
+      const result = await verifyOtpMutation.mutateAsync({ email, otp: otpValue, kind: 'reset' });
+      setResetToken(result.resetToken ?? null);
       setStep('RESET');
     } catch (err) {
       if (isAppError(err) && err.code === 'AUTH_VERIFICATION_EXPIRED') {
@@ -141,7 +149,7 @@ export const ForgotPasswordForm: React.FC = () => {
 
     setIsResetting(true);
     try {
-      await authApi.resetPassword({ email, resetToken, password });
+      await resetPasswordMutation.mutateAsync({ email, resetToken, password });
       setStep('SUCCESS');
     } catch (err) {
       setError(isAppError(err) ? translateError(err, err.code) : translateError(err));

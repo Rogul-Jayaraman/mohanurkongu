@@ -8,6 +8,7 @@ import { appConfig } from './config/app.config.js';
 import { authConfig } from './config/auth.config.js';
 import { requestId } from './common/middleware/requestId.js';
 import { language } from './common/middleware/language.js';
+import { cacheMetrics } from './common/cache/cacheMetrics.js';
 import { requestLogger } from './common/middleware/requestLogger.js';
 import { errorHandler } from './common/middleware/errorHandler.js';
 import { translate } from './common/utils/translation.js';
@@ -74,19 +75,17 @@ import { createAdminProfilesRoutes } from './modules/admin-profiles/admin-profil
 import { createAdminDashboardRoutes } from './modules/admin-dashboard/admin-dashboard.routes.js';
 import horoscopeRouter from './modules/horoscope/index.js';
 import { createMembershipRoutes } from './modules/membership/membership.routes.js';
-import { MandapamService } from './modules/mandapam/mandapam.service.js';
 import { MandapamController } from './modules/mandapam/mandapam.controller.js';
 import { createMandapamRoutes } from './modules/mandapam/mandapam.routes.js';
-import { BookingRepository } from './modules/booking/booking.repository.js';
-import { BookingService } from './modules/booking/booking.service.js';
-import { BookingController } from './modules/booking/booking.controller.js';
-import { createBookingRoutes, createPublicBookingRoutes } from './modules/booking/booking.routes.js';
 import { AnalyticsRepository } from './modules/analytics/analytics.repository.js';
 import { AnalyticsService } from './modules/analytics/analytics.service.js';
 import { AnalyticsController } from './modules/analytics/analytics.controller.js';
 import { createAnalyticsRoutes } from './modules/analytics/analytics.routes.js';
+import { AnalyticsCache } from './modules/analytics/analytics.cache.js';
+import { getRedisClient } from './services/redis.js';
+import { initializeCache } from './common/cache/migrations.lock.js';
 
-export function createApp() {
+export async function createApp() {
   const app = express();
 
   app.set('trust proxy', 1);
@@ -167,6 +166,30 @@ export function createApp() {
       `# HELP nodejs_eventloop_lag_seconds Event loop lag in seconds`,
       `# TYPE nodejs_eventloop_lag_seconds gauge`,
       `nodejs_eventloop_lag_seconds 0`,
+      ``,
+      `# HELP cache_hits_total Total cache hits since process start`,
+      `# TYPE cache_hits_total counter`,
+      `cache_hits_total ${cacheMetrics.snapshot().hits}`,
+      ``,
+      `# HELP cache_misses_total Total cache misses since process start`,
+      `# TYPE cache_misses_total counter`,
+      `cache_misses_total ${cacheMetrics.snapshot().misses}`,
+      ``,
+      `# HELP cache_writes_total Total cache writes since process start`,
+      `# TYPE cache_writes_total counter`,
+      `cache_writes_total ${cacheMetrics.snapshot().writes}`,
+      ``,
+      `# HELP cache_errors_total Total cache errors since process start`,
+      `# TYPE cache_errors_total counter`,
+      `cache_errors_total ${cacheMetrics.snapshot().errors}`,
+      ``,
+      `# HELP cache_flushes_total Total cache flush operations since process start`,
+      `# TYPE cache_flushes_total counter`,
+      `cache_flushes_total ${cacheMetrics.snapshot().flushes}`,
+      ``,
+      `# HELP cache_hit_rate Cache hit rate (0..1) since process start`,
+      `# TYPE cache_hit_rate gauge`,
+      `cache_hit_rate ${cacheMetrics.snapshot().hitRate.toFixed(4)}`,
     ].join('\n'));
   });
 
@@ -198,6 +221,9 @@ export function createApp() {
   app.use(language);
   app.use(requestLogger);
 
+  // --- CacheManager (must be initialized before services that need it) ---
+  const cacheManager = await initializeCache();
+
   // --- DI ---
   const verificationRepo = new VerificationRepository();
   const sessionRepo = new SessionRepository();
@@ -205,7 +231,7 @@ export function createApp() {
 
   const notificationService = new NotificationService();
   const verificationService = new VerificationService(verificationRepo);
-  const accountService = new AccountService(accountRepo);
+  const accountService = new AccountService(accountRepo, cacheManager);
   const sessionService = new SessionService(sessionRepo, accountRepo);
 
   // MembershipModule
@@ -268,18 +294,13 @@ export function createApp() {
   const adminDashboardService = new AdminDashboardService(adminDashboardRepo);
   const adminDashboardController = new AdminDashboardController(adminDashboardService);
 
-  // MandapamModule
-  const mandapamService = new MandapamService();
-  const mandapamController = new MandapamController(mandapamService);
-
-  // BookingModule
-  const bookingRepo = new BookingRepository();
-  const bookingService = new BookingService(bookingRepo);
-  const bookingController = new BookingController(bookingService);
+  // MandapamModule (consolidated — replaces old BookingModule)
+  const mandapamController = new MandapamController(cacheManager);
 
   // AnalyticsModule
+  const analyticsCache = new AnalyticsCache(cacheManager);
   const analyticsRepo = new AnalyticsRepository();
-  const analyticsService = new AnalyticsService(analyticsRepo);
+  const analyticsService = new AnalyticsService(analyticsRepo, analyticsCache);
   const analyticsController = new AnalyticsController(analyticsService);
 
   // --- Bull Board ---
@@ -337,8 +358,6 @@ export function createApp() {
   app.use('/admin', createAdminDashboardRoutes(adminDashboardController));
   app.use('/', createMembershipRoutes(membershipController));
   app.use('/', createMandapamRoutes(mandapamController));
-  app.use('/', createBookingRoutes(bookingController));
-  app.use('/', createPublicBookingRoutes(bookingController));
   app.use('/admin', createAnalyticsRoutes(analyticsController));
 
   // 404

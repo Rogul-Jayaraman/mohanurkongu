@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { User, Admin } from '../types/user';
 import { storeSession, clearSession, decodeJwtPayload } from '../adapters/auth.adapter';
 import * as authApi from '../api/auth.api';
 import * as adminApi from '../api/admin.api';
 import { setAccessToken, getAccessToken, clearAccessToken } from '../lib/session';
 import { setLastAuthRole } from '../lib/api';
+import { LOGOUT_REMOVE_KEYS } from '../queries/queryKeys';
 
 export type AuthStatus = 'anonymous' | 'otp_pending' | 'register_pending' | 'authenticated' | 'expired';
 
@@ -29,6 +31,7 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const qc = useQueryClient();
   const [state, setState] = useState<AuthState>({
     status: 'anonymous',
     user: null,
@@ -73,13 +76,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // Graceful — token may already be invalid
     }
+    qc.removeQueries({ queryKey: LOGOUT_REMOVE_KEYS, exact: false });
     clearAccessToken();
     clearSession();
     setLastAuthRole(isAdmin ? 'ADMIN' : 'USER');
     localStorage.removeItem('auth_cache');
     setState({ status: 'anonymous', user: null, token: null });
     window.location.href = isAdmin ? '/admin/login' : '/manamaalai/login';
-  }, [state.user]);
+  }, [state.user, qc]);
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
     try {

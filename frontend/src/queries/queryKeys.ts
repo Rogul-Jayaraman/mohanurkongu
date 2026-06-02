@@ -1,0 +1,81 @@
+import type {
+  BrowseProfilesParams,
+  CursorParams,
+} from '../types/profile';
+
+export const queryKeys = {
+  auth: {
+    all: ['auth'] as const,
+    me: () => [...queryKeys.auth.all, 'me'] as const,
+  },
+  profile: {
+    all: ['profiles'] as const,
+    lists: () => [...queryKeys.profile.all, 'list'] as const,
+    list: (filters?: BrowseProfilesParams) =>
+      [...queryKeys.profile.lists(), filters ?? null] as const,
+    browse: (filters?: BrowseProfilesParams) =>
+      [...queryKeys.profile.lists(), 'browse', filters ?? null] as const,
+    details: () => [...queryKeys.profile.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.profile.details(), id] as const,
+    shortlisted: () => [...queryKeys.profile.all, 'shortlisted'] as const,
+    showcase: () => [...queryKeys.profile.all, 'showcase'] as const,
+    my: () => [...queryKeys.profile.all, 'my'] as const,
+    adminLists: () => [...queryKeys.profile.all, 'admin', 'list'] as const,
+    adminList: (filters?: Record<string, unknown>) =>
+      [...queryKeys.profile.adminLists(), filters ?? null] as const,
+    adminDetail: (id: string) =>
+      [...queryKeys.profile.all, 'admin', 'detail', id] as const,
+    audit: (id: string) => [...queryKeys.profile.all, 'admin', 'audit', id] as const,
+  },
+  verification: {
+    all: ['verification'] as const,
+    queue: (filters?: CursorParams) =>
+      [...queryKeys.verification.all, 'queue', filters ?? null] as const,
+    stats: () => [...queryKeys.verification.all, 'stats'] as const,
+  },
+  membership: {
+    all: ['membership'] as const,
+    plans: () => [...queryKeys.membership.all, 'plans'] as const,
+    mine: () => [...queryKeys.membership.all, 'mine'] as const,
+    caps: () => [...queryKeys.membership.all, 'caps'] as const,
+    billing: () => [...queryKeys.membership.all, 'billing'] as const,
+  },
+  analytics: {
+    all: ['analytics'] as const,
+    dashboard: (range?: string) =>
+      [...queryKeys.analytics.all, 'dashboard', range ?? 'default'] as const,
+  },
+  mandapam: {
+    all: ['mandapam'] as const,
+    bookings: () => [...queryKeys.mandapam.all, 'bookings'] as const,
+    booking: (id: string) => [...queryKeys.mandapam.bookings(), id] as const,
+    calendar: (from?: string, to?: string) =>
+      [...queryKeys.mandapam.all, 'calendar', from ?? null, to ?? null] as const,
+    calendarDay: (date: string) =>
+      [...queryKeys.mandapam.all, 'calendar', 'day', date] as const,
+    publicCalendar: () => [...queryKeys.mandapam.all, 'public', 'calendar'] as const,
+    packages: () => [...queryKeys.mandapam.all, 'packages'] as const,
+    package: (id: string) => [...queryKeys.mandapam.packages(), id] as const,
+    publicPackages: () => [...queryKeys.mandapam.all, 'public', 'packages'] as const,
+    facilities: () => [...queryKeys.mandapam.all, 'facilities'] as const,
+    addons: () => [...queryKeys.mandapam.all, 'addons'] as const,
+    publicCatalog: () => [...queryKeys.mandapam.all, 'public', 'catalog'] as const,
+    token: () => [...queryKeys.mandapam.all, 'token'] as const,
+  },
+} as const;
+
+export const LOGOUT_REMOVE_KEYS = [
+  queryKeys.auth.me(),
+  queryKeys.profile.my(),
+  queryKeys.profile.shortlisted(),
+  queryKeys.profile.browse(undefined),
+  queryKeys.profile.details(),
+  queryKeys.membership.mine(),
+  queryKeys.membership.caps(),
+  queryKeys.profile.adminLists(),
+  queryKeys.profile.adminDetail(''),
+  queryKeys.profile.audit(''),
+  queryKeys.verification.all,
+  queryKeys.analytics.all,
+  queryKeys.membership.billing(),
+] as const;

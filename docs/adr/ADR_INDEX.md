@@ -19,3 +19,8 @@ This index catalogs all ADRs documented for the Mohanur Kongu Manamaalai platfor
 | ADR-013 | Single Profile Create Path (No Separate Publish) | ACCEPTED | 2026-05-25 |
 | ADR-014 | Admin Approval Workflow for Profile Activation | ACCEPTED | 2026-05-25 |
 | ADR-015 | Backend Draft Validation Limited to Structural Checks | ACCEPTED | 2026-05-25 |
+| ADR-016 | Caching Mutations Strategy (3-Layer Cache) | ACCEPTED | 2026-06-01 |
+| ADR-017 | Tag-Based Cache Invalidation via Redis SETs | ACCEPTED | 2026-06-01 |
+| ADR-018 | React Query Mutation Pattern (Optimistic vs Pessimistic) | ACCEPTED | 2026-06-01 |
+| ADR-019 | cacheVersion Prefix Key for Emergency Global Flush | ACCEPTED | 2026-06-01 |
+| ADR-020 | Backend-First Build Order for Cache Implementation | ACCEPTED | 2026-06-01 |

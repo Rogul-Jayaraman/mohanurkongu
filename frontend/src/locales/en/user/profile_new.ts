@@ -43,6 +43,7 @@ export const profileNewEn = {
       manually_uploaded: "Manually Uploaded",
       photo_main: "MAIN"
     },
+    birth_place: "Place of Birth",
     placeholders: {
       first_name: "Enter first name",
       last_name: "Enter last name",
@@ -174,7 +175,8 @@ export const profileNewEn = {
       ratio: "Ratio",
       security_title: "Security & Trust",
       security_watermark: "All photos are automatically watermarked",
-      security_verified: "Encrypted & visible only to verified matches"
+      security_verified: "Encrypted & visible only to verified matches",
+      alt: "Gallery Image"
     },
     sub_caste: "Community",
     is_late: "Late",
@@ -265,6 +267,9 @@ export const profileNewEn = {
       error_generating_horoscope: "Could not generate horoscope. Please try again.",
       error_missing_birth_details: "Please provide birth date, time, and place.",
       delete_success: "Image deleted successfully",
+      delete_error: "Failed to delete image",
+      draft_error: "Failed to save draft",
+      publish_error: "Failed to publish profile",
       upload_success: "Image uploaded successfully",
       upload_error: "Upload failed. Please try again.",
       image_size_error: "Image size must be less than 5MB",

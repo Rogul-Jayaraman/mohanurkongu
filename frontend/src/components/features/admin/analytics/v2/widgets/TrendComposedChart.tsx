@@ -37,7 +37,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export const TrendComposedChart: React.FC<Props> = ({ title, subtitle, data, series, xKey, loading, height = 300 }) => {
+export const TrendComposedChart: React.FC<Props> = React.memo(({ title, subtitle, data, series, xKey, loading, height = 300 }) => {
   if (loading) {
     return (
       <div className="bg-white border border-gold/20 rounded-xl shadow-sm animate-pulse">
@@ -79,4 +79,6 @@ export const TrendComposedChart: React.FC<Props> = ({ title, subtitle, data, ser
       )}
     </div>
   );
-};
+});
+
+TrendComposedChart.displayName = 'TrendComposedChart';

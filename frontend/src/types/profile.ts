@@ -147,6 +147,10 @@ export interface Profile {
 
   contactLocked?: boolean;
   horoscopeLocked?: boolean;
+  horoscopeLabelsLocked?: boolean;
+  professionalLocked?: boolean;
+  familyLocked?: boolean;
+  galleryLocked?: boolean;
 
   [key: string]: any;
 }

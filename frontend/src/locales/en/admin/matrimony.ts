@@ -141,6 +141,22 @@ export const adminMatrimonyEn = {
       noProfilesDesc: "There are no profiles waiting for verification at the moment. Please check back later.",
       queueCleared: "All profiles are verified. Queue cleared.",
       queueTitle: "Verification Queue",
+      pendingTotal: "Pending Total",
+      pendingToday: "Pending Today",
+      approvedToday: "Approved Today",
+      rejectedToday: "Rejected Today",
+      avgTime: "Average Review Time",
+      audit: "Audit"
+    },
+    audit: {
+      trailTitle: "Audit Trail",
+      assignedTo: "Assigned To",
+      priority: "Priority",
+      queuedAt: "Queued At",
+      statusHistory: "Status History",
+      reviews: "Reviews",
+      noHistory: "No history found",
+      noReviews: "No reviews found",
     },
     users: {
       title: "User Accounts",

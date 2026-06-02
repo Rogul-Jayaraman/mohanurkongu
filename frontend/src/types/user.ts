@@ -8,6 +8,7 @@ export interface User {
     email: string;
     phone: string;
     role: 'USER' | 'ADMIN';
+    roles?: string[];
     createdAt: string;
     updatedAt?: string;
     membership: {
@@ -27,6 +28,7 @@ export interface Admin {
     email: string;
     phone: string;
     role: 'ADMIN';
+    roles?: string[];
     createdAt?: string;
     [key: string]: any;
 }

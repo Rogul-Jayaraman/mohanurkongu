@@ -1,4 +1,5 @@
 import api from '../lib/api';
+import { publicApi } from '../lib/publicApi';
 import type { MandapamPackage, MandapamFacility, MandapamAddon, TranslationPair, Booking, CalendarEntry } from '../types/mandapam';
 
 // ── Admin Packages ──
@@ -42,13 +43,11 @@ export function adminGetAllFacilities(): Promise<{ facilities: MandapamFacility[
 
 export interface CreateFacilityDto {
   iconName: string;
-  chargeType?: 'GENERAL' | 'ADDITIONAL';
   name: TranslationPair[];
 }
 
 export interface UpdateFacilityDto {
   iconName?: string;
-  chargeType?: 'GENERAL' | 'ADDITIONAL';
   name?: TranslationPair[];
   status?: boolean;
 }
@@ -73,15 +72,15 @@ export function adminGetAllAddons(): Promise<{ addons: MandapamAddon[] }> {
 
 export interface CreateAddonDto {
   iconName: string;
-  pricingType?: 'HOURLY' | 'FIXED';
-  amount?: number;
+  pricingType?: 'PER_EVENT' | 'PER_HOUR' | 'PER_DAY';
+  supportsQuantity?: boolean;
   name: TranslationPair[];
 }
 
 export interface UpdateAddonDto {
   iconName?: string;
-  pricingType?: 'HOURLY' | 'FIXED';
-  amount?: number;
+  pricingType?: 'PER_EVENT' | 'PER_HOUR' | 'PER_DAY';
+  supportsQuantity?: boolean;
   name?: TranslationPair[];
   status?: boolean;
 }
@@ -101,15 +100,15 @@ export function adminDeleteAddon(id: string): Promise<{ deleted: boolean }> {
 // ── Public ──
 
 export function getPublicPackages(language?: string): Promise<{ packages: any[] }> {
-  return api.get(`/mandapam/packages?language=${language || 'EN'}`);
+  return publicApi.get(`/mandapam/packages?language=${language || 'EN'}`);
 }
 
 export function getPublicFacilities(language?: string): Promise<{ facilities: any[] }> {
-  return api.get(`/mandapam/facilities?language=${language || 'EN'}`);
+  return publicApi.get(`/mandapam/facilities?language=${language || 'EN'}`);
 }
 
 export function getPublicAddons(language?: string): Promise<{ addons: any[] }> {
-  return api.get(`/mandapam/addons?language=${language || 'EN'}`);
+  return publicApi.get(`/mandapam/addons?language=${language || 'EN'}`);
 }
 
 // ── Booking API ──
@@ -125,21 +124,36 @@ export interface BookingFilters {
   sortOrder?: 'asc' | 'desc';
 }
 
+export interface AddonSelectionDto {
+  addonId: string;
+  amount: number;
+  quantity?: number;
+  units?: number;
+}
+
 export interface CreateBookingDto {
   customerName: { en: string; ta: string };
   customerPhone: string;
   customerEmail?: string;
   eventTitle: { en: string; ta: string };
   eventAddress?: { en: string; ta: string };
-  packageCode: 'STANDARD' | 'ROYAL' | 'GRAND';
+  bookingType: 'HOURLY' | 'ONE_DAY' | 'TWO_DAY';
+  eventType: 'MARRIAGE' | 'RECEPTION' | 'ENGAGEMENT' | 'BIRTHDAY' | 'BABY_SHOWER' | 'EAR_PIERCING' | 'PUBERTY_FUNCTION' | 'OTHER';
   bookingMethod: 'NORMAL_BOOKING' | 'TOKEN_BOOKING';
   bookingConfig: {
     startDate: string;
-    endDate: string;
+    endDate?: string;
     startTime?: string;
     endTime?: string;
+    durationHours?: number;
   };
   addonIds?: string[];
+  addonQuantities?: Record<string, number>;
+  addons?: AddonSelectionDto[];
+  tokenNumber?: string;
+  tokenNumber2?: string;
+  advanceAmount?: number;
+  paymentMethod?: 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE';
   notes?: string;
 }
 
@@ -166,7 +180,9 @@ export interface AddRefundDto {
 
 export interface AddAddonDto {
   addonId: string;
+  amount: number;
   quantity?: number;
+  units?: number;
 }
 
 export interface SettlementActionDto {
@@ -237,6 +253,10 @@ export function adminUnblockDates(dto: UnblockDatesDto): Promise<{ entries: Cale
   return api.post('/admin/mandapam/calendar/unblock', dto);
 }
 
-export function getPublicCalendar(from?: string, to?: string): Promise<{ availableDates: string[]; month: string }> {
-  return api.get('/mandapam/calendar', { params: { from, to } });
+export function adminValidateToken(tokenNumber: string): Promise<{ valid: boolean; availableTokens: number }> {
+  return api.post('/admin/mandapam/bookings/validate-token', { tokenNumber });
+}
+
+export function getPublicCalendar(from?: string, to?: string): Promise<{ entries: { date: string; status: string }[]; month: string }> {
+  return publicApi.get('/mandapam/calendar', { params: { from, to } });
 }

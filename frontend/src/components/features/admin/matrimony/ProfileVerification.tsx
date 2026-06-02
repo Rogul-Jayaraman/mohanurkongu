@@ -4,14 +4,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 import { SearchAndSort } from '@/components/ui/table/SearchAndSort';
 import { AdminProfileCard } from '@/components/features/admin/matrimony/ProfileCard';
-import { fetchVerificationQueue } from '@/api/verification.api';
+import { useVerificationQueueQuery, useVerificationStatsQuery } from '@/queries/useProfileQueries';
+import AuditPanel from './AuditPanel';
 import { toast } from 'sonner';
 import type { AdminManagedProfile } from '@/types/admin-types';
-import { UserX } from 'lucide-react';
+import { UserX, Shield, Clock, CheckCircle, XCircle, TrendingUp } from 'lucide-react';
 
-// ═══════════════════════════════════════════════════════════
-// VerificationSkeleton
-// ═══════════════════════════════════════════════════════════
+interface QueueStats {
+  pendingTotal: number;
+  pendingToday: number;
+  approvedToday: number;
+  rejectedToday: number;
+  avgReviewTimeHours: number;
+}
+
 const VerificationSkeleton: React.FC = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -26,9 +32,44 @@ const VerificationSkeleton: React.FC = () => (
     </div>
 );
 
-// ═══════════════════════════════════════════════════════════
-// EmptyState
-// ═══════════════════════════════════════════════════════════
+const StatsBar: React.FC<{ stats: QueueStats | null; isLoading: boolean }> = ({ stats, isLoading }) => {
+  const { t } = useLanguage();
+  if (isLoading) return (
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-20 rounded-2xl bg-white/40 border border-gold-soft/10 animate-pulse" />)}
+    </div>
+  );
+  if (!stats) return null;
+
+  const items = [
+    { label: t('adminMatrimony.verification.pendingTotal') || 'Pending', value: stats.pendingTotal, icon: Shield, color: 'text-amber-600 bg-amber-50 border-amber-200' },
+    { label: t('adminMatrimony.verification.pendingToday') || 'Today', value: stats.pendingToday, icon: Clock, color: 'text-blue-600 bg-blue-50 border-blue-200' },
+    { label: t('adminMatrimony.verification.approvedToday') || 'Approved', value: stats.approvedToday, icon: CheckCircle, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+    { label: t('adminMatrimony.verification.rejectedToday') || 'Rejected', value: stats.rejectedToday, icon: XCircle, color: 'text-red-600 bg-red-50 border-red-200' },
+    { label: t('adminMatrimony.verification.avgTime') || 'Avg Time', value: `${stats.avgReviewTimeHours}h`, icon: TrendingUp, color: 'text-purple-600 bg-purple-50 border-purple-200' },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      {items.map((item, i) => (
+        <motion.div
+          key={item.label}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.05 }}
+          className={`rounded-2xl p-3.5 border ${item.color} backdrop-blur-sm`}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <item.icon size={14} strokeWidth={2} />
+            <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">{item.label}</span>
+          </div>
+          <p className="text-xl font-black font-serif">{item.value}</p>
+        </motion.div>
+      ))}
+    </div>
+  );
+};
+
 const EmptyState: React.FC<{ t: (key: string, options?: any) => string; onReset: () => void }> = ({ t, onReset }) => (
     <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white/40 backdrop-blur-xl border border-gold-soft/20 rounded-[3rem] p-24 text-center group">
         <div className="w-24 h-24 bg-gold-soft/10 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500"><UserX className="w-12 h-12 text-gold-soft/40" /></div>
@@ -38,9 +79,6 @@ const EmptyState: React.FC<{ t: (key: string, options?: any) => string; onReset:
     </motion.div>
 );
 
-// ═══════════════════════════════════════════════════════════
-// ProfileVerification (Main Orchestrator)
-// ═══════════════════════════════════════════════════════════
 const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.2 } } };
 const itemVariants = { hidden: { opacity: 0, y: 30, scale: 0.98 }, show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 100, damping: 15 } }, exit: { opacity: 0, scale: 0.95, x: -20, transition: { duration: 0.2 } } };
 
@@ -53,15 +91,21 @@ const ProfileVerification: React.FC = () => {
     const [dateSort, setDateSort] = React.useState<'asc' | 'desc' | null>('desc');
     const [nameSort, setNameSort] = React.useState<'asc' | 'desc' | null>(null);
 
-    const [qData, setQData] = React.useState<{ profiles: any[] }>({ profiles: [] });
-    const [isLoading, setIsLoading] = React.useState(true);
-    React.useEffect(() => {
-      setIsLoading(true);
-      fetchVerificationQueue({ page: 1, limit: 50, search: searchQuery || undefined })
-        .then((res: any) => setQData({ profiles: res.profiles || [] }))
-        .catch(() => { toast.error(translateError('VERIFICATION_QUEUE_FAILED') || 'Failed to load queue'); setQData({ profiles: [] }); })
-        .finally(() => setIsLoading(false));
-    }, [searchQuery]);
+    const queueQuery = useVerificationQueueQuery({
+      page: 1,
+      limit: 50,
+      search: searchQuery || undefined,
+    });
+    const statsQuery = useVerificationStatsQuery();
+
+    const qData: { profiles: any[] } = (queueQuery.data as any)?.profiles
+      ? (queueQuery.data as any)
+      : { profiles: [] };
+    const isLoading = queueQuery.isPending;
+    const stats = (statsQuery.data as unknown as QueueStats) ?? null;
+    const statsLoading = statsQuery.isPending;
+
+    const [auditProfileId, setAuditProfileId] = React.useState<string | null>(null);
 
     const handleReset = () => { setDateSort('desc'); setNameSort(null); setSearchQuery(''); };
 
@@ -79,7 +123,9 @@ const ProfileVerification: React.FC = () => {
         });
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 max-w-[1500px] mx-auto">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-[1500px] mx-auto">
+            <StatsBar stats={stats} isLoading={statsLoading} />
+
             <SearchAndSort 
                 searchQuery={searchQuery} 
                 onSearchChange={setSearchQuery} 
@@ -95,9 +141,12 @@ const ProfileVerification: React.FC = () => {
             ) : sortedAndFiltered.length > 0 ? (
                 <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <AnimatePresence mode='popLayout'>
-                        {sortedAndFiltered.map((profile) => (
+                        {sortedAndFiltered.map((profile: any) => (
                             <motion.div key={profile.id} layout variants={itemVariants}>
-                                <AdminProfileCard profile={{ ...profile, submittedAt: profile.createdAt } as any} adminActions={{ onView: (id) => navigate(`/admin/matrimony/profiles/${id}`) }} />
+                                <AdminProfileCard profile={{ ...profile, submittedAt: profile.createdAt } as any} adminActions={{
+                                  onView: (id) => navigate(`/admin/matrimony/profiles/${id}`),
+                                  onAudit: (id) => setAuditProfileId(id),
+                                }} />
                             </motion.div>
                         ))}
                     </AnimatePresence>
@@ -105,6 +154,12 @@ const ProfileVerification: React.FC = () => {
             ) : (
                 <EmptyState t={t} onReset={handleReset} />
             )}
+
+            <AuditPanel
+              profileId={auditProfileId || ''}
+              isOpen={auditProfileId !== null}
+              onClose={() => setAuditProfileId(null)}
+            />
         </motion.div>
     );
 };

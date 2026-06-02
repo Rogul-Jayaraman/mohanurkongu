@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { Check, Edit2, IndianRupee } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { MembershipPlan } from '@/api/membership.api';
-import { adminUpdatePlan } from '@/api/admin-membership.api';
 import { formatCurrency } from '@/utils/format';
+import { useAdminUpdatePlanMutation } from '@/queries/useAdminMembershipMutations';
 
 interface AdminMembershipCardProps {
   plan: MembershipPlan;
@@ -28,7 +28,8 @@ const planColors: Record<string, string> = {
 
 export const AdminMembershipCard: React.FC<AdminMembershipCardProps> = ({ plan, onEdit, onRefresh }) => {
   const { t } = useTranslation();
-  const [toggling, setToggling] = useState(false);
+  const updatePlanMut = useAdminUpdatePlanMutation();
+  const toggling = updatePlanMut.isPending;
 
   const {
     code, displayName, displayPrice, durationDays, status,
@@ -74,15 +75,12 @@ export const AdminMembershipCard: React.FC<AdminMembershipCardProps> = ({ plan, 
   const isActive = status === 'ACTIVE';
 
   const handleStatusToggle = async () => {
-    setToggling(true);
+    const newStatus = isActive ? 'INACTIVE' : 'ACTIVE';
     try {
-      const newStatus = isActive ? 'INACTIVE' : 'ACTIVE';
-      await adminUpdatePlan(plan.id, { status: newStatus });
+      await updatePlanMut.mutateAsync({ planId: plan.id, data: { status: newStatus } });
       onRefresh?.();
     } catch {
       // error handled by interceptor
-    } finally {
-      setToggling(false);
     }
   };
 

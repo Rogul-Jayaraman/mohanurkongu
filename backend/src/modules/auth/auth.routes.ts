@@ -22,12 +22,7 @@ export function createAuthRoutes(controller: AuthController): Router {
   router.post('/auth/change-password', requireSession, createRateLimiter(5), validate(changePasswordSchema), controller.changePassword);
   router.post('/auth/logout-all', requireSession, createRateLimiter(10), controller.logoutAll);
 
-  router.post('/auth/password/otp', createRateLimiter(5), controller.sendPasswordResetOtp);
-  router.post('/auth/password/otp/verify', createRateLimiter(10), controller.verifyPasswordResetOtp);
   router.post('/auth/password/reset', createRateLimiter(5), validate(resetPasswordSchema), controller.resetPassword);
-
-  router.post('/auth/registration/otp', createRateLimiter(5), controller.sendRegistrationOtp);
-  router.post('/auth/registration/otp/verify', createRateLimiter(10), controller.verifyRegistrationOtp);
 
   return router;
 }

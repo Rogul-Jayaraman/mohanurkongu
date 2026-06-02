@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 import { toast } from 'sonner';
-import { updateProfile } from '@/api/verification.api';
 import { uploadFile, deleteUpload } from '@/api/profile.api';
+import { useAdminUpdateProfileMutation } from '@/queries/useAdminMutations';
 import { MediaImage } from '@/components/ui/media/MediaImage';
 import { Input } from '@/components/ui/forms/Input';
 import { TextArea } from '@/components/ui/forms/TextArea';
@@ -390,7 +390,8 @@ const SectionEditModal: React.FC<SectionEditModalProps> = ({ isOpen, onClose, se
     const { t, language, translateError } = useLanguage();
     const isTamil = language === 'ta';
     const [formData, setFormData] = useState<Record<string, any>>({});
-    const [saving, setSaving] = useState(false);
+    const updateProfileMut = useAdminUpdateProfileMutation();
+    const saving = updateProfileMut.isPending;
 
     const initFormData = useCallback((p: Profile) => {
         const hJson = (p as any).horoscope?.horoscopeJson;
@@ -489,7 +490,6 @@ const SectionEditModal: React.FC<SectionEditModalProps> = ({ isOpen, onClose, se
 
     const handleSave = async () => {
         if (!profile) return;
-        setSaving(true);
         try {
             let payload: Record<string, any>;
             const enBase = { firstName: profile.firstNameEn || '', lastName: profile.lastNameEn || '', fatherName: profile.fatherNameEn || '', motherName: profile.motherNameEn || '', kuladeivam: profile.kuladeivamEn || '' };
@@ -597,14 +597,12 @@ const SectionEditModal: React.FC<SectionEditModalProps> = ({ isOpen, onClose, se
                     payload = { photos: { primaryUploadId: formData.primaryUploadId || null, galleryUploadIds: formData.galleryUploadIds || [] } };
                     break;
             }
-            await updateProfile(profile.id, payload);
+            await updateProfileMut.mutateAsync({ id: profile.id, data: payload });
             toast.success(isTamil ? 'சுயவிவரம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது' : 'Section updated successfully');
             onSaved();
             onClose();
         } catch (error: any) {
             toast.error(translateError(error) || (isTamil ? 'புதுப்பிப்பு தோல்வியடைந்தது' : 'Update failed'));
-        } finally {
-            setSaving(false);
         }
     };
 

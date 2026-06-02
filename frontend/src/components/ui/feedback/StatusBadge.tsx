@@ -30,6 +30,9 @@ const statusToColor: Record<string, StatusConfig> = {
     completed: { color: 'sage', icon: CheckCircle2 },
     cancelled: { color: 'rosewood', icon: XCircle },
     upcoming: { color: 'gold', icon: Clock },
+    event_in_progress: { color: 'blue', icon: Clock },
+    event_completed: { color: 'sage', icon: CheckCircle2 },
+    settlement_pending: { color: 'amber', icon: AlertCircle },
 };
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className, minimal = false, label }) => {
@@ -51,6 +54,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className, min
         completed: t('adminMatrimony.common.completed') || 'Completed',
         cancelled: t('adminMatrimony.common.cancelled') || 'Cancelled',
         upcoming: t('adminMandapam.bookings.upcoming') || 'Upcoming',
+        event_in_progress: t('adminMandapam.bookings.eventInProgress') || 'Event in Progress',
+        event_completed: t('adminMandapam.bookings.eventCompleted') || 'Event Completed',
+        settlement_pending: t('adminMandapam.bookings.settlementPending') || 'Settlement Pending',
     };
 
     const statusStr = typeof status === 'string' ? status : String(status || '');

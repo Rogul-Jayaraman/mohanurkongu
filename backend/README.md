@@ -83,6 +83,85 @@ src/
 
 ---
 
+## Pipeline Architecture
+
+The backend uses two independent pipeline systems for **auth** and **mandapam (hall booking)** modules, plus a shared **cache pipeline**.
+
+```
+                         PIPELINE ARCHITECTURE
+                         =====================
+
+  AUTH PIPELINE SYSTEM                    MANDAPAM PIPELINE SYSTEM
+  ──────────────────────                  ──────────────────────────
+
+  Runner: PipelineRunner (Pipeline.ts)    Runner: runSteps / runInTransaction
+  Context: PipelineContext                Context: MandapamPipelineContext
+  Step Type: StepFunction                 Step Type: MandapamStep
+
+  Pipelines:                              Pipelines:
+    login.pipeline.ts     [7 steps]         booking-create.pipeline.ts   [4 pre + ~7 tx + 2 post]
+    register.pipeline.ts  [6 steps]         booking-status.pipeline.ts   [3 pre + ~4 tx + 2 post]
+    refresh.pipeline.ts   [3 steps]         booking-settlement.pipeline  [4 pre + ~3 tx + 2 post]
+    change-password.ts    [4 steps]         booking-addon.pipeline.ts    [3 pre + ~3 tx + 2 post]
+    reset-password.ts     [5 steps]         financial-transaction.pipe   [4 pre + ~3 tx + 2 post]
+    otp.pipeline.ts       (class-based)     calendar-view.pipeline.ts    [3 fns: view / day / public]
+                                           calendar-block.pipeline.ts    [direct tx + cache flush]
+                                           catalog-entity.pipeline.ts    [single step + cache]
+                                           booking-get.pipeline.ts       [direct query + cache]
+                                           booking-list.pipeline.ts      [direct query + cache]
+                                           token-validate.pipeline.ts    [direct query]
+                                           package-update.pipeline.ts    [direct tx + cache flush]
+
+  ── CACHE STEPS (shared) ──             ── MANDAPAM CACHE STEPS ──
+  cacheRead(tags)     → checks cache      mandapamCacheRead(tags)       → checks cache
+  cacheWrite(tags,    → writes cache      mandapamCacheWrite(tags,      → writes cache
+    ttl, dataFn)                              ttl, dataFn)
+  flushCacheInvalid.  → flushes tags      mandapamFlushCacheInvalid.    → flushes tags
+
+  ── CURRENT CACHE USAGE ──              ── CACHE TAGS ──
+  AccountService:                          mandapam:calendar:{from}:{to}
+    getProfile() → cacheManager           mandapam:calendar-day:{date}
+    changePassword() → flush              mandapam:booking:{id}
+  AnalyticsCache:                          mandapam:booking-list:{hash}
+    getStats() → cacheManager             mandapam:catalog:{facility|addon}
+    flushTags()                            mandapam:catalog:{type}:public
+                                           mandapam:packages:all:{lang}
+                                           mandapam:package:{code}
+
+  ── GAP (before this update) ──         ── STATUS ──
+  Auth pipelines had cache fields in      Step-based pipelines: invalidation via
+  PipelineContext but NO cache steps      cacheInvalidationTags + flush in post-steps
+  were wired. CacheManager existed        Direct-query pipelines: inline cache
+  but was never passed into pipelines.    read/write (calendar, booking, catalog,
+                                          packages). CacheManager passed via
+                                          MandapamController constructor.
+```
+
+### How Cache Flows Through Mandapam Pipelines
+
+**Step-based pipelines** (booking-create, status, settlement, addon, financial-transaction):
+1. Pre-steps: `addCacheInvalidationTag()` registers tags for affected entities
+2. Transaction steps: main business logic runs inside a DB transaction
+3. Post-steps: `setBookingResponse` builds the response → `mandapamFlushCacheInvalidations` flushes all registered tags
+
+**Direct-query pipelines** (calendar-view, booking-get, booking-list):
+- `cacheManager.get(tag)` at start → return cached if hit
+- Execute DB query → `cacheManager.setByTags()` to store result
+- TTLs range from 60s (booking list) to 1800s (catalog/packages)
+
+**Mutation pipelines** (calendar-block, package-update, catalog-entity):
+- Inline `cacheManager.flushTags()` after mutation completes
+- Catalog entity: invalidation tags registered in `entityCrudWithTranslations` step, flushed in `catalogEntityPipeline`
+
+**Public endpoints** (packages, facilities, addons, calendar):
+- Controller methods check cache before querying DB
+- Cache keys include language parameter (e.g., `mandapam:packages:all:EN`)
+- Invalidated when admin updates/deletes entities
+
+All cache operations are non-critical — failures are logged and swallowed to avoid impacting API availability.
+
+---
+
 ## API Envelope
 
 All responses follow a consistent format:

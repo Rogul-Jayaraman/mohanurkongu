@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { ModalShell } from '@/components/ui/modals/ModalShell';
 import { Loader2, Plus, X, Save } from 'lucide-react';
-import { adminUpdatePackage } from '@/api/mandapam.api';
+import { useUpdatePackage } from '@/queries/useMandapamMutations';
 import { toast } from 'sonner';
-import type { MandapamPackage, TranslationPair } from '@/types/mandapam';
 import { formatCurrency } from '@/utils/format';
+import TranslatableInput from '@/components/ui/forms/TranslatableInput';
+import type { MandapamPackage, TranslationPair } from '@/types/mandapam';
 
 interface EditPackageModalProps {
     isOpen: boolean;
@@ -15,28 +16,24 @@ interface EditPackageModalProps {
 }
 
 export const EditPackageModal: React.FC<EditPackageModalProps> = ({ isOpen, onClose, pkg, onSuccess }) => {
-    const { t } = useLanguage();
+    const { language } = useLanguage();
+    const isTamil = language === 'ta';
+    const updatePackage = useUpdatePackage();
+    const isSaving = updatePackage.isPending;
 
-    const [enName, setEnName] = useState('');
-    const [taName, setTaName] = useState('');
-    const [newPrice, setNewPrice] = useState('');
     const [removedFunctionIds, setRemovedFunctionIds] = useState<Set<string>>(new Set());
     const [newFunctions, setNewFunctions] = useState<{ enName: string; taName: string }[]>([]);
     const [newFnEn, setNewFnEn] = useState('');
     const [newFnTa, setNewFnTa] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
+    const [newPrice, setNewPrice] = useState<number | ''>('');
 
     useEffect(() => {
         if (isOpen) {
-            setEnName(pkg.translations.find(tr => tr.language === 'EN')?.displayName ?? '');
-            setTaName(pkg.translations.find(tr => tr.language === 'TA')?.displayName ?? '');
-            const activePricing = pkg.pricings.find(p => p.isActive) ?? pkg.pricings[0];
-            setNewPrice(activePricing?.amount.toString() ?? '');
             setRemovedFunctionIds(new Set());
             setNewFunctions([]);
             setNewFnEn('');
             setNewFnTa('');
-            setIsSaving(false);
+            setNewPrice('');
         }
     }, [isOpen, pkg]);
 
@@ -63,47 +60,34 @@ export const EditPackageModal: React.FC<EditPackageModalProps> = ({ isOpen, onCl
         setNewFunctions(prev => prev.filter((_, i) => i !== index));
     };
 
+    const updatePackage = useUpdatePackage();
+    const isSaving = updatePackage.isPending;
+
     const handleSave = async () => {
-        setIsSaving(true);
-        try {
-            const displayName: TranslationPair[] = [
-                { language: 'EN', value: enName },
-                { language: 'TA', value: taName },
-            ];
+        const functionsDto: { id?: string; name: TranslationPair[]; status?: boolean }[] = [];
 
-            const functionsDto: { id?: string; name: TranslationPair[]; status?: boolean }[] = [];
+        pkg.functions.forEach(fn => {
+            if (removedFunctionIds.has(fn.id)) {
+                functionsDto.push({ id: fn.id, name: [], status: false });
+            }
+        });
 
-            pkg.functions.forEach(fn => {
-                if (removedFunctionIds.has(fn.id)) {
-                    functionsDto.push({ id: fn.id, name: [], status: false });
-                }
+        newFunctions.forEach(fn => {
+            functionsDto.push({
+                name: [
+                    { language: 'EN', value: fn.enName },
+                    { language: 'TA', value: fn.taName },
+                ],
             });
+        });
 
-            newFunctions.forEach(fn => {
-                functionsDto.push({
-                    name: [
-                        { language: 'EN', value: fn.enName },
-                        { language: 'TA', value: fn.taName },
-                    ],
-                });
-            });
+        const payload: Record<string, any> = {};
+        if (functionsDto.length > 0) payload.functions = functionsDto;
+        if (newPrice !== '') payload.pricing = { amount: Number(newPrice) };
 
-            const pricingAmount = parseFloat(newPrice);
-
-            await adminUpdatePackage(pkg.id, {
-                displayName,
-                functions: functionsDto.length > 0 ? functionsDto : undefined,
-                ...(pricingAmount && !isNaN(pricingAmount) ? { pricing: { amount: pricingAmount } } : {}),
-            });
-
-            toast.success(t('adminMandapam.packages.updateSuccess'));
-            onSuccess();
-            onClose();
-        } catch (error: any) {
-            toast.error(error?.message ?? t('adminMandapam.packages.somethingWentWrong'));
-        } finally {
-            setIsSaving(false);
-        }
+        await updatePackage.mutateAsync({ id: pkg.id, dto: payload });
+        onSuccess();
+        onClose();
     };
 
     const activeFunctions = pkg.functions.filter(fn => fn.status && !removedFunctionIds.has(fn.id));
@@ -112,17 +96,17 @@ export const EditPackageModal: React.FC<EditPackageModalProps> = ({ isOpen, onCl
         <div className="flex items-center justify-end gap-3">
             <button
                 onClick={onClose}
-                className="px-6 py-2.5 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
+                className="px-6 py-2.5 text-sm font-black text-rosewood bg-white border-2 border-rosewood/10 rounded-2xl hover:bg-rosewood/5 transition-all uppercase tracking-wider"
             >
-                {t('adminMandapam.packages.cancel')}
+                {isTamil ? 'ரத்துசெய்' : 'Cancel'}
             </button>
             <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="px-6 py-2.5 text-sm font-semibold text-white bg-rosewood rounded-xl hover:bg-rosewood-dark transition-all disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-2.5 text-sm font-black text-ivory bg-rosewood rounded-2xl hover:bg-rosewood-dark transition-all disabled:opacity-50 flex items-center gap-2 uppercase tracking-wider"
             >
                 {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                {t('adminMandapam.packages.save')}
+                {isTamil ? 'சேமி' : 'Save'}
             </button>
         </div>
     );
@@ -131,153 +115,170 @@ export const EditPackageModal: React.FC<EditPackageModalProps> = ({ isOpen, onCl
         <ModalShell
             isOpen={isOpen}
             onClose={onClose}
-            title={t('adminMandapam.packages.editPackage')}
-            size="2xl"
+            title={`${isTamil ? 'தொகுப்பைத் திருத்து' : 'Edit Package'} — ${pkg.code}`}
+            size="lg"
             footer={footer}
         >
-            <div className="mb-8">
-                <h4 className="text-sm font-bold text-rosewood mb-4 uppercase tracking-wider">
-                    {t('adminMandapam.packages.packageName')}
-                </h4>
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">{t('adminMandapam.packages.englishLabel')}</label>
-                        <input
-                            type="text"
-                            value={enName}
-                            onChange={(e) => setEnName(e.target.value)}
-                            className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-rosewood/20 focus:border-rosewood transition-all"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">{t('adminMandapam.packages.tamilLabel')}</label>
-                        <input
-                            type="text"
-                            value={taName}
-                            onChange={(e) => setTaName(e.target.value)}
-                            className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-rosewood/20 focus:border-rosewood transition-all"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <div className="mb-8">
-                <h4 className="text-sm font-bold text-rosewood mb-4 uppercase tracking-wider">
-                    {t('adminMandapam.packages.pricing')}
-                </h4>
-                {pkg.pricings.length > 0 && (
-                    <div className="mb-4 p-4 bg-ivory rounded-xl border border-slate-100">
-                        <p className="text-xs text-slate-500 mb-1">
-                            {t('adminMandapam.packages.currentPricing')}
-                        </p>
-                        <p className="text-lg font-semibold text-gold">
-                            {formatCurrency(pkg.pricings.find(p => p.isActive)?.amount ?? pkg.pricings[0]?.amount)}
-                            <span className="text-xs text-slate-400 ml-1">
-                                {pkg.pricings.find(p => p.isActive)?.pricingType === 'HOURLY' ? '/hr' : `/${pkg.bookingType === 'DAY_BASED' ? 'event' : 'day'}`}
-                            </span>
-                        </p>
-                    </div>
-                )}
+            <div className="space-y-6">
+                {/* Existing Functions */}
                 <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1.5">
-                        {t('adminMandapam.packages.newPrice')} (INR)
-                    </label>
-                    <input
-                        type="number"
-                        min="0"
-                        value={newPrice}
-                        onChange={(e) => setNewPrice(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-rosewood/20 focus:border-rosewood transition-all"
-                    />
-                </div>
-            </div>
+                    <h4 className="text-[11px] font-black text-rosewood/30 uppercase tracking-[0.2em] mb-4">
+                        {isTamil ? 'தற்போதைய செயல்பாடுகள்' : 'Current Functions'}
+                    </h4>
 
-            <div className="mb-4">
-                <h4 className="text-sm font-bold text-rosewood mb-4 uppercase tracking-wider">
-                    {t('adminMandapam.packages.functions')}
-                </h4>
+                    {activeFunctions.length === 0 && newFunctions.length === 0 && (
+                        <p className="text-sm text-rosewood/30 font-bold mb-4">
+                            {isTamil ? 'செயல்பாடுகள் எதுவும் இல்லை' : 'No functions available'}
+                        </p>
+                    )}
 
-                {activeFunctions.length === 0 && newFunctions.length === 0 && (
-                    <p className="text-sm text-slate-400 mb-4">
-                        {t('adminMandapam.packages.noFunctions')}
-                    </p>
-                )}
-
-                <div className="space-y-2 mb-4">
-                    {activeFunctions.map((fn) => {
-                        const fnName = fn.translations.find(tr => tr.language === 'EN')?.name ?? '';
-                        return (
-                            <div key={fn.id} className="flex items-center justify-between px-4 py-3 bg-white border border-slate-100 rounded-xl">
-                                <span className="text-sm text-slate-700 font-medium">{fnName}</span>
-                                <button
-                                    onClick={() => handleRemoveFunction(fn.id)}
-                                    className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-all"
-                                >
-                                    <X size={14} />
-                                </button>
-                            </div>
-                        );
-                    })}
-                    {newFunctions.map((fn, index) => (
-                        <div key={`new-${index}`} className="flex items-center justify-between px-4 py-3 bg-emerald-50 border border-emerald-100 rounded-xl">
-                            <span className="text-sm text-emerald-700 font-medium">{fn.enName}</span>
-                            <button
-                                onClick={() => handleRemoveNewFunction(index)}
-                                className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-all"
-                            >
-                                <X size={14} />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-
-                {removedFunctionIds.size > 0 && (
                     <div className="space-y-2 mb-4">
-                        {pkg.functions.filter(fn => removedFunctionIds.has(fn.id)).map((fn) => {
-                            const fnName = fn.translations.find(tr => tr.language === 'EN')?.name ?? '';
+                        {activeFunctions.map((fn) => {
+                            const fnEn = fn.translations.find(tr => tr.language === 'EN')?.name ?? '';
+                            const fnTa = fn.translations.find(tr => tr.language === 'TA')?.name ?? '';
                             return (
-                                <div key={fn.id} className="flex items-center justify-between px-4 py-3 bg-red-50 border border-red-100 rounded-xl opacity-60">
-                                    <span className="text-sm text-red-500 font-medium line-through">{fnName}</span>
+                                <div key={fn.id} className="flex items-center gap-3 px-4 py-3 bg-white border border-rosewood/5 rounded-xl">
+                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <input
+                                            type="text"
+                                            value={fnEn}
+                                            readOnly
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500 font-medium"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={fnTa}
+                                            readOnly
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-500 font-medium"
+                                        />
+                                    </div>
                                     <button
-                                        onClick={() => handleUndoRemoveFunction(fn.id)}
-                                        className="p-1.5 text-slate-400 hover:bg-white rounded-lg transition-all text-xs font-semibold"
+                                        onClick={() => handleRemoveFunction(fn.id)}
+                                        className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-all shrink-0"
+                                        title={isTamil ? 'அகற்று' : 'Remove'}
                                     >
-                                        {t('adminMandapam.packages.undo')}
+                                        <X size={14} />
                                     </button>
                                 </div>
                             );
                         })}
+                        {newFunctions.map((fn, index) => (
+                            <div key={`new-${index}`} className="flex items-center gap-3 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <input
+                                        type="text"
+                                        value={fn.enName}
+                                        readOnly
+                                        className="w-full px-3 py-2 bg-white border border-emerald-200 rounded-lg text-sm text-emerald-700 font-medium"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={fn.taName}
+                                        readOnly
+                                        className="w-full px-3 py-2 bg-white border border-emerald-200 rounded-lg text-sm text-emerald-700 font-medium"
+                                    />
+                                </div>
+                                <button
+                                    onClick={() => handleRemoveNewFunction(index)}
+                                    className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-all shrink-0"
+                                    title={isTamil ? 'நீக்கு' : 'Delete'}
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ))}
                     </div>
-                )}
 
-                <div className="p-4 bg-ivory rounded-xl border border-slate-100 space-y-3">
-                    <p className="text-xs font-semibold text-slate-500">
-                        {t('adminMandapam.packages.addNewFunction')}
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <input
-                            type="text"
-                            placeholder={t('adminMandapam.packages.enterFunctionEn')}
-                            value={newFnEn}
-                            onChange={(e) => setNewFnEn(e.target.value)}
-                            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-rosewood/20 focus:border-rosewood transition-all"
-                        />
-                        <input
-                            type="text"
-                            placeholder={t('adminMandapam.packages.enterFunctionTa')}
-                            value={newFnTa}
-                            onChange={(e) => setNewFnTa(e.target.value)}
-                            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-rosewood/20 focus:border-rosewood transition-all"
-                        />
+                    {removedFunctionIds.size > 0 && (
+                        <div className="space-y-2 mb-4">
+                            <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider mb-2">
+                                {isTamil ? 'அகற்றப்படவுள்ளவை' : 'Marked for Removal'}
+                            </p>
+                            {pkg.functions.filter(fn => removedFunctionIds.has(fn.id)).map((fn) => {
+                                const fnEn = fn.translations.find(tr => tr.language === 'EN')?.name ?? '';
+                                const fnTa = fn.translations.find(tr => tr.language === 'TA')?.name ?? '';
+                                return (
+                                    <div key={fn.id} className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl">
+                                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <input
+                                                type="text"
+                                                value={fnEn}
+                                                readOnly
+                                                className="w-full px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-500 font-medium line-through"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={fnTa}
+                                                readOnly
+                                                className="w-full px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-500 font-medium line-through"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => handleUndoRemoveFunction(fn.id)}
+                                            className="px-3 py-1.5 text-[10px] font-black text-rosewood bg-white border border-rosewood/20 rounded-lg hover:bg-rosewood/5 transition-all uppercase tracking-wider shrink-0"
+                                        >
+                                            {isTamil ? 'மீளமை' : 'Undo'}
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                {/* Pricing */}
+                <div>
+                    <h4 className="text-[11px] font-black text-rosewood/30 uppercase tracking-[0.2em] mb-4">
+                        {isTamil ? 'விலை நிர்ணயம்' : 'Pricing'}
+                    </h4>
+                    <div className="p-4 bg-ivory rounded-2xl border border-gold/10 space-y-3">
+                        {pkg.pricings.filter(p => p.isActive).length > 0 && (
+                            <div className="flex items-center gap-2 text-xs text-rosewood/50 font-bold mb-2">
+                                <span>{isTamil ? 'தற்போதைய விலை:' : 'Current price:'}</span>
+                                <span className="text-rosewood font-black">{formatCurrency(pkg.pricings.filter(p => p.isActive)[0].amount)}</span>
+                                <span className="text-rosewood/30">({pkg.pricings.filter(p => p.isActive)[0].pricingType})</span>
+                            </div>
+                        )}
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-rosewood/50 uppercase tracking-wider">
+                                {isTamil ? 'புதிய விலை (₹)' : 'New Price (₹)'}
+                            </label>
+                            <input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                placeholder={isTamil ? 'புதிய தொகையை உள்ளிடுக' : 'Enter new amount'}
+                                value={newPrice}
+                                onChange={(e) => setNewPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                                className="w-full px-4 py-3 bg-white border border-rosewood/10 rounded-xl text-sm text-rosewood font-bold focus:border-gold focus:ring-2 focus:ring-gold/10 outline-none transition-all"
+                            />
+                        </div>
                     </div>
-                    <button
-                        onClick={handleAddFunction}
-                        disabled={!newFnEn.trim() || !newFnTa.trim()}
-                        className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-rosewood bg-white border border-rosewood/20 rounded-xl hover:bg-rosewood hover:text-white transition-all disabled:opacity-40"
-                    >
-                        <Plus size={14} />
-                        {t('adminMandapam.packages.add')}
-                    </button>
+                </div>
+
+                {/* Add New Function */}
+                <div>
+                    <h4 className="text-[11px] font-black text-rosewood/30 uppercase tracking-[0.2em] mb-4">
+                        {isTamil ? 'புதிய செயல்பாட்டைச் சேர்' : 'Add New Function'}
+                    </h4>
+                    <div className="p-4 bg-ivory rounded-2xl border border-gold/10 space-y-3">
+                        <TranslatableInput
+                            label={isTamil ? 'செயல்பாட்டின் பெயர்' : 'Function Name'}
+                            valueEn={newFnEn}
+                            valueTa={newFnTa}
+                            onChangeEn={setNewFnEn}
+                            onChangeTa={setNewFnTa}
+                            placeholder={isTamil ? 'செயல்பாட்டின் பெயரை உள்ளிடுக' : 'Enter function name'}
+                        />
+                        <button
+                            onClick={handleAddFunction}
+                            disabled={!newFnEn.trim() || !newFnTa.trim()}
+                            className="flex items-center gap-2 px-4 py-2.5 text-[10px] font-black text-rosewood bg-white border-2 border-rosewood/10 rounded-xl hover:bg-rosewood hover:text-ivory hover:border-rosewood transition-all disabled:opacity-40 uppercase tracking-wider"
+                        >
+                            <Plus size={14} />
+                            {isTamil ? 'சேர்' : 'Add'}
+                        </button>
+                    </div>
                 </div>
             </div>
         </ModalShell>

@@ -1,1096 +1,84 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { motion } from "framer-motion";
-import { fetchProfile } from '@/api/profile.api';
-import { useAuth } from "@/hooks/useAuth";
-import { useProfileUtils } from "@/hooks/useProfileUtils";
-import { useDateFormatter } from "@/hooks/useDateFormatter";
-import { getBilingualValue } from "@/utils/bilingual";
-import { getImageUrl } from '@/utils/getImageUrl';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfileView } from '@/hooks/useProfileView';
+import { useMyCapabilitiesQuery } from '@/queries/useMembershipQueries';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
-import { toast } from "sonner";
-import {
-  ArrowLeft,
-  Printer,
-  FileText,
-  Lock,
-  Sparkles,
-  User,
-  Users,
-  Briefcase,
-  Heart,
-  Building2,
-  Map,
-  Camera,
-  ShieldAlert,
-  Info,
-} from "lucide-react";
+import { ArrowLeft, Printer, FileText, Shield } from 'lucide-react';
+import { SectionDivider } from '@/components/features/matrimony/ProfileViewPrimitives';
+import PrintProfile, { JathagamPrintView } from './PrintProfile';
 
-import {
-  SectionCard3D,
-  SectionHeaderRedesigned,
-  DetailRow,
-  SectionDivider,
-} from "@/components/features/matrimony/ProfileViewPrimitives";
-
-import { D1Chart, D9Chart } from "@/components/shared/horoscope";
-import type { PlanetData, HoroscopeResult } from "@/types/horoscope";
-import PrintProfile, { JathagamPrintView } from "./PrintProfile";
-import {
-  PROFILE_FOR_OPTIONS,
-  MARITAL_STATUS_OPTIONS,
-  DIET_OPTIONS,
-  COMPLEXION_OPTIONS,
-  BLOOD_GROUP_OPTIONS,
-  KULAM_OPTIONS,
-  HEIGHT_OPTIONS,
-  JOB_SECTOR_OPTIONS,
-  RESIDENCE_OPTIONS,
-  NAKSHATRA_OPTIONS,
-  RASI_OPTIONS,
-  DOSHAM_OPTIONS,
-  GENDER_OPTIONS,
-} from "@/constants/index";
-
-// ═══════════════════════════════════════════════════════════
-// Quick Nav
-// ═══════════════════════════════════════════════════════════
-const NAV_KEYS: { id: string; key: string }[] = [
-  { id: "basic", key: "basic" },
-  { id: "personal", key: "personal" },
-  { id: "community", key: "community" },
-  { id: "professional", key: "professional" },
-  { id: "family", key: "family" },
-  { id: "assets", key: "assets" },
-  { id: "contact", key: "contact" },
-  { id: "horoscope", key: "horoscope" },
-  { id: "gallery", key: "gallery" },
-  { id: "partner-preference", key: "partner_preference" },
-];
-
-const QuickNav: React.FC = () => {
-  const [activeSection, setActiveSection] = useState("");
-  const { t } = useTranslation(["common"]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const id = entry.target.id.replace("section-", "");
-            setActiveSection(id);
-          }
-        }
-      },
-      { rootMargin: "-80px 0px -60% 0px", threshold: 0 },
-    );
-
-    NAV_KEYS.forEach((s) => {
-      const el = document.getElementById(`section-${s.id}`);
-      if (el) observer.observe(el);
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div className="no-print relative">
-      <div className="flex items-center h-11 sm:h-12 overflow-x-auto overflow-y-hidden scrollbar-hide sm:overflow-visible">
-        {NAV_KEYS.map((s) => {
-          const isActive = activeSection === s.id;
-          return (
-            <button
-              key={s.id}
-              onClick={() => {
-                setActiveSection(s.id);
-                const el = document.getElementById(`section-${s.id}`);
-                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-              className={`h-full px-3 sm:px-5 flex items-center font-serif font-bold
-                          text-[11px] sm:text-sm whitespace-nowrap shrink-0
-                          transition-colors duration-200 relative select-none
-                          ${isActive
-                            ? "text-rosewood"
-                            : "text-rosewood/60 hover:text-rosewood"}`}
-            >
-              <span>{t(`section_nav.${s.key}`)}</span>
-              {isActive && (
-                <div className="absolute bottom-0 left-3 sm:left-5 right-3 sm:right-5 h-0.5 bg-gold rounded-t-full" />
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════
-// ProfileViewHeader
-// ═══════════════════════════════════════════════════════════
-const ProfileViewHeader: React.FC<{ profile: any; isLoading: boolean }> = ({
-  profile,
-  isLoading,
-}) => {
-  const { t: tCommon, i18n } = useTranslation(["common"]);
-  const { t, getEnumLabel, getLocationLabel, calculateAge } = useProfileUtils();
-  const { formatDate } = useDateFormatter();
-  const isTamil = i18n.language === "ta";
-  const { user } = useAuth();
-  const isOwner = !!(profile && user && (profile.isOwner || profile.userId === user.id));
-
-  const name = profile
-    ? isTamil
-      ? [profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' ') || [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ')
-      : [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ') || [profile.firstNameTa, profile.lastNameTa].filter(Boolean).join(' ')
-    : "";
-
-  const currentLocation = profile
-    ? getLocationLabel(
-        profile.currentDistrictEn || profile.currentDistrict,
-        profile.currentTaluk || profile.currentCityEn,
-        profile.currentDistrictTa,
-        profile.currentTalukTa,
-        profile.currentCityEn,
-        profile.currentStateEn,
-        profile.currentCountryEn,
-        profile.currentCityTa,
-        profile.currentStateTa,
-        profile.currentCountryTa,
-      )
-    : "";
-
-  const profilePhotoUrl = profile?.profilePhoto
-    ? (typeof profile.profilePhoto === 'object' && profile.profilePhoto?.url
-        ? getImageUrl(profile.profilePhoto.url)
-        : getImageUrl(profile.profilePhoto as string)) || ""
-    : "";
-  const ageDisplay = profile?.dob
-    ? `${calculateAge(profile.dob)} ${tCommon("yrs")}`
-    : "";
-  const genderLabel = profile?.gender
-    ? getEnumLabel(profile.gender, GENDER_OPTIONS)
-    : "";
-
-  if (isLoading) {
-  return (
-    <>
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8">
-        <div className="md:col-span-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gold/20 p-6 md:p-8">
-            <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gold/10">
-              <div className="w-10 h-10 rounded-xl bg-gold/10 animate-pulse" />
-              <div className="h-5 w-32 bg-gold/10 rounded animate-pulse" />
-            </div>
-            <div className="space-y-0">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="flex flex-col sm:flex-row py-2 sm:py-1.5 border-b border-gold/10 last:border-0 sm:items-baseline gap-1 sm:gap-0">
-                  <div className="h-4 w-24 bg-gold/10 rounded animate-pulse sm:w-[160px]" />
-                  <span className="hidden sm:inline-block w-6 text-center" />
-                  <div className="h-4 w-3/4 bg-gold/10 rounded animate-pulse" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="md:col-span-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gold/20 p-4">
-            <div className="w-full aspect-square rounded-xl bg-gold/10 animate-pulse" />
-          </div>
-        </div>
-      </div>
-    </>
-  );
-  }
-
-  return (
-    <>
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8">
-      <div className="md:col-span-8">
-        <SectionCard3D>
-          <SectionHeaderRedesigned
-            title={tCommon("basic_info")}
-            icon={<Info size={16} />}
-            gradient="bg-rosewood-gradient text-white"
-            isTamil={isTamil}
-          >
-            {(() => {
-              if (!isOwner) return null;
-              const a = profile.adminVerified?.toLowerCase();
-              const s = profile.status;
-              const statusTag = (gradient: string, label: string) => (
-                <span className={`${gradient} text-[9px] sm:text-[10px] font-bold rounded-full px-2 sm:px-2.5 py-0.5 sm:py-1 shadow-sm whitespace-nowrap`}>{label}</span>
-              );
-              if (s === "BLOCKED") return statusTag("bg-rosewood-gradient text-white", tCommon("adminMatrimony:common.blocked"));
-              if (s === "SUSPENDED") return statusTag("bg-rosewood-gradient text-white", tCommon("adminMatrimony:common.suspended"));
-              if (s === "INACTIVE") return statusTag("bg-rosewood-gradient text-white", tCommon("profile.status.inactive"));
-              if (a === "rejected") return statusTag("bg-rosewood-gradient text-white", tCommon("adminMatrimony:common.rejected"));
-              if (a === "pending") return statusTag("bg-ivory-gold-gradient", tCommon("pending"));
-              if (a === "accepted") return statusTag("bg-ivory-gold-gradient", tCommon("verified"));
-              return null;
-            })()}
-          </SectionHeaderRedesigned>
-          <div className="space-y-0">
-            <DetailRow
-              label={t("profile_new:full_name")}
-              value={name}
-            />
-            <DetailRow
-              label={tCommon("profile.reg_no")}
-              value={profile?.regNo}
-            />
-            <DetailRow
-              label={t("profile_new:dob")}
-              value={profile?.dob ? formatDate(profile.dob) : ""}
-            />
-            <DetailRow
-              label={tCommon("profile.age")}
-              value={profile?.dob ? `${calculateAge(profile.dob)} ${tCommon("yrs")}` : ""}
-            />
-            <DetailRow
-              label={t("profile_new:gender")}
-              value={profile?.gender ? getEnumLabel(profile.gender, GENDER_OPTIONS) : ""}
-            />
-            <DetailRow
-              label={t("profile_new:current_location")}
-              value={currentLocation}
-            />
-          </div>
-        </SectionCard3D>
-      </div>
-        <div className="md:col-span-4">
-        <div className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gold/20 flex flex-col items-center">
-          <div className="w-full max-w-56 sm:max-w-none aspect-square rounded-xl overflow-hidden border-4 border-ivory bg-ivory">
-            {profilePhotoUrl ? (
-              <img
-                src={profilePhotoUrl}
-                alt={name}
-                width={typeof profile?.profilePhoto === 'object' ? profile?.profilePhoto?.width ?? undefined : undefined}
-                height={typeof profile?.profilePhoto === 'object' ? profile?.profilePhoto?.height ?? undefined : undefined}
-                className="w-full h-full object-cover"
-                loading="lazy"
-                decoding="async"
-              />
-            ) : (
-              <div className="w-full h-full bg-ivory flex items-center justify-center">
-                <span className="text-rosewood/30 text-4xl font-serif font-bold">
-                  {name?.charAt(0)}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-    </>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════
-// StatusReasons — old style banners
-// ═══════════════════════════════════════════════════════════
-const StatusReasons: React.FC<{ profile: any; isTamil: boolean }> = ({
-  profile,
-  isTamil,
-}) => {
-  const { user } = useAuth();
-  if (!profile || !user) return null;
-  if (!profile.isOwner && profile.userId !== user.id) return null;
-  const rejectionReason = profile.rejectionReasonEn;
-  const rejectionReasonTa = profile.rejectionReasonTa;
-  const blockReason = profile.statusReasonEn;
-  const blockReasonTa = profile.statusReasonTa;
-  if (!rejectionReason && !blockReason) return null;
-  return (
-    <div className="space-y-3">
-      {rejectionReason && (
-        <div className="bg-red-50 rounded-xl p-4 border border-red-100">
-          <div className="flex items-center gap-2 mb-2">
-            <ShieldAlert size={16} className="text-red-500" />
-            <p className="text-[9px] text-red-400 font-bold uppercase tracking-wider">
-              {isTamil ? "நிராகரிப்பு காரணம்" : "Rejection Reason"}
-            </p>
-          </div>
-          <p className="text-sm font-bold text-red-800 ml-7">
-            {isTamil && rejectionReasonTa ? rejectionReasonTa : rejectionReason}
-          </p>
-        </div>
-      )}
-      {blockReason && (
-        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-          <div className="flex items-center gap-2 mb-2">
-            <ShieldAlert size={16} className="text-amber-500" />
-            <p className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">
-              {isTamil ? "தடை காரணம்" : "Block Reason"}
-            </p>
-          </div>
-          <p className="text-sm font-bold text-amber-800 ml-7">
-            {isTamil && blockReasonTa ? blockReasonTa : blockReason}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════
-// ProfileViewPersonal
-// ═══════════════════════════════════════════════════════════
-const ProfileViewPersonal: React.FC<{ profile: any; isLoading: boolean }> = ({
-  profile,
-  isLoading,
-}) => {
-  const { t: tCommon, i18n } = useTranslation(["common"]);
-  const isTamil = i18n.language === "ta";
-  const { getEnumLabel } = useProfileUtils();
-
-  return (
-    <SectionCard3D isLoading={isLoading}>
-      <SectionHeaderRedesigned
-        title={tCommon("personal_info")}
-        icon={<User size={16} />}
-        gradient="bg-ivory-gold-gradient text-rosewood"
-        isLoading={isLoading}
-        isTamil={isTamil}
-      />
-      <div className="space-y-0">
-        <DetailRow
-          label={tCommon("profile_new:profile_for")}
-          value={
-            profile?.profileFor
-              ? getEnumLabel(profile.profileFor, PROFILE_FOR_OPTIONS)
-              : ""
-          }
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={tCommon("profile_new:marital_status")}
-          value={
-            profile?.maritalStatus
-              ? getEnumLabel(profile.maritalStatus, MARITAL_STATUS_OPTIONS)
-              : ""
-          }
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={tCommon("profile_new:diet")}
-          value={profile?.diet ? getEnumLabel(profile.diet, DIET_OPTIONS) : ""}
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={tCommon("profile_new:height")}
-          value={
-            profile?.height
-              ? getEnumLabel(profile.height.toString(), HEIGHT_OPTIONS)
-              : ""
-          }
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={tCommon("profile_new:weight")}
-          value={profile?.weight ? `${profile.weight} kg` : ""}
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={tCommon("profile_new:complexion")}
-          value={
-            profile?.complexion
-              ? getEnumLabel(profile.complexion, COMPLEXION_OPTIONS)
-              : ""
-          }
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={tCommon("profile_new:blood_group")}
-          value={
-            profile?.bloodGroup
-              ? getEnumLabel(profile.bloodGroup, BLOOD_GROUP_OPTIONS)
-              : ""
-          }
-          isLoading={isLoading}
-        />
-      </div>
-    </SectionCard3D>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════
-// ProfileViewCommunity
-// ═══════════════════════════════════════════════════════════
-const ProfileViewCommunity: React.FC<{
-  profile: any;
-  isLoading: boolean;
-}> = ({ profile, isLoading }) => {
-  const { t: tCommon, i18n } = useTranslation(["common"]);
-  const { t, getEnumLabel, getLocationLabel } = useProfileUtils();
-
-  const isTamil = i18n.language === "ta";
-  const getCommunityLabel = () => {
-    if (!profile) return "";
-    const comm = profile.community || "Kongu Vellalar";
-    if (
-      isTamil &&
-      (comm === "Kongu Vellalar" ||
-        comm === "கொங்கு வேளாளர்" ||
-        comm === "கொங்கு வெள்ளாளர்")
-    )
-      return "கொங்கு வேளாளர்";
-    return comm;
-  };
-
-  return (
-    <SectionCard3D isLoading={isLoading}>
-      <SectionHeaderRedesigned
-        title={t("profile_new:sections.community_details")}
-        icon={<Users size={16} />}
-        gradient="bg-rosewood-gradient"
-        isTamil={isTamil}
-        isLoading={isLoading}
-      />
-      <div className="space-y-0">
-        <DetailRow
-          label={t("profile_new:caste")}
-          value={profile?.caste || "BC"}
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:community")}
-          value={getCommunityLabel()}
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={isTamil ? "குலம்" : "Kulam"}
-          value={
-            profile?.kulam ? getEnumLabel(profile.kulam, KULAM_OPTIONS) : ""
-          }
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:kuladeivam")}
-          value={
-            profile
-              ? (isTamil
-                  ? profile.kuladeivamTa || profile.kuladeivamEn
-                  : profile.kuladeivamEn) || ""
-              : ""
-          }
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:birth_place")}
-          value={
-            profile
-              ? (isTamil
-                  ? profile.birthPlaceTa || profile.birthPlaceEn
-                  : profile.birthPlaceEn) || ""
-              : ""
-          }
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:native_location")}
-          value={
-            profile
-              ? getLocationLabel(
-                  profile.nativeDistrictEn || profile.nativeDistrict,
-                  profile.nativeTaluk || undefined,
-                  profile.nativeDistrictTa,
-                  profile.nativeTalukTa,
-                )
-              : ""
-          }
-          isLoading={isLoading}
-        />
-      </div>
-    </SectionCard3D>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════
-// ProfileViewProfessional
-// ═══════════════════════════════════════════════════════════
-const ProfileViewProfessional: React.FC<{
-  profile: any;
-  isLoading: boolean;
-}> = ({ profile, isLoading }) => {
-  const { t: tCommon, i18n } = useTranslation(["common"]);
-  const { t, getEnumLabel, formatSalary } = useProfileUtils();
-
-  const isTamil = i18n.language === "ta";
-  const education = profile?.education || tCommon("profile.not_specified");
-  const jobDetail = profile?.jobDetail || tCommon("profile.not_specified");
-  const jobLocation = profile
-    ? (isTamil
-        ? profile.jobLocationTa || profile.jobLocationEn
-        : profile.jobLocationEn) || ""
-    : "";
-
-  return (
-    <SectionCard3D isLoading={isLoading}>
-      <SectionHeaderRedesigned
-        title={t("profile_new:sections.professional_details")}
-        icon={<Briefcase size={16} />}
-        gradient="bg-rosewood-gradient text-white"
-        isTamil={isTamil}
-        isLoading={isLoading}
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
-        <DetailRow
-          label={t("profile_new:education")}
-          value={education}
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:job_detail")}
-          value={jobDetail}
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:company_name")}
-          value={profile?.companyName || ""}
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:job_sector")}
-          value={
-            profile?.jobSector
-              ? getEnumLabel(profile.jobSector, JOB_SECTOR_OPTIONS)
-              : ""
-          }
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:job_location")}
-          value={jobLocation}
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:salary_monthly")}
-          value={
-            profile?.salaryMonthly ? formatSalary(profile.salaryMonthly) : ""
-          }
-          isLoading={isLoading}
-        />
-      </div>
-    </SectionCard3D>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════
-// ProfileViewFamily
-// ═══════════════════════════════════════════════════════════
-const ProfileViewFamily: React.FC<{ profile: any; isLoading: boolean }> = ({
-  profile,
-  isLoading,
-}) => {
-  const { t: tCommon, i18n } = useTranslation(["common"]);
-  const { t, formatSalary } = useProfileUtils();
-
-  const isTamil = i18n.language === "ta";
-  const fatherNameRaw = profile
-    ? (isTamil
-        ? profile.fatherNameTa || profile.fatherNameEn
-        : profile.fatherNameEn) || tCommon("not_provided")
-    : "";
-  const motherNameRaw = profile
-    ? (isTamil
-        ? profile.motherNameTa || profile.motherNameEn
-        : profile.motherNameEn) || tCommon("not_provided")
-    : "";
-  const lateSuffix = ` (${t("profile_new:is_late")})`;
-  const fatherName = profile?.fatherIsLate
-    ? `${fatherNameRaw}${lateSuffix}`
-    : fatherNameRaw;
-  const motherName = profile?.motherIsLate
-    ? `${motherNameRaw}${lateSuffix}`
-    : motherNameRaw;
-
-  return (
-    <SectionCard3D isLoading={isLoading}>
-      <SectionHeaderRedesigned
-        title={t("profile_new:sections.family_details")}
-        icon={<Heart size={16} />}
-        gradient="bg-ivory-gold-gradient text-rosewood"
-        isTamil={isTamil}
-        isLoading={isLoading}
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
-        <div>
-          <h3 className="font-semibold text-rosewood text-sm mt-1 mb-2 border-b border-rosewood/10 pb-1">
-            {isLoading ? (
-          <div className="h-4 w-28 bg-gold/10 rounded animate-pulse" />
-        ) : (
-          `${t("profile_new:father_details_label")}:`
-            )}
-          </h3>
-          <DetailRow
-            label={t("profile_new:father_name")}
-            value={fatherName}
-            isLoading={isLoading}
-          />
-          <DetailRow
-            label={t("profile_new:father_job")}
-            value={profile?.fatherJob || ""}
-            isLoading={isLoading}
-          />
-          <DetailRow
-            label={tCommon("salary_monthly")}
-            value={profile?.fatherSalary ? formatSalary(profile.fatherSalary) : ""}
-            isLoading={isLoading}
-          />
-          <h3 className="font-semibold text-rosewood text-sm mt-5 mb-2 border-b border-rosewood/10 pb-1">
-            {isLoading ? (
-              <div className="h-4 w-24 bg-gold/10 rounded animate-pulse" />
-            ) : (
-              `${t("profile_new:sections.siblings")}:`
-            )}
-          </h3>
-          <DetailRow
-            label={t("profile_new:no_of_brothers")}
-            value={profile?.noOfBrothers ?? 0}
-            isLoading={isLoading}
-          />
-        </div>
-        <div>
-          <h3 className="font-semibold text-rosewood text-sm mt-1 mb-2 border-b border-rosewood/10 pb-1">
-            {isLoading ? (
-              <div className="h-4 w-24 bg-gold/10 rounded animate-pulse" />
-            ) : (
-              `${t("profile_new:mother_details_label")}:`
-            )}
-          </h3>
-          <DetailRow
-            label={t("profile_new:mother_name")}
-            value={motherName}
-            isLoading={isLoading}
-          />
-          <DetailRow
-            label={t("profile_new:mother_job")}
-            value={profile?.motherJob || ""}
-            isLoading={isLoading}
-          />
-          <DetailRow
-            label={tCommon("salary_monthly")}
-            value={profile?.motherSalary ? formatSalary(profile.motherSalary) : ""}
-            isLoading={isLoading}
-          />
-          <h3 className="font-semibold text-rosewood text-sm mt-5 mb-2 border-b border-rosewood/10 pb-1">
-            {isLoading ? (
-              <div className="h-4 w-24 bg-gold/10 rounded animate-pulse" />
-            ) : (
-              `${t("profile_new:sections.siblings")}:`
-            )}
-          </h3>
-          <DetailRow
-            label={t("profile_new:no_of_sisters")}
-            value={profile?.noOfSisters ?? 0}
-            isLoading={isLoading}
-          />
-        </div>
-      </div>
-    </SectionCard3D>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════
-// ProfileViewAssets
-// ═══════════════════════════════════════════════════════════
-const ProfileViewAssets: React.FC<{
-  profile: any;
-  isLoading: boolean;
-}> = ({ profile, isLoading }) => {
-  const { t: tCommon, i18n } = useTranslation(["common"]);
-  const { t, getEnumLabel } = useProfileUtils();
-
-  const isTamil = i18n.language === "ta";
-  const land = profile
-    ? (isTamil
-        ? profile.landTa || profile.landEn
-        : profile.landEn) || ""
-    : "";
-  const otherAssets = profile
-    ? (isTamil
-        ? profile.otherAssetsTa || profile.otherAssetsEn
-        : profile.otherAssetsEn) || ""
-    : "";
-
-  return (
-    <SectionCard3D isLoading={isLoading}>
-      <SectionHeaderRedesigned
-        title={t("profile_new:sections.assets_and_expectations")}
-        icon={<Building2 size={16} />}
-        gradient="bg-rosewood-gradient text-white"
-        isTamil={isTamil}
-        isLoading={isLoading}
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
-        <DetailRow
-          label={t("profile_new:residence")}
-          value={
-            profile?.residence
-              ? getEnumLabel(profile.residence, RESIDENCE_OPTIONS)
-              : ""
-          }
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:vehicle")}
-          value={profile?.vehicle || "-"}
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:other_assets")}
-          value={otherAssets || "-"}
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:land")}
-          value={land || "-"}
-          isLoading={isLoading}
-        />
-      </div>
-    </SectionCard3D>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════
-// ProfileViewPartnerPreference
-// ═══════════════════════════════════════════════════════════
-const ProfileViewPartnerPreference: React.FC<{
-  profile: any;
-  isLoading: boolean;
-}> = ({ profile, isLoading }) => {
-  const { t: tCommon, i18n } = useTranslation(["common"]);
-  const { t, getEnumLabel, formatSalary } = useProfileUtils();
-
-  const isTamil = i18n.language === "ta";
-  const ageRange =
-    profile?.ageMin && profile?.ageMax
-      ? `${profile.ageMin} - ${profile.ageMax} ${tCommon("yrs")}`
-      : profile?.ageMin
-        ? `${profile.ageMin}+ ${tCommon("yrs")}`
-        : profile?.ageMax
-          ? `Up to ${profile.ageMax} ${tCommon("yrs")}`
-          : "";
-  const expectationNote = profile
-    ? (isTamil
-        ? profile.expectationNoteTa || profile.expectationNoteEn
-        : profile.expectationNoteEn) || ""
-    : "";
-  const preferredLocation = profile
-    ? (isTamil
-        ? profile.preferredLocationTa || profile.preferredLocationEn
-        : profile.preferredLocationEn) || ""
-    : "";
-
-  return (
-    <SectionCard3D isLoading={isLoading}>
-      <SectionHeaderRedesigned
-        title={t("profile_new:sections.partner_preferences")}
-        icon={<Heart size={16} />}
-        gradient="bg-ivory-gold-gradient text-rosewood"
-        isTamil={isTamil}
-        isLoading={isLoading}
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
-        <DetailRow
-          label={t("profile_new:age_range")}
-          value={ageRange || "-"}
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:height_min")}
-          value={
-            profile?.heightMinId
-              ? getEnumLabel(profile.heightMinId.toString(), HEIGHT_OPTIONS)
-              : ""
-          }
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:height_max")}
-          value={
-            profile?.heightMaxId
-              ? getEnumLabel(profile.heightMaxId.toString(), HEIGHT_OPTIONS)
-              : ""
-          }
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:monthly_salary")}
-          value={
-            profile?.monthlySalary
-              ? formatSalary(profile.monthlySalary)
-              : ""
-          }
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:preferred_location")}
-          value={preferredLocation || "-"}
-          isLoading={isLoading}
-        />
-        <DetailRow
-          label={t("profile_new:expectation")}
-          value={expectationNote || "-"}
-          isLoading={isLoading}
-        />
-      </div>
-    </SectionCard3D>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════
-// ProfileViewContact
-// ═══════════════════════════════════════════════════════════
-const ProfileViewContact: React.FC<{ profile: any; isLoading: boolean }> = ({ profile, isLoading }) => {
-  const { t, i18n } = useTranslation(["common"]);
-  const isTamil = i18n.language === "ta";
-  const locked = profile?.contactLocked;
-
-  return (
-    <SectionCard3D isLoading={isLoading}>
-      <SectionHeaderRedesigned
-        title={isTamil ? 'தொடர்பு தகவல்' : 'Contact'}
-        icon={<Info size={16} />}
-        gradient="bg-rosewood-gradient"
-        isTamil={isTamil}
-        isLoading={isLoading}
-      />
-      {isLoading ? null : locked ? (
-        <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Lock size={32} className="text-slate-300 mb-3" />
-          <p className="text-sm text-slate-500 font-medium">
-            {isTamil
-              ? 'தொடர்பு தகவலைப் பார்க்க மேம்படுத்தவும்'
-              : 'Upgrade your plan to view contact information'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
-          <DetailRow label={isTamil ? 'தொலைபேசி' : 'Phone'} value={profile?.phone || '-'} isLoading={isLoading} />
-          <DetailRow label={isTamil ? 'மின்னஞ்சல்' : 'Email'} value={profile?.email || '-'} isLoading={isLoading} />
-        </div>
-      )}
-    </SectionCard3D>
-  );
-};
-
-// ProfileViewHoroscope
-// ═══════════════════════════════════════════════════════════
-const ProfileViewHoroscope: React.FC<{ profile: any; isLoading: boolean }> = ({
-  profile,
-  isLoading,
-}) => {
-  const { t: tCommon, i18n } = useTranslation(["common"]);
-  const lang = i18n.language as "en" | "ta";
-  const isTamil = i18n.language === "ta";
-  const { t, getEnumLabel } = useProfileUtils();
-
-  const natchathiram = profile?.star
-    ? getBilingualValue(NAKSHATRA_OPTIONS, profile.star, lang)
-    : "";
-  const rasiLabel = profile?.rasi
-    ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang)
-    : "";
-  const lagnam = profile?.lagnam
-    ? getBilingualValue(RASI_OPTIONS, profile.lagnam, lang)
-    : "";
-  const dosham = profile?.dosham
-    ? getEnumLabel(profile.dosham, DOSHAM_OPTIONS)
-    : "";
-  const hasCharts =
-    profile?.horoscope && (profile.horoscope.rasi || profile.horoscope.navamsa || (profile.horoscope.mode === 'GENERATED' && profile.horoscope.horoscopeJson));
-
-  return (
-    <SectionCard3D isLoading={isLoading}>
-      <SectionHeaderRedesigned
-        title={t("profile_new:sections.horoscope_details")}
-        icon={<Map size={16} />}
-        gradient="bg-rosewood-gradient"
-        isTamil={isTamil}
-        isLoading={isLoading}
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0 mb-8">
-        <DetailRow label={t("profile_new:star")} value={natchathiram} isLoading={isLoading} />
-        <DetailRow label={t("profile_new:rasi")} value={rasiLabel} isLoading={isLoading} />
-        <DetailRow label={t("profile_new:laganam")} value={lagnam} isLoading={isLoading} />
-        <DetailRow label={t("profile_new:dosham")} value={dosham} isLoading={isLoading} />
-      </div>
-      {isLoading || hasCharts ? (
-        <div className="mt-8 pt-8 border-t border-gold/20">
-          <h3 className="text-sm font-bold text-rosewood uppercase tracking-widest mb-6 flex items-center gap-2">
-            <span className="material-symbols-outlined text-gold">auto_awesome</span>
-            {t("profile_new:horoscope.charts")}
-          </h3>
-          {isLoading ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="aspect-square bg-gold/10 rounded-xl animate-pulse" />
-              <div className="aspect-square bg-gold/10 rounded-xl animate-pulse" />
-            </div>
-          ) : profile?.horoscope?.mode === "GENERATED" ? (
-            (() => {
-              const hJson = profile?.horoscope?.horoscopeJson;
-              if (hJson) {
-                const parsed = typeof hJson === 'string' ? JSON.parse(hJson) : hJson as HoroscopeResult;
-                return (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d">
-                      <D1Chart lagnaSign={parsed.lagna.signIndex} planets={parsed.planets} />
-                    </motion.div>
-                    <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d">
-                      <D9Chart planets={parsed.planets} lagnaNavamsaSignIndex={parsed.lagnaNavamsa.signIndex} />
-                    </motion.div>
-                  </div>
-                );
-              }
-              return null;
-            })()
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {profile?.horoscope?.rasi?.url && (
-                <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
-                  <img src={getImageUrl(profile.horoscope.rasi.url) || ""} alt="Rasi" className="w-full h-full object-contain p-4" />
-                  <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{t("profile_new:horoscope.rasi_chart_label")}</span>
-                  </div>
-                </motion.div>
-              )}
-              {profile?.horoscope?.navamsa?.url && (
-                <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
-                  <img src={getImageUrl(profile.horoscope.navamsa.url) || ""} alt="Navamsa" className="w-full h-full object-contain p-4" />
-                  <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{t("profile_new:horoscope.navamsa_chart_label")}</span>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="mt-8 p-6 bg-white rounded-xl border border-gold/20 text-center">
-          <p className="text-sm text-slate-400 italic font-medium">{t("profile_new:horoscope.no_chart_provided")}</p>
-        </div>
-      )}
-    </SectionCard3D>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════
-// ProfileViewGallery
-// ═══════════════════════════════════════════════════════════
-const ProfileViewGallery: React.FC<{
-  profile: any;
-  isLoading: boolean;
-}> = ({ profile, isLoading }) => {
-  const { t: tCommon, i18n } = useTranslation(["common"]);
-  const isTamil = i18n.language === "ta";
-  const { t } = useTranslation(["profile_new"]);
-
-  const galleryImages = (profile?.gallery || []).filter((item: any) => item?.url);
-
-  if (!isLoading && galleryImages.length === 0) return null;
-
-  return (
-    <SectionCard3D isLoading={isLoading}>
-      <SectionHeaderRedesigned
-        title={t("profile_new:sections.lifestyle_glimpses")}
-        icon={<Camera size={16} />}
-        gradient="bg-ivory-gold-gradient text-rosewood"
-        isLoading={isLoading}
-        isTamil={isTamil}
-      />
-      {(() => {
-        if (isLoading) {
-          return (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 mt-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="aspect-4/5 rounded-2xl bg-gold/10 animate-pulse" />
-              ))}
-            </div>
-          );
-        }
-        return (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6 mt-4">
-            {galleryImages.map((item: any, i: number) => (
-              <motion.div
-                key={i}
-                whileHover={{ rotateY: -2, scale: 1.02 }}
-                className="perspective-1000 preserve-3d aspect-4/5 rounded-2xl overflow-hidden border border-gold/20 cursor-pointer shadow-sm hover:shadow-xl hover:shadow-gold/10 transition-shadow duration-300 group bg-white relative"
-              >
-                <img
-                  src={getImageUrl(item.url) ?? ""}
-                  alt={`${t("profile_new:gallery")} ${i + 1}`}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
-                  <span className="material-symbols-outlined text-white text-2xl">
-                    zoom_in
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        );
-      })()}
-    </SectionCard3D>
-  );
-};
+import QuickNav from './profile-sections/QuickNav';
+import ProfileHeaderSection from './profile-sections/ProfileHeaderSection';
+import StatusReasonsSection from './profile-sections/StatusReasonsSection';
+import LockedSectionUpgrade from './profile-sections/LockedSectionUpgrade';
+import ActionBar from './profile-sections/ActionBar';
+import PersonalSection from './profile-sections/PersonalSection';
+import CommunitySection from './profile-sections/CommunitySection';
+import ProfessionalSection from './profile-sections/ProfessionalSection';
+import FamilySection from './profile-sections/FamilySection';
+import AssetsSection from './profile-sections/AssetsSection';
+import PartnerPreferenceSection from './profile-sections/PartnerPreferenceSection';
+import ContactSection from './profile-sections/ContactSection';
+import HoroscopeSection from './profile-sections/HoroscopeSection';
+import GallerySection from './profile-sections/GallerySection';
 
 // ═══════════════════════════════════════════════════════════
 // ProfileView (Main Orchestrator)
 // ═══════════════════════════════════════════════════════════
-const LockedSection: React.FC<{ message: string; messageTa: string }> = ({ message, messageTa }) => {
-  const { i18n } = useTranslation();
-  const isTamil = i18n.language === 'ta';
-  return (
-    <div className="flex flex-col items-center justify-center py-8 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-rosewood/5 flex items-center justify-center mb-4 border border-rosewood/10">
-        <Lock size={28} className="text-rosewood/30" />
-      </div>
-      <p className="text-sm text-slate-500 font-medium max-w-[220px]">{isTamil ? messageTa : message}</p>
-    </div>
-  );
-};
-
 const ProfileView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation(["common"]);
-  const isTamil = i18n.language === "ta";
-  const [profile, setProfile] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isError, setIsError] = useState(false);
+  const { t, i18n } = useTranslation(['common']);
+  const isTamil = i18n.language === 'ta';
+  const { user } = useAuth();
+
+  const {
+    profile,
+    loading,
+    errorType,
+    errorMessage,
+    viewerRole,
+    shortlisted,
+    handleRetry,
+    handleToggleShortlist,
+    handleSendInvite,
+  } = useProfileView(id);
+
   const [viewDetails, setViewDetails] = useState<string>('FULL');
-  useEffect(() => { if (id) { fetchProfile(id).then(setProfile).catch(() => setIsError(true)).finally(() => setIsLoading(false)); } }, [id]);
+  const [canPrintProfile, setCanPrintProfile] = useState(false);
+  const [canPrintHoroscope, setCanPrintHoroscope] = useState(false);
+  const { data: capsData } = useMyCapabilitiesQuery();
   useEffect(() => {
-    import('@/api/membership.api').then(({ getMyCapabilities }) => {
-      getMyCapabilities().then(({ capabilities }) => {
-        if (capabilities?.viewDetails) setViewDetails(capabilities.viewDetails);
-      }).catch(() => {});
-    });
-  }, []);
+    const caps = (capsData as any)?.capabilities as { viewDetails?: string; printProfile?: boolean; printHoroscope?: boolean } | undefined;
+    if (caps?.viewDetails) setViewDetails(caps.viewDetails);
+    if (caps?.printProfile !== undefined) setCanPrintProfile(caps.printProfile);
+    if (caps?.printHoroscope !== undefined) setCanPrintHoroscope(caps.printHoroscope);
+  }, [capsData]);
 
   const levels = ['BASIC', 'EXTENDED', 'ADVANCED', 'FULL'];
   const vd = (min: string) => levels.indexOf(viewDetails) >= levels.indexOf(min);
-  const professionalLocked = !vd('EXTENDED') && !profile?.isOwner;
-  const familyLocked = !vd('EXTENDED') && !profile?.isOwner;
-  const horoscopeLabelsLocked = !vd('EXTENDED') && !profile?.isOwner;
-  const horoscopeChartsLocked = !vd('ADVANCED') && !profile?.isOwner;
-  const contactLocked = !vd('FULL') && !profile?.isOwner;
-  const galleryLocked = !vd('EXTENDED') && !profile?.isOwner;
+  const isStaff = viewerRole === 'admin';
+  const isOwner = !!(profile && user && (profile.isOwner || profile.userId === user.id));
+  const bypassLocks = isOwner || isStaff;
+  const professionalLocked = !vd('EXTENDED') && !bypassLocks;
+  const familyLocked = !vd('EXTENDED') && !bypassLocks;
+  const horoscopeLabelsLocked = !vd('EXTENDED') && !bypassLocks;
+  const horoscopeChartsLocked = !vd('ADVANCED') && !bypassLocks;
+  const contactLocked = !vd('FULL') && !bypassLocks;
+  const galleryLocked = !vd('EXTENDED') && !bypassLocks;
 
   const [isPrintingJathagam, setIsPrintingJathagam] = useState(false);
   const [isPrintingBiodata, setIsPrintingBiodata] = useState(false);
 
   const userGalleryImages = (profile?.gallery || []).filter((url: string) => !!url);
-  const hasUserGalleryContent = isLoading || userGalleryImages.length > 0;
+  const hasUserGalleryContent = loading || userGalleryImages.length > 0;
 
   useEffect(() => {
     if (isPrintingJathagam && profile) {
-      document.body.classList.add("printing-jathagam");
+      document.body.classList.add('printing-jathagam');
       const timer = setTimeout(() => window.print(), 500);
       return () => clearTimeout(timer);
     }
@@ -1100,10 +88,10 @@ const ProfileView: React.FC = () => {
     if (isPrintingJathagam) {
       const handler = () => {
         setIsPrintingJathagam(false);
-        document.body.classList.remove("printing-jathagam");
+        document.body.classList.remove('printing-jathagam');
       };
-      window.addEventListener("afterprint", handler);
-      return () => window.removeEventListener("afterprint", handler);
+      window.addEventListener('afterprint', handler);
+      return () => window.removeEventListener('afterprint', handler);
     }
   }, [isPrintingJathagam]);
 
@@ -1117,14 +105,12 @@ const ProfileView: React.FC = () => {
   useEffect(() => {
     if (isPrintingBiodata) {
       const handler = () => setIsPrintingBiodata(false);
-      window.addEventListener("afterprint", handler);
-      return () => window.removeEventListener("afterprint", handler);
+      window.addEventListener('afterprint', handler);
+      return () => window.removeEventListener('afterprint', handler);
     }
   }, [isPrintingBiodata]);
 
-  const handlePrintJathagam = () => {
-    setIsPrintingJathagam(true);
-  };
+  const handlePrintJathagam = () => setIsPrintingJathagam(true);
 
   if (isPrintingJathagam && profile) {
     return <JathagamPrintView profile={profile} />;
@@ -1134,27 +120,45 @@ const ProfileView: React.FC = () => {
     return <PrintProfile profile={profile} />;
   }
 
-  if (isError) {
+  if (errorType) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-6">
         <div className="text-center">
           <div className="w-20 h-20 rounded-2xl bg-rosewood/5 flex items-center justify-center mx-auto mb-6">
             <span className="text-rosewood/30 text-2xl font-serif font-bold">!</span>
           </div>
-          <h2 className="text-2xl font-serif font-black text-rosewood mb-2">
-            {t("common:profile_not_found")}
+          <h2 className="text-xl font-serif font-black text-rosewood mb-2">
+            {errorType === 'NOT_FOUND' && t('common:profile_not_found')}
+            {errorType === 'FORBIDDEN' && 'Access Restricted'}
+            {errorType === 'NETWORK_ERROR' && 'Connection Error'}
           </h2>
-          <p className="text-gray-500 text-sm mb-6">
-            {t("common:profile_not_found_desc", {
-              defaultValue: "This profile may have been removed.",
-            })}
+          <p className="text-gray-500 text-sm mb-6 max-w-md">
+            {errorMessage || t('common:profile_not_found_desc', { defaultValue: 'This profile may have been removed.' })}
           </p>
-          <button
-            onClick={() => navigate(-1)}
-            className="px-8 py-3 bg-rosewood text-white rounded-xl font-black text-xs uppercase tracking-widest-plus hover:scale-105 active:scale-95 transition-all shadow-lg shadow-rosewood/20"
-          >
-            {t("common:back")}
-          </button>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => navigate(-1)}
+              className="px-8 py-3 bg-rosewood text-white rounded-xl font-black text-xs uppercase tracking-widest-plus hover:scale-105 active:scale-95 transition-all shadow-lg shadow-rosewood/20"
+            >
+              {t('common:back')}
+            </button>
+            {errorType === 'NETWORK_ERROR' && (
+              <button
+                onClick={handleRetry}
+                className="px-8 py-3 bg-gold/20 text-rosewood rounded-xl font-black text-xs uppercase tracking-widest-plus hover:scale-105 active:scale-95 transition-all"
+              >
+                Retry
+              </button>
+            )}
+            {errorType === 'FORBIDDEN' && (
+              <button
+                onClick={() => navigate('/manamaalai/plans')}
+                className="px-8 py-3 bg-gold/20 text-rosewood rounded-xl font-black text-xs uppercase tracking-widest-plus hover:scale-105 active:scale-95 transition-all"
+              >
+                View Plans
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -1162,7 +166,7 @@ const ProfileView: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white font-manrope selection:bg-gold/20">
-      {/* Section Tabs — sticky below layout header, full-width bar, negate parent p-4 top padding */}
+      {/* Section Tabs */}
       <div className="sticky top-0 z-20 relative -mt-4 lg:-mt-8">
         <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-screen bg-white border-b border-gold/10 shadow-sm pointer-events-none" />
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
@@ -1172,7 +176,7 @@ const ProfileView: React.FC = () => {
 
       {/* Main Content */}
       <div className="no-print max-w-6xl mx-auto px-4 sm:px-6 pb-10">
-        {/* Back + Print Buttons */}
+        {/* Back + Print + Actions */}
         <div className="flex items-center justify-between pt-4 sm:pt-6 pb-4 sm:pb-8 gap-2">
           <motion.button
             whileHover={{ y: -1 }}
@@ -1183,60 +187,104 @@ const ProfileView: React.FC = () => {
                        font-black uppercase tracking-wider shadow-sm btn-shine shrink-0"
           >
             <ArrowLeft size={14} className="sm:size-4" />
-            <span className="hidden sm:inline">{t("common:back")}</span>
+            <span className="hidden sm:inline">{t('common:back')}</span>
           </motion.button>
 
-          {profile && (
-            <div className="flex items-center gap-1.5 sm:gap-3">
-              <motion.button
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handlePrintJathagam}
-                className="btn-shine flex items-center gap-1 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2
-                           bg-rosewood-gradient text-white rounded-xl text-[10px] sm:text-[11px]
-                           font-bold shadow-sm border border-rosewood/20 shrink-0"
-              >
-                <FileText size={13} className="sm:size-[14px]" />
-                <span className="hidden sm:inline">{t("common:print_jathagam")}</span>
-              </motion.button>
-
-              <motion.button
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsPrintingBiodata(true)}
-                className="btn-shine flex items-center gap-1 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2
-                            bg-rosewood-gradient text-white rounded-xl text-[10px] sm:text-[11px]
-                            font-bold shadow-sm border border-rosewood/20 shrink-0"
-              >
-                <Printer size={13} className="sm:size-[14px]" />
-                <span className="hidden sm:inline">{t("common:print")}</span>
-              </motion.button>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <ActionBar viewerRole={viewerRole} isShortlisted={shortlisted} isOwner={isOwner} onToggleShortlist={handleToggleShortlist} onInvite={handleSendInvite} />
+            {profile && (
+              <>
+                {(canPrintHoroscope || bypassLocks) ? (
+                  <motion.button
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handlePrintJathagam}
+                    className="btn-shine flex items-center gap-1 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2
+                               bg-rosewood-gradient text-white rounded-xl text-[10px] sm:text-[11px]
+                               font-bold shadow-sm border border-rosewood/20 shrink-0"
+                  >
+                    <FileText size={13} className="sm:size-[14px]" />
+                    <span className="hidden sm:inline">{t('common:print_jathagam')}</span>
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate('/manamaalai/plan-upgrade')}
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2
+                               bg-gray-200 text-gray-400 rounded-xl text-[10px] sm:text-[11px]
+                               font-bold shadow-sm shrink-0"
+                    title={t('common:upgrade_to_print', { defaultValue: 'Upgrade to print' })}
+                  >
+                    <FileText size={13} className="sm:size-[14px]" />
+                    <span className="hidden sm:line-through">{t('common:print_jathagam')}</span>
+                  </motion.button>
+                )}
+                {(canPrintProfile || bypassLocks) ? (
+                  <motion.button
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setIsPrintingBiodata(true)}
+                    className="btn-shine flex items-center gap-1 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2
+                                bg-rosewood-gradient text-white rounded-xl text-[10px] sm:text-[11px]
+                                font-bold shadow-sm border border-rosewood/20 shrink-0"
+                  >
+                    <Printer size={13} className="sm:size-[14px]" />
+                    <span className="hidden sm:inline">{t('common:print')}</span>
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate('/manamaalai/plan-upgrade')}
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2
+                                bg-gray-200 text-gray-400 rounded-xl text-[10px] sm:text-[11px]
+                                font-bold shadow-sm shrink-0"
+                    title={t('common:upgrade_to_print', { defaultValue: 'Upgrade to print' })}
+                  >
+                    <Printer size={13} className="sm:size-[14px]" />
+                    <span className="hidden sm:line-through">{t('common:print')}</span>
+                  </motion.button>
+                )}
+              </>
+            )}
+          </div>
         </div>
+
+        {/* Staff badge */}
+        {viewerRole === 'admin' && profile && (
+          <div className="mb-4 flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-700">
+            <Shield size={14} />
+            <span>{t('common:admin_view')}</span>
+          </div>
+        )}
 
         {/* Hero */}
         <AnimatedSection>
           <div id="section-basic" className="scroll-mt-20 mb-6">
-            <ProfileViewHeader profile={profile} isLoading={isLoading} />
+            <ProfileHeaderSection profile={profile} isLoading={loading} isTamil={isTamil} isOwner={isOwner} />
           </div>
         </AnimatedSection>
 
         {/* Rejection / Block reasons */}
         <AnimatedSection>
           <div className="mb-6">
-            <StatusReasons profile={profile} isTamil={isTamil} />
+            <StatusReasonsSection
+              rejectionReasonEn={profile?.rejectionReasonEn}
+              rejectionReasonTa={profile?.rejectionReasonTa}
+              statusReasonEn={profile?.statusReasonEn}
+              statusReasonTa={profile?.statusReasonTa}
+              isTamil={isTamil}
+              show={!!profile && isOwner}
+            />
           </div>
         </AnimatedSection>
 
         {/* Sections 1 + 2: Personal + Community */}
         <AnimatedSection>
           <div id="section-personal" className="scroll-mt-20 grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-            <ProfileViewPersonal profile={profile} isLoading={isLoading} />
-            <ProfileViewCommunity
-              profile={profile}
-              isLoading={isLoading}
-            />
+            <PersonalSection profile={profile} isLoading={loading} />
+            <CommunitySection profile={profile} isLoading={loading} />
           </div>
         </AnimatedSection>
         <SectionDivider />
@@ -1245,12 +293,13 @@ const ProfileView: React.FC = () => {
         <AnimatedSection>
           <div id="section-professional" className="scroll-mt-20">
             {professionalLocked ? (
-              <LockedSection
+              <LockedSectionUpgrade
                 message="Upgrade to view professional details"
                 messageTa="தொழில் விவரங்களைக் காண மேம்படுத்தவும்"
+                isTamil={isTamil}
               />
             ) : (
-              <ProfileViewProfessional profile={profile} isLoading={isLoading} />
+              <ProfessionalSection profile={profile} isLoading={loading} />
             )}
           </div>
         </AnimatedSection>
@@ -1260,12 +309,13 @@ const ProfileView: React.FC = () => {
         <AnimatedSection>
           <div id="section-family" className="scroll-mt-20">
             {familyLocked ? (
-              <LockedSection
+              <LockedSectionUpgrade
                 message="Upgrade to view family details"
                 messageTa="குடும்ப விவரங்களைக் காண மேம்படுத்தவும்"
+                isTamil={isTamil}
               />
             ) : (
-              <ProfileViewFamily profile={profile} isLoading={isLoading} />
+              <FamilySection profile={profile} isLoading={loading} />
             )}
           </div>
         </AnimatedSection>
@@ -1274,10 +324,7 @@ const ProfileView: React.FC = () => {
         {/* Section 5: Assets */}
         <AnimatedSection>
           <div id="section-assets" className="scroll-mt-20">
-            <ProfileViewAssets
-              profile={profile}
-              isLoading={isLoading}
-            />
+            <AssetsSection profile={profile} isLoading={loading} />
           </div>
         </AnimatedSection>
         <SectionDivider />
@@ -1286,24 +333,22 @@ const ProfileView: React.FC = () => {
         <AnimatedSection>
           <div id="section-contact" className="scroll-mt-20">
             {contactLocked ? (
-              <LockedSection
+              <LockedSectionUpgrade
                 message="Upgrade to Platinum to view contact information"
                 messageTa="தொடர்பு தகவலைக் காண பிளாட்டினத்திற்கு மேம்படுத்தவும்"
+                isTamil={isTamil}
               />
             ) : (
-              <ProfileViewContact profile={profile} isLoading={isLoading} />
+              <ContactSection profile={profile} isLoading={loading} />
             )}
           </div>
         </AnimatedSection>
         <SectionDivider />
 
-        {/* Section 7: Partner Preference -- was 6 before Contact addition */}
+        {/* Section 7: Partner Preference */}
         <AnimatedSection>
           <div id="section-partner-preference" className="scroll-mt-20">
-            <ProfileViewPartnerPreference
-              profile={profile}
-              isLoading={isLoading}
-            />
+            <PartnerPreferenceSection profile={profile} isLoading={loading} />
           </div>
         </AnimatedSection>
         <SectionDivider />
@@ -1311,13 +356,14 @@ const ProfileView: React.FC = () => {
         {/* Section 8: Horoscope */}
         <AnimatedSection>
           <div id="section-horoscope" className="scroll-mt-20">
-            {horoscopeLabelsLocked && !profile?.isOwner ? (
-              <LockedSection
+            {horoscopeLabelsLocked && !isOwner ? (
+              <LockedSectionUpgrade
                 message="Upgrade to view horoscope details"
                 messageTa="ஜாதக விவரங்களைக் காண மேம்படுத்தவும்"
+                isTamil={isTamil}
               />
             ) : (
-              <ProfileViewHoroscope profile={profile} isLoading={isLoading} />
+              <HoroscopeSection profile={profile} isLoading={loading} />
             )}
           </div>
         </AnimatedSection>
@@ -1329,12 +375,13 @@ const ProfileView: React.FC = () => {
             <AnimatedSection>
               <div id="section-gallery" className="scroll-mt-20 mb-6">
                 {galleryLocked ? (
-                  <LockedSection
+                  <LockedSectionUpgrade
                     message="Upgrade to view photos"
                     messageTa="புகைப்படங்களைக் காண மேம்படுத்தவும்"
+                    isTamil={isTamil}
                   />
                 ) : (
-                  <ProfileViewGallery profile={profile} isLoading={isLoading} />
+                  <GallerySection profile={profile} isLoading={loading} />
                 )}
               </div>
             </AnimatedSection>

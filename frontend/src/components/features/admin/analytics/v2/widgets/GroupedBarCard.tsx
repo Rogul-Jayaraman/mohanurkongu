@@ -8,7 +8,7 @@ interface Props {
   xKey: string; loading?: boolean; height?: number;
 }
 
-export const GroupedBarCard: React.FC<Props> = ({ title, subtitle, data, keys, xKey, loading, height = 300 }) => {
+export const GroupedBarCard: React.FC<Props> = React.memo(({ title, subtitle, data, keys, xKey, loading, height = 300 }) => {
   if (loading) {
     return (
       <div className="bg-white border border-gold/20 rounded-xl shadow-sm animate-pulse">
@@ -44,4 +44,6 @@ export const GroupedBarCard: React.FC<Props> = ({ title, subtitle, data, keys, x
       )}
     </div>
   );
-};
+});
+
+GroupedBarCard.displayName = 'GroupedBarCard';

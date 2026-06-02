@@ -29,6 +29,7 @@ export const adminLayoutTa = {
       packages: "பேக்கேஜ்கள்",
       hallAvailability: "மண்டப இருப்பு",
       bookings: "முன்பதிவுகள்",
+      createBooking: "புதிய முன்பதிவு",
       settings: "அமைப்புகள்",
       profile_details: "சுயவிவர விவரங்கள்",
     },

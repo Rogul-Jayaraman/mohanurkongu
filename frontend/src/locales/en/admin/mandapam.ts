@@ -259,7 +259,9 @@ export const adminMandapamEn = {
       pricingHistory: 'Pricing History',
       pricingHistoryDesc: 'View price changes over time across all packages.',
       showLess: 'Show less',
+      more: 'more',
       functionsCount: 'functions',
+      token: 'Token',
     },
     facilities: {
       title: 'Facilities',

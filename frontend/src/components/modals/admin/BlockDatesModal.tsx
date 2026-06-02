@@ -4,8 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { ModalShell } from '@/components/ui/modals/ModalShell';
 import TranslatableTextarea from '@/components/ui/forms/TranslatableTextarea';
-import { adminBlockDates } from '@/api/mandapam.api';
-import { toast } from 'sonner';
+import { useBlockDates } from '@/queries/useMandapamMutations';
 import { useLanguage } from '@/context/LanguageContext';
 
 const BLOCK_REASONS = [
@@ -32,8 +31,8 @@ export const BlockDatesModal: React.FC<BlockDatesModalProps> = ({ isOpen, onClos
     const [selectedOption, setSelectedOption] = useState('');
     const [reasonEn, setReasonEn] = useState('');
     const [reasonTa, setReasonTa] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const blockMutation = useBlockDates();
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, showAbove: false });
     const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -42,7 +41,6 @@ export const BlockDatesModal: React.FC<BlockDatesModalProps> = ({ isOpen, onClos
             setSelectedOption('');
             setReasonEn('');
             setReasonTa('');
-            setIsSubmitting(false);
             setIsDropdownOpen(false);
         }
     }, [isOpen]);
@@ -94,20 +92,12 @@ export const BlockDatesModal: React.FC<BlockDatesModalProps> = ({ isOpen, onClos
             reasonEnVal = found?.label.en || '';
             reasonTaVal = found?.label.ta || '';
         }
-        setIsSubmitting(true);
-        try {
-            await adminBlockDates({
-                dates,
-                reason: { en: reasonEnVal, ta: reasonTaVal }
-            });
-            toast.success(isTamil ? `${dates.length} நாட்கள் தடுக்கப்பட்டன` : `${dates.length} date(s) blocked successfully`);
-            onSuccess?.();
-            onClose();
-        } catch (err: any) {
-            toast.error(err.message || (isTamil ? 'தடுக்க முடியவில்லை' : 'Failed to block dates'));
-        } finally {
-            setIsSubmitting(false);
-        }
+        await blockMutation.mutateAsync({
+            dates,
+            reason: { en: reasonEnVal, ta: reasonTaVal }
+        });
+        onSuccess?.();
+        onClose();
     };
 
     const formatDate = (d: string) => {
@@ -195,10 +185,10 @@ export const BlockDatesModal: React.FC<BlockDatesModalProps> = ({ isOpen, onClos
                     <button
                         type="button"
                         onClick={handleConfirm}
-                        disabled={!selectedOption || isSubmitting || (selectedOption === 'OTHER' && !reasonEn.trim() && !reasonTa.trim())}
+                        disabled={!selectedOption || blockMutation.isPending || (selectedOption === 'OTHER' && !reasonEn.trim() && !reasonTa.trim())}
                         className="flex-1 px-4 py-3 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 bg-linear-to-br from-rosewood to-dark-rosewood text-ivory disabled:opacity-40 active:scale-[0.98]"
                     >
-                        {isSubmitting ? (
+                        {blockMutation.isPending ? (
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         ) : (
                             <Ban size={14} />

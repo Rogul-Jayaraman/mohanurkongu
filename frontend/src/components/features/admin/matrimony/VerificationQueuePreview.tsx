@@ -6,20 +6,27 @@ import { AdminProfileCard } from '@/components/features/admin/matrimony/ProfileC
 import { useNavigate } from 'react-router-dom';
 import { SectionHeader } from '@/components/ui/layout/SectionHeader';
 import { EmptyState } from '@/components/ui/feedback/EmptyState';
-import { fetchVerificationQueue } from '@/api/verification.api';
 import { AdminProfileCardSkeleton } from '@/components/features/admin/matrimony/ProfileCardSkeleton';
+import { useVerificationQueueQuery } from '@/queries/useProfileQueries';
+import { useApproveProfileMutation, useRejectProfileMutation } from '@/queries/useAdminMutations';
 
 const VerificationQueuePreview: React.FC = () => {
     const { t } = useLanguage();
     const navigate = useNavigate();
 
-    const [data, setData] = React.useState<{ profiles: any[] }>({ profiles: [] });
-    const [isLoading, setIsLoading] = React.useState(true);
-    React.useEffect(() => { fetchVerificationQueue().then((res: any) => setData({ profiles: res.profiles || [] })).finally(() => setIsLoading(false)); }, []);
-    const profiles = (data as any)?.profiles || [];
+    const queueQuery = useVerificationQueueQuery();
+    const approveMut = useApproveProfileMutation();
+    const rejectMut = useRejectProfileMutation();
 
-    const handleAccept = (id: string) => console.log('Accepted:', id);
-    const handleReject = (id: any) => console.log('Rejected:', id);
+    const profiles: any[] = (queueQuery.data as any)?.profiles ?? [];
+    const isLoading = queueQuery.isPending;
+
+    const handleAccept = (id: string) => {
+        approveMut.mutate(id);
+    };
+    const handleReject = (id: string) => {
+        rejectMut.mutate({ id, reasonEn: 'Rejected from queue preview' });
+    };
 
     return (
         <div className="w-full space-y-6">

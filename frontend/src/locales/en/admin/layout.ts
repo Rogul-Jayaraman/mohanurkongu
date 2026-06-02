@@ -29,6 +29,7 @@ export const adminLayoutEn = {
       packages: "Packages",
       hallAvailability: "Hall Availability",
       bookings: "Bookings",
+      createBooking: "Create Booking",
       settings: "Settings",
       profile_details: "Profile Details",
     },

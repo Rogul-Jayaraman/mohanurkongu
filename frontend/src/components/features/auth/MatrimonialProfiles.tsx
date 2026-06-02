@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from
 import { motion } from 'framer-motion';
 import { ProfileShowcaseCard } from './ProfileShowcaseCard';
 import { useTranslations } from '@/hooks/useTranslations';
-import { fetchShowcaseProfiles } from '@/api/profile.api';
+import { useShowcaseQuery } from '@/queries/useProfileQueries';
 import type { ShowcaseProfile } from '@/types/profile';
 
 
@@ -44,35 +44,12 @@ export const MatrimonialProfiles: React.FC = () => {
   const { t, language } = useTranslations(['auth']);
   const isTamil = language === 'ta';
 
-  const [brides, setBrides] = useState<ShowcaseProfile[]>([]);
-  const [grooms, setGrooms] = useState<ShowcaseProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchProfiles = useCallback(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    fetchShowcaseProfiles()
-      .then((data) => {
-        if (cancelled) return;
-        setBrides(data.brides);
-        setGrooms(data.grooms);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err?.message || 'Failed to load profiles');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    const cleanup = fetchProfiles();
-    return cleanup;
-  }, [fetchProfiles]);
+  const showcaseQuery = useShowcaseQuery();
+  const data = showcaseQuery.data as any;
+  const brides: ShowcaseProfile[] = data?.brides ?? [];
+  const grooms: ShowcaseProfile[] = data?.grooms ?? [];
+  const loading = showcaseQuery.isPending;
+  const error = showcaseQuery.error ? (showcaseQuery.error as Error).message : null;
 
   const profiles = React.useMemo(() => interleave(brides, grooms), [brides, grooms]);
 
@@ -231,7 +208,7 @@ export const MatrimonialProfiles: React.FC = () => {
             {isTamil ? 'சுயவிவரங்களை ஏற்றுவதில் பிழை' : 'Unable to load profiles'}
           </p>
           <button
-            onClick={fetchProfiles}
+            onClick={() => showcaseQuery.refetch()}
             className="mt-2 text-[11px] text-gold/60 hover:text-gold underline underline-offset-2 cursor-pointer transition-colors"
           >
             {isTamil ? 'மீண்டும் முயற்சிக்கவும்' : 'Try again'}

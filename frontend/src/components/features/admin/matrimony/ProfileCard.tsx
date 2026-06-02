@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreVertical, Eye, Check, X } from 'lucide-react';
+import { MoreVertical, Eye, Check, X, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LazyImage } from '@/components/ui/atoms/LazyImage';
 import { useTranslations } from '@/hooks/useTranslations';
@@ -16,6 +16,7 @@ interface AdminActions {
     onAccept?: (id: string) => void;
     onReject?: (id: string) => void;
     onView?: (id: string) => void;
+    onAudit?: (id: string) => void;
 }
 
 interface AdminProfileCardProps {
@@ -189,15 +190,26 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = React.memo(({
                         </div>
                     )}
                     
-                    <button
-                        onClick={(e) => { e.stopPropagation(); handleViewProfile(); }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood shadow-[inset_0_1px_2px_rgba(255,255,255,1),0_2px_4px_rgba(0,0,0,0.05)] border border-gold/10 transition-all duration-500 cursor-pointer hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 hover:shadow-lg hover:shadow-rosewood/20 hover:-translate-y-0.5"
-                    >
-                        <Eye size={16} strokeWidth={3} className="text-current group-hover/btn:scale-110 transition-transform duration-300" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">
-                            {t('common:profile.action.view_details') || 'View Details'}
-                        </span>
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                          onClick={(e) => { e.stopPropagation(); handleViewProfile(); }}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-linear-to-br from-ivory to-gold/40 text-rosewood shadow-[inset_0_1px_2px_rgba(255,255,255,1),0_2px_4px_rgba(0,0,0,0.05)] border border-gold/10 transition-all duration-500 cursor-pointer hover:bg-linear-to-br hover:from-rosewood/80 hover:via-dark-rosewood/95 hover:to-rosewood/80 hover:text-white hover:border-rosewood/50 hover:shadow-lg hover:shadow-rosewood/20 hover:-translate-y-0.5"
+                      >
+                          <Eye size={16} strokeWidth={3} className="text-current group-hover/btn:scale-110 transition-transform duration-300" />
+                          <span className="text-[10px] font-bold uppercase tracking-wider">
+                              {t('common:profile.action.view_details') || 'View Details'}
+                          </span>
+                      </button>
+                      {adminActions?.onAudit && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); adminActions.onAudit!(profile.id); }}
+                          className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-gold-soft/30 text-rosewood/60 hover:bg-gold-soft/10 hover:text-rosewood transition-all duration-300 cursor-pointer text-[10px] font-bold uppercase tracking-wider"
+                        >
+                          <Shield size={14} strokeWidth={2} />
+                          {t('adminMatrimony:verification.audit') || 'Audit'}
+                        </button>
+                      )}
+                    </div>
                 </div>
             </div>
         </div>

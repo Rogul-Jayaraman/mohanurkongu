@@ -1,0 +1,104 @@
+import React from 'react';
+import { Map } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
+import { useProfileUtils } from '@/hooks/useProfileUtils';
+import { getBilingualValue } from '@/utils/bilingual';
+import { getImageUrl } from '@/utils/getImageUrl';
+import { NAKSHATRA_OPTIONS, RASI_OPTIONS, DOSHAM_OPTIONS } from '@/constants/index';
+import { SectionCard3D, SectionHeaderRedesigned, DetailRow } from '@/components/features/matrimony/ProfileViewPrimitives';
+import { D1Chart, D9Chart } from '@/components/shared/horoscope';
+import type { HoroscopeResult } from '@/types/horoscope';
+
+interface HoroscopeSectionProps {
+  profile: any;
+  isLoading: boolean;
+}
+
+const HoroscopeSection: React.FC<HoroscopeSectionProps> = ({ profile, isLoading }) => {
+  const { i18n } = useTranslation(['common']);
+  const lang = i18n.language as 'en' | 'ta';
+  const isTamil = i18n.language === 'ta';
+  const { t, getEnumLabel } = useProfileUtils();
+
+  const natchathiram = profile?.star ? getBilingualValue(NAKSHATRA_OPTIONS, profile.star, lang) : '';
+  const rasiLabel = profile?.rasi ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang) : '';
+  const lagnam = profile?.lagnam ? getBilingualValue(RASI_OPTIONS, profile.lagnam, lang) : '';
+  const dosham = profile?.dosham ? getEnumLabel(profile.dosham, DOSHAM_OPTIONS) : '';
+  const hasCharts = profile?.horoscope && (profile.horoscope.rasi || profile.horoscope.navamsa || (profile.horoscope.mode === 'GENERATED' && profile.horoscope.horoscopeJson));
+
+  return (
+    <SectionCard3D isLoading={isLoading}>
+      <SectionHeaderRedesigned
+        title={t('profile_new:sections.horoscope_details')}
+        icon={<Map size={16} />}
+        gradient="bg-rosewood-gradient"
+        isTamil={isTamil}
+        isLoading={isLoading}
+      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0 mb-8">
+        <DetailRow label={t('profile_new:star')} value={natchathiram} isLoading={isLoading} />
+        <DetailRow label={t('profile_new:rasi')} value={rasiLabel} isLoading={isLoading} />
+        <DetailRow label={t('profile_new:laganam')} value={lagnam} isLoading={isLoading} />
+        <DetailRow label={t('profile_new:dosham')} value={dosham} isLoading={isLoading} />
+      </div>
+      {isLoading || hasCharts ? (
+        <div className="mt-8 pt-8 border-t border-gold/20">
+          <h3 className="text-sm font-bold text-rosewood uppercase tracking-widest mb-6 flex items-center gap-2">
+            <span className="material-symbols-outlined text-gold">auto_awesome</span>
+            {t('profile_new:horoscope.charts')}
+          </h3>
+          {isLoading ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="aspect-square bg-gold/10 rounded-xl animate-pulse" />
+              <div className="aspect-square bg-gold/10 rounded-xl animate-pulse" />
+            </div>
+          ) : profile?.horoscope?.mode === 'GENERATED' ? (
+            (() => {
+              const hJson = profile?.horoscope?.horoscopeJson;
+              if (hJson) {
+                const parsed = typeof hJson === 'string' ? JSON.parse(hJson) : hJson as HoroscopeResult;
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d">
+                      <D1Chart lagnaSign={parsed.lagna.signIndex} planets={parsed.planets} />
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d">
+                      <D9Chart planets={parsed.planets} lagnaNavamsaSignIndex={parsed.lagnaNavamsa.signIndex} />
+                    </motion.div>
+                  </div>
+                );
+              }
+              return null;
+            })()
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {profile?.horoscope?.rasi?.url && (
+                <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
+                  <img src={getImageUrl(profile.horoscope.rasi.url) || ''} alt="Rasi" className="w-full h-full object-contain p-4" />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{t('profile_new:horoscope.rasi_chart_label')}</span>
+                  </div>
+                </motion.div>
+              )}
+              {profile?.horoscope?.navamsa?.url && (
+                <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
+                  <img src={getImageUrl(profile.horoscope.navamsa.url) || ''} alt="Navamsa" className="w-full h-full object-contain p-4" />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{t('profile_new:horoscope.navamsa_chart_label')}</span>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="mt-8 p-6 bg-white rounded-xl border border-gold/20 text-center">
+          <p className="text-sm text-slate-400 italic font-medium">{t('profile_new:horoscope.no_chart_provided')}</p>
+        </div>
+      )}
+    </SectionCard3D>
+  );
+};
+
+export default HoroscopeSection;

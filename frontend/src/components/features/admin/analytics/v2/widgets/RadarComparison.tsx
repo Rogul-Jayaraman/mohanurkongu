@@ -7,7 +7,7 @@ interface Props {
   title: string; subtitle?: string; labels: string[]; male: number[]; female: number[]; loading?: boolean;
 }
 
-export const RadarComparison: React.FC<Props> = ({ title, subtitle, labels, male, female, loading }) => {
+export const RadarComparison: React.FC<Props> = React.memo(({ title, subtitle, labels, male, female, loading }) => {
   if (loading) {
     return (
       <div className="bg-white border border-gold/20 rounded-xl shadow-sm animate-pulse">
@@ -42,4 +42,6 @@ export const RadarComparison: React.FC<Props> = ({ title, subtitle, labels, male
       )}
     </div>
   );
-};
+});
+
+RadarComparison.displayName = 'RadarComparison';

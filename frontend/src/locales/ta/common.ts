@@ -1,4 +1,6 @@
 export const commonTa = {
+    "Full Name": "முழு பெயர்",
+    "Age": "வயது",
     "Profile For": "பதிவு செய்பவருடனான உறவு",
     "Name": "பெயர்",
     "Date of Birth": "பிறந்த தேதி",
@@ -289,5 +291,6 @@ export const commonTa = {
       'RANIPET': 'ராணிப்பேட்டை',
       'MAYILADUTHURAI': 'மயிலாடுதுறை',
       'OTHER': 'மற்றவை'
-    }
+    },
+    admin_view: 'நிர்வாகி அணுகல் — அனைத்து பிரிவுகளும் தெரியும்'
   };

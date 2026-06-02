@@ -1,4 +1,6 @@
 export const commonEn = {
+    "Full Name": "Full Name",
+    "Age": "Age",
     "Profile For": "Profile For",
     "Name": "Name",
     "Date of Birth": "Date of Birth",
@@ -289,5 +291,6 @@ export const commonEn = {
       'RANIPET': 'Ranipet',
       'MAYILADUTHURAI': 'Mayiladuthurai',
       'OTHER': 'Other'
-    }
+    },
+    admin_view: 'Admin Access — All sections visible'
   };

@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useLanguage } from "../../context/LanguageContext";
 import { ScrollToTop } from "../../components/ui/layout/ScrollToTop";
 
 export const AdminLayout: React.FC = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
 
@@ -26,18 +27,23 @@ export const AdminLayout: React.FC = () => {
     if (path.includes("/admin/mandapam/availability"))
       return "adminLayout.nav.hallAvailability";
     if (path.includes("/admin/mandapam/bookings")) return "adminLayout.nav.bookings";
+    if (path.includes("/admin/mandapam/new-booking")) return "adminLayout.nav.createBooking";
     if (path.includes("/admin/settings")) return "adminLayout.nav.settings";
     return "adminLayout.header.adminPanel";
   };
 
+  const path = location.pathname;
+  const showBack = path.includes("/admin/mandapam/new-booking");
+
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen admin-layout">
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 min-w-0 xl:ml-72 bg-white h-dvh overflow-hidden transition-all flex flex-col">
         <Header
           onMenuClick={() => setIsSidebarOpen(true)}
           title={getPageTitle()}
+          onBack={showBack ? () => navigate('/admin/mandapam/availability') : undefined}
         />
 
         <ScrollToTop dependencies={[location.pathname]} />

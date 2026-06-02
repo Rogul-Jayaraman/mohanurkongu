@@ -1,8 +1,15 @@
 import { prisma } from '../../database/prisma.js';
 
 export class AdminProfilesRepository {
-  async findAll(params: { page: number; limit: number; search?: string; status?: string }) {
-    const { page, limit, search, status } = params;
+  async findAll(params: {
+    page: number; limit: number; search?: string; status?: string;
+    sortBy?: string; sortOrder?: string; communityId?: string; regNo?: string;
+    createdAtFrom?: string; createdAtTo?: string;
+  }) {
+    const {
+      page, limit, search, status, sortBy, sortOrder,
+      communityId, regNo, createdAtFrom, createdAtTo,
+    } = params;
     const where: any = {};
 
     if (status && status !== 'All') {
@@ -18,12 +25,31 @@ export class AdminProfilesRepository {
       ];
     }
 
+    if (communityId) {
+      const parsed = parseInt(communityId, 10);
+      if (!isNaN(parsed)) where.community = { communityId: parsed };
+    }
+
+    if (regNo) {
+      where.regNo = regNo;
+    }
+
+    if (createdAtFrom || createdAtTo) {
+      where.createdAt = {};
+      if (createdAtFrom) where.createdAt.gte = new Date(createdAtFrom);
+      if (createdAtTo) where.createdAt.lte = new Date(createdAtTo);
+    }
+
+    const validSortFields = ['createdAt', 'updatedAt', 'regNo'];
+    const orderField = validSortFields.includes(sortBy || '') ? sortBy! : 'createdAt';
+    const orderDir = sortOrder === 'asc' ? 'asc' : 'desc';
+
     const [profiles, total] = await Promise.all([
       prisma.profile.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { [orderField]: orderDir },
         include: {
           basic: {
             include: {
