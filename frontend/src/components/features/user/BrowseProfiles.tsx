@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 
 import { UserProfileCard, UserProfileCardSkeleton } from '@/components/features/user/UserProfileCard';
 import { SearchBar } from '@/components/ui/SearchBar';
-import { QuickFilters } from '@/components/ui/table/QuickFilters';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { useAuth } from '@/hooks/useAuth';
 import { useBrowseProfiles } from '@/hooks/useProfileBrowse';
@@ -129,22 +128,17 @@ interface BrowseProfilesHeaderProps {
     description?: string;
     searchQuery: string;
     setSearchQuery: (q: string) => void;
-    filters: any;
-    onFilterChange: (key: string, value: any) => void;
     onFilterClick: (key?: string) => void;
-    resultCount: number;
-    loading: boolean;
     children?: React.ReactNode;
 }
 
 const BrowseProfilesHeader: React.FC<BrowseProfilesHeaderProps> = ({
-    title, description, searchQuery, setSearchQuery, filters, onFilterChange, onFilterClick, resultCount, loading, children
+    title, description, searchQuery, setSearchQuery, onFilterClick, children
 }) => {
-    const { t, i18n } = useTranslation(['common', 'dashboard', 'browse']);
-    const lang = i18n.language as 'en' | 'ta';
+    const { t } = useTranslation(['common', 'dashboard', 'browse']);
 
     return (
-        <div className="bg-ivory/95 backdrop-blur-md border-b border-gold/10 pt-3 md:pt-4 pb-1 md:pb-2 px-4 -mx-4 md:mx-0 md:rounded-b-2xl shadow-sm transition-all duration-300">
+        <div className="bg-ivory/95 backdrop-blur-md border-b border-gold/10 pt-3 md:pt-4 pb-4 md:pb-6 px-4 -mx-4 md:mx-0 md:rounded-b-2xl shadow-sm transition-all duration-300">
             <div className="max-w-7xl mx-auto space-y-2 md:space-y-4">
                 <div className="hidden md:flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 min-w-0">
@@ -162,9 +156,6 @@ const BrowseProfilesHeader: React.FC<BrowseProfilesHeaderProps> = ({
                 {children && <div className="flex md:hidden justify-center w-full px-4">{children}</div>}
                 <div className="w-full px-2 md:px-0">
                     <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} onFilterClick={() => onFilterClick('advanced')} placeholder={t('common:search')} />
-                </div>
-                <div className="overflow-x-clip no-scrollbar -mx-4 md:mx-0 px-4 md:px-0 text-center">
-                    <QuickFilters filters={filters} onFilterChange={onFilterChange} onFilterClick={onFilterClick} />
                 </div>
             </div>
         </div>
@@ -296,10 +287,14 @@ const BrowseProfiles: React.FC = () => {
     const handleGenderChange = (gender: 'MALE' | 'FEMALE') => { setSelectedGender(gender); };
 
     const { data: capsData } = useMyCapabilitiesQuery();
+    const capsInfo = (capsData as any)?.capabilities as { searchLevel?: string; openLimit?: number; openRemaining?: number } | undefined;
     useEffect(() => {
-      const caps = (capsData as any)?.capabilities as { searchLevel?: string } | undefined;
-      if (caps?.searchLevel) setSearchLevel(caps.searchLevel);
-    }, [capsData]);
+      if (capsInfo?.searchLevel) setSearchLevel(capsInfo.searchLevel);
+    }, [capsInfo]);
+
+    const openLimit = capsInfo?.openLimit ?? -1;
+    const openRemaining = capsInfo?.openRemaining ?? -1;
+    const showQuota = openLimit >= 0;
 
     const {
         profiles,
@@ -333,14 +328,18 @@ const BrowseProfiles: React.FC = () => {
                         searchQuery={searchQuery}
                         setSearchQuery={setSearchQuery}
                         onFilterClick={() => setShowFilters(true)}
-                        filters={filters}
-                        onFilterChange={handleFilterChange}
-                        resultCount={profiles.length}
-                        loading={isLoading}
                     >
-                        {!hasActiveFilters && (
-                            <GenderToggle selectedGender={selectedGender} onGenderChange={handleGenderChange} />
-                        )}
+                        <div className="flex items-center gap-2">
+                            {showQuota && (
+                                <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold border ${openRemaining === 0 ? 'bg-red-50 text-red-600 border-red-200' : openRemaining <= 3 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-ivory text-rosewood/50 border-gold/10'}`}>
+                                    <span>{openRemaining <= 0 ? '0' : openRemaining}/{openLimit}</span>
+                                    <span className="opacity-60">{'views'}</span>
+                                </div>
+                            )}
+                            {!hasActiveFilters && (
+                                <GenderToggle selectedGender={selectedGender} onGenderChange={handleGenderChange} />
+                            )}
+                        </div>
                     </BrowseProfilesHeader>
 
                     <div className="space-y-4">

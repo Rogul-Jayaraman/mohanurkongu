@@ -15,11 +15,11 @@ import { queryKeys } from './queryKeys';
 import type { BrowseProfilesParams, CursorParams } from '../types/profile';
 import type { VerificationQueueParams } from '../api/verification.api';
 
-export function useProfileQuery(profileId: string | undefined, signal?: AbortSignal) {
+export function useProfileQuery(profileId: string | undefined, options?: { signal?: AbortSignal; enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.profile.detail(profileId ?? ''),
-    queryFn: ({ signal: s }) => fetchProfile(profileId!, s ?? signal),
-    enabled: !!profileId,
+    queryFn: ({ signal: s }) => fetchProfile(profileId!, s ?? options?.signal),
+    enabled: (options?.enabled ?? true) && !!profileId,
     staleTime: 120_000,
   });
 }

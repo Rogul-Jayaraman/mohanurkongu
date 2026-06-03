@@ -74,7 +74,8 @@ const EmptyStateView: React.FC<{
 // ═══════════════════════════════════════════════════════════
 const MyProfiles: React.FC = () => {
     const navigate = useNavigate();
-    const { t } = useTranslation(['myprofiles', 'common']);
+    const { t, i18n } = useTranslation(['myprofiles', 'common']);
+    const isTamil = i18n.language === 'ta';
     const [searchQuery, setSearchQuery] = useState('');
     const [profileToDelete, setProfileToDelete] = useState<string | null>(null);
 
@@ -114,13 +115,15 @@ const MyProfiles: React.FC = () => {
                             placeholder={t('common:search')} 
                         />
                     </div>
-                    <button 
-                        onClick={handleCreateNew} 
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 h-11 md:h-12 rounded-2xl bg-linear-to-br from-ivory to-gold/30 text-rosewood shadow-[inset_0_1px_2px_rgba(255,255,255,1),0_2px_4px_rgba(0,0,0,0.05)] border border-gold/10 transition-all duration-500 hover:border-rosewood/50 hover:bg-linear-to-br hover:from-rosewood/95 hover:via-dark-rosewood/95 hover:to-rosewood/95 hover:text-white hover:shadow-lg hover:shadow-rosewood/20 hover:-translate-y-0.5 font-black hover:scale-[1.02] active:scale-95 whitespace-nowrap text-xs group"
-                    >
-                        <Plus className="w-4 h-4 text-current transition-colors duration-500" />
-                        <span>{t('myprofiles:create_new')}</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleCreateNew}
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 h-11 md:h-12 rounded-2xl whitespace-nowrap text-xs group font-black transition-all duration-500 bg-linear-to-br from-ivory to-gold/30 text-rosewood shadow-[inset_0_1px_2px_rgba(255,255,255,1),0_2px_4px_rgba(0,0,0,0.05)] border border-gold/10 hover:border-rosewood/50 hover:bg-linear-to-br hover:from-rosewood/95 hover:via-dark-rosewood/95 hover:to-rosewood/95 hover:text-white hover:shadow-lg hover:shadow-rosewood/20 hover:-translate-y-0.5 hover:scale-[1.02] active:scale-95"
+                        >
+                            <Plus className="w-4 h-4 text-current transition-colors duration-500" />
+                            <span>{t('myprofiles:create_new')}</span>
+                        </button>
+                    </div>
                 </div>
             </AnimatedSection>
 

@@ -36,6 +36,12 @@ const translationSchema = z.object({
   fatherName: z.string().nullable().optional(),
   motherName: z.string().nullable().optional(),
   jobLocation: z.string().nullable().optional(),
+  currentCity: z.string().nullable().optional(),
+  currentState: z.string().nullable().optional(),
+  currentCountry: z.string().nullable().optional(),
+  nativeCity: z.string().nullable().optional(),
+  nativeState: z.string().nullable().optional(),
+  nativeCountry: z.string().nullable().optional(),
 });
 
 export const saveDraftSchema = z.object({

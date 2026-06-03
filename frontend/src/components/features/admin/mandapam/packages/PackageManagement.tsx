@@ -25,8 +25,8 @@ const PackageManagement: React.FC = () => {
     const deleteAddon = useDeleteAddon();
 
     const packages = pkgData?.packages ?? [];
-    const facilities = facData?.items ?? [];
-    const addons = addonData?.items ?? [];
+    const facilities = (facData as any)?.facilities ?? [];
+    const addons = (addonData as any)?.addons ?? [];
 
     const [editPackage, setEditPackage] = useState<MandapamPackage | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);

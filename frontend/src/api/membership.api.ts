@@ -56,7 +56,11 @@ export interface BillingOverview {
     searchLevel: string;
     profileSlotLimit: number;
     shortlistLimit: number;
+    openLimit: number;
+    openRemaining: number;
     printProfile: boolean;
+    profileCount: number;
+    shortlistCount: number;
   } | null;
   plans: Array<{
     code: string;

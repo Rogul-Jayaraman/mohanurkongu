@@ -139,6 +139,7 @@ export interface Profile {
   verifiedAt?: string | null;
   verifiedBy?: string | null;
 
+  isOwner: boolean;
   status: ProfileStatus;
   adminVerified: VerificationStatus;
   createdAt: string;

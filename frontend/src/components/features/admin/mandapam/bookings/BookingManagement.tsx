@@ -87,8 +87,8 @@ const BookingManagement: React.FC = () => {
       bookingId: booking.id,
       action: {
         type: 'add-payment',
-        paymentType,
-        paymentMethod,
+        paymentType: paymentType as 'ADVANCE' | 'INSTALLMENT' | 'FINAL_PAYMENT',
+        paymentMethod: paymentMethod as 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE',
         amount: numAmount,
         referenceNo: referenceNo || undefined,
         notes: notes || undefined,
@@ -102,7 +102,7 @@ const BookingManagement: React.FC = () => {
       const numAmount = Number(refundAmount.replace?.(/,/g, '') ?? refundAmount);
       await bookingWrite.mutateAsync({
         bookingId: booking.id,
-        action: { type: 'add-refund', refundType, refundMethod, amount: numAmount, reason },
+        action: { type: 'add-refund', refundType: refundType as 'PARTIAL_REFUND' | 'FULL_REFUND', refundMethod: refundMethod as 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE', amount: numAmount, reason },
       });
     }
     await bookingWrite.mutateAsync({
@@ -118,7 +118,7 @@ const BookingManagement: React.FC = () => {
       if (numAmount > 0) {
         await bookingWrite.mutateAsync({
           bookingId: booking.id,
-          action: { type: 'add-payment', paymentType: 'FINAL_PAYMENT', paymentMethod, amount: numAmount },
+          action: { type: 'add-payment', paymentType: 'FINAL_PAYMENT', paymentMethod: paymentMethod as 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE', amount: numAmount },
         });
       }
       await bookingWrite.mutateAsync({

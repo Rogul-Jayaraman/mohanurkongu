@@ -22,6 +22,7 @@ import { formatFullName } from "@/utils/formatName";
 import { getImageUrl } from "@/utils/getImageUrl";
 import { getAccessToken } from "@/lib/session";
 import { useToggleShortlistMutation } from '@/queries/useProfileMutations';
+import { useBillingOverviewQuery } from '@/queries/useMembershipQueries';
 
 interface UserProfileCardProps {
   profile: any;
@@ -103,6 +104,12 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
         ? new Date().getFullYear() - new Date(profile.dob).getFullYear()
         : t("common:not_provided"));
 
+    const billingQuery = useBillingOverviewQuery();
+    const billingData = billingQuery.data as any;
+    const caps = billingData?.capabilities;
+    const shortlistLimit = caps?.shortlistLimit ?? -1;
+    const shortlistCount = caps?.shortlistCount ?? 0;
+
     const toggleShortlist = async (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
@@ -115,6 +122,11 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
       }
 
       const previousState = isShortlisted;
+      if (!previousState && shortlistLimit >= 0 && shortlistCount >= shortlistLimit) {
+        toast.error(t("common:shortlist_limit_reached") || "Shortlist limit reached. Upgrade to add more.");
+        return;
+      }
+
       setIsShortlisted(!previousState);
 
       try {

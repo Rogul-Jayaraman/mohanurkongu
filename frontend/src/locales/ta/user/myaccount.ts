@@ -5,7 +5,8 @@ export const myAccountTa = {
     },
     tabs: {
         details: "கணக்கு விவரங்கள்",
-        membership: "உறுப்பினர் & கட்டணம்",
+        membership: "உறுப்பினர்",
+        plans: "திட்டங்கள்",
     },
     details: {
         title: "தனிப்பட்ட தகவல்",

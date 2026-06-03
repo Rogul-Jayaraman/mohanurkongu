@@ -57,8 +57,8 @@ export const PackagesHero: React.FC<PackagesHeroProps> = () => {
   const { data: addonData, isLoading: loadingAddons } = usePublicAddons(langCode);
 
   const packages = (pkgData?.packages as PublicPackage[]) ?? [];
-  const facilities = (facData?.items as PublicFacility[]) ?? [];
-  const addons = (addonData?.items as PublicAddon[]) ?? [];
+  const facilities = (facData as any)?.facilities as PublicFacility[] ?? [];
+  const addons = (addonData as any)?.addons as PublicAddon[] ?? [];
   const loading = loadingPkgs || loadingFacs || loadingAddons;
   const error = pkgError ? (pkgError as Error).message : null;
 

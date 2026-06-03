@@ -44,7 +44,7 @@ const HoroscopeSection: React.FC<HoroscopeSectionProps> = ({ profile, isLoading 
       </div>
       {isLoading || hasCharts ? (
         <div className="mt-8 pt-8 border-t border-gold/20">
-          <h3 className="text-sm font-bold text-rosewood uppercase tracking-widest mb-6 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-rosewood mb-6 flex items-center gap-2">
             <span className="material-symbols-outlined text-gold">auto_awesome</span>
             {t('profile_new:horoscope.charts')}
           </h3>
@@ -77,7 +77,7 @@ const HoroscopeSection: React.FC<HoroscopeSectionProps> = ({ profile, isLoading 
                 <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
                   <img src={getImageUrl(profile.horoscope.rasi.url) || ''} alt="Rasi" className="w-full h-full object-contain p-4" />
                   <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{t('profile_new:horoscope.rasi_chart_label')}</span>
+                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold rounded-lg shadow-lg">{t('profile_new:horoscope.rasi_chart_label')}</span>
                   </div>
                 </motion.div>
               )}
@@ -85,7 +85,7 @@ const HoroscopeSection: React.FC<HoroscopeSectionProps> = ({ profile, isLoading 
                 <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
                   <img src={getImageUrl(profile.horoscope.navamsa.url) || ''} alt="Navamsa" className="w-full h-full object-contain p-4" />
                   <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{t('profile_new:horoscope.navamsa_chart_label')}</span>
+                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold rounded-lg shadow-lg">{t('profile_new:horoscope.navamsa_chart_label')}</span>
                   </div>
                 </motion.div>
               )}

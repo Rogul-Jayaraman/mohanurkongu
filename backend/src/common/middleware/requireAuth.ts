@@ -15,31 +15,6 @@ declare global {
   }
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new AppError(401, ErrorCodes.AUTH_UNAUTHORIZED, translate(ErrorCodes.AUTH_UNAUTHORIZED, res.locals.lang));
-    }
-
-    const token = authHeader.split(' ')[1];
-    const payload = verifyAccessToken(token);
-
-    if (payload.type !== 'access') {
-      throw new AppError(401, ErrorCodes.AUTH_TOKEN_INVALID, translate(ErrorCodes.AUTH_TOKEN_INVALID, res.locals.lang));
-    }
-
-    req.account = payload;
-    next();
-  } catch (err) {
-    if (err instanceof AppError) {
-      next(err);
-      return;
-    }
-    next(new AppError(401, ErrorCodes.AUTH_TOKEN_INVALID, translate(ErrorCodes.AUTH_TOKEN_INVALID, res.locals.lang)));
-  }
-}
-
 export async function requireSession(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const authHeader = req.headers.authorization;

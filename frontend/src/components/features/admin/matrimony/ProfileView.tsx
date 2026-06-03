@@ -41,9 +41,9 @@ const NAV_KEYS: { id: string; key: string }[] = [
   { id: "professional", key: "professional" },
   { id: "family", key: "family" },
   { id: "assets", key: "assets" },
+  { id: "partner-preference", key: "partner_preference" },
   { id: "horoscope", key: "horoscope" },
   { id: "gallery", key: "gallery" },
-  { id: "partner-preference", key: "partner_preference" },
   { id: "owner", key: "owner" },
   { id: "admin", key: "admin" },
 ];
@@ -220,7 +220,7 @@ const AdminStatusReasons: React.FC<{ profile: Profile | undefined; isTamil: bool
         <div className="bg-red-50 rounded-xl p-4 border border-red-100">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-red-500 font-bold text-xs">!</span>
-            <p className="text-[9px] text-red-400 font-bold uppercase tracking-wider">
+            <p className="text-[9px] text-red-400 font-bold">
               {t('adminMatrimony.profileView.rejectionReason')}
             </p>
           </div>
@@ -233,7 +233,7 @@ const AdminStatusReasons: React.FC<{ profile: Profile | undefined; isTamil: bool
         <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-amber-500 font-bold text-xs">!</span>
-            <p className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">
+            <p className="text-[9px] text-amber-400 font-bold">
               {t('adminMatrimony.profileView.blockReason')}
             </p>
           </div>
@@ -575,7 +575,7 @@ const AdminHoroscopeDetails: React.FC<{
       </div>
       {isLoading || hasCharts ? (
         <div className="mt-8 pt-8 border-t border-gold/20">
-          <h3 className="text-sm font-bold text-rosewood uppercase tracking-widest mb-6 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-rosewood mb-6 flex items-center gap-2">
             <FileText size={14} className="text-gold" />
             {t('adminMatrimony.profileView.horoscopeCharts')}
           </h3>
@@ -608,7 +608,7 @@ const AdminHoroscopeDetails: React.FC<{
                 <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
                   <img src={getImageUrl(profile.horoscope.rasi.url) || ''} alt="Rasi" className="w-full h-full object-contain p-4" />
                   <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{t('adminMatrimony.profileView.rasiChart')}</span>
+                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold rounded-lg shadow-lg">{t('adminMatrimony.profileView.rasiChart')}</span>
                   </div>
                 </motion.div>
               )}
@@ -616,7 +616,7 @@ const AdminHoroscopeDetails: React.FC<{
                 <motion.div whileHover={{ scale: 1.01, rotateY: -1 }} className="perspective-1000 preserve-3d group relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
                   <img src={getImageUrl(profile.horoscope.navamsa.url) || ''} alt="Navamsa" className="w-full h-full object-contain p-4" />
                   <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold uppercase rounded-lg shadow-lg">{t('adminMatrimony.profileView.navamsaChart')}</span>
+                    <span className="px-3 py-1 bg-rosewood/90 text-white text-[10px] font-bold rounded-lg shadow-lg">{t('adminMatrimony.profileView.navamsaChart')}</span>
                   </div>
                 </motion.div>
               )}
@@ -848,7 +848,7 @@ const AdminControls: React.FC<{
               <X size={16} strokeWidth={3} />
             </div>
             <div>
-              <p className="text-[10px] text-red-400 font-bold uppercase tracking-wider mb-1">
+              <p className="text-[10px] text-red-400 font-bold mb-1">
                 {t('adminMatrimony.profileView.rejectionReason')}
               </p>
               <p className="text-sm font-bold text-red-800">
@@ -867,7 +867,7 @@ const AdminControls: React.FC<{
               <ShieldBan size={16} strokeWidth={3} />
             </div>
             <div>
-              <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mb-1">
+              <p className="text-[10px] text-amber-500 font-bold mb-1">
                 {t('adminMatrimony.profileView.archiveReason')}
               </p>
               <p className="text-sm font-bold text-amber-800">
@@ -939,7 +939,7 @@ const ErrorState: React.FC<{ onBack: () => void; isTamil: boolean }> = ({ onBack
       </p>
       <button
         onClick={onBack}
-        className="px-8 py-3 bg-rosewood text-white rounded-xl font-black text-xs uppercase tracking-widest-plus hover:scale-105 active:scale-95 transition-all shadow-lg shadow-rosewood/20"
+        className="px-8 py-3 bg-rosewood text-white rounded-xl font-black text-xs hover:scale-105 active:scale-95 transition-all shadow-lg shadow-rosewood/20"
       >
         {t('adminMatrimony.profileView.goBack')}
       </button>
@@ -1115,7 +1115,7 @@ const AdminProfileView: React.FC = () => {
             onClick={() => navigate(-1)}
             className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2
                        bg-ivory-gold-gradient rounded-xl text-[10px] sm:text-xs
-                       font-black uppercase tracking-wider shadow-sm btn-shine shrink-0"
+                       font-black shadow-sm btn-shine shrink-0"
           >
             <ArrowLeft size={14} className="sm:size-4" />
             <span className="hidden sm:inline">{t('common:back')}</span>
@@ -1166,9 +1166,13 @@ const AdminProfileView: React.FC = () => {
 
         {/* Sections 1 + 2: Personal + Community */}
         <AnimatedSection>
-          <div id="section-personal" className="scroll-mt-20 grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-            <AdminPersonalDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} onEdit={profile?.status === 'PENDING' ? () => setEditSection('personal') : undefined} />
-            <AdminCommunityDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} getLocationLabel={getLocationLabel} isLoading={false} onEdit={profile?.status === 'PENDING' ? () => setEditSection('community') : undefined} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+            <div id="section-personal" className="scroll-mt-20">
+              <AdminPersonalDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} isLoading={false} onEdit={profile?.status === 'PENDING' ? () => setEditSection('personal') : undefined} />
+            </div>
+            <div id="section-community" className="scroll-mt-20">
+              <AdminCommunityDetails profile={profile} isTamil={isTamil} getEnumLabel={getEnumLabel} getLocationLabel={getLocationLabel} isLoading={false} onEdit={profile?.status === 'PENDING' ? () => setEditSection('community') : undefined} />
+            </div>
           </div>
         </AnimatedSection>
         <SectionDivider />

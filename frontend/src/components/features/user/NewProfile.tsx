@@ -1,20 +1,55 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { useScrollToTop } from '../../ui/layout/ScrollToTop';
 import { useProfileForm } from '../../../hooks/useProfileForm';
+import { useBillingOverviewQuery } from '../../../queries/useMembershipQueries';
 import { Spinner } from '../../ui/feedback/Spinner';
 import { uploadFile, deleteUpload, saveDraft, resumeDraft, createProfile } from '../../../api/profile.api';
 import { formToDraft, draftToForm } from '../../../adapters/profile.adapter';
+import { queryKeys } from '../../../queries/queryKeys';
 import { getErrorMessage } from '../../../lib/errors';
 import { STEP_REQUIRED_FIELDS } from '../../../validation/profile-schema';
 import { Step1Personal, Step2Combined, Step3Family, Step4Assets, Step5Horoscope, Step6Gallery, Step7Review } from './form-steps';
 
+const LimitReachedBanner: React.FC<{ current: number; limit: number }> = ({ current, limit }) => {
+    const { t, i18n } = useTranslation(['profile_new', 'common']);
+    const isTamil = i18n.language === 'ta';
+    return (
+        <div className="max-w-4xl mx-auto w-full pt-10 lg:pt-16 pb-8 lg:pb-12 px-2 sm:px-4 min-h-full flex flex-col items-center justify-center">
+            <div className="rounded-xl border-2 border-rosewood/20 bg-ivory shadow-sm p-12 text-center max-w-lg">
+                <div className="w-16 h-16 bg-rosewood/5 rounded-xl flex items-center justify-center mx-auto mb-6">
+                    <span className="material-symbols-outlined text-3xl text-rosewood">block</span>
+                </div>
+                <h3 className={`${isTamil ? 'text-lg' : 'text-xl'} font-serif font-bold text-rosewood mb-3`}>
+                    {isTamil ? 'சுயவிவர வரம்பு எட்டப்பட்டது' : 'Profile Slot Limit Reached'}
+                </h3>
+                <p className="text-rosewood/60 text-sm mb-2">
+                    {isTamil
+                        ? `நீங்கள் உங்கள் திட்டத்தின் ${limit} சுயவிவர வரம்பை எட்டிவிட்டீர்கள். மேலும் சுயவிவரங்களை உருவாக்க திட்டத்தை மேம்படுத்தவும்.`
+                        : `You have reached your plan's limit of ${limit} profile${limit > 1 ? 's' : ''}. Upgrade your plan to create more profiles.`}
+                </p>
+                <p className="text-rosewood/40 text-xs mb-8">
+                    {isTamil ? `தற்போதைய பயன்பாடு: ${current} / ${limit}` : `Current usage: ${current} / ${limit}`}
+                </p>
+                <Link
+                    to="/manamaalai/my-account?tab=plans"
+                    className="inline-block px-8 py-3 bg-rosewood text-white font-bold rounded-xl shadow-lg shadow-rosewood/20 text-xs hover:bg-rosewood-dark transition-all"
+                >
+                    {isTamil ? 'திட்டத்தை மேம்படுத்து' : 'Upgrade Plan'}
+                </Link>
+            </div>
+        </div>
+    );
+};
+
 const NewProfile: React.FC = () => {
     const { t, i18n } = useTranslation(['profile_new', 'common']);
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const { setHeaderContent } = useOutletContext<{ setHeaderContent: (content: React.ReactNode) => void }>();
     const { formData, updateField, isDirty, setIsDirty, setFormData, persistDraft, fieldErrors, touchedFields, markTouched, validateStepOnNav, stepErrors } = useProfileForm();
     const [currentStep, setCurrentStep] = useState(1);
@@ -24,6 +59,13 @@ const NewProfile: React.FC = () => {
     const [profileId, setProfileId] = useState<string | null>(null);
     const [draftProfileId, setDraftProfileId] = useState<string | null>(null);
     const totalSteps = 7;
+
+    const billingQuery = useBillingOverviewQuery();
+    const billingData = billingQuery.data as any;
+    const caps = billingData?.capabilities;
+    const slotLimit = caps?.profileSlotLimit ?? -1;
+    const profileCount = caps?.profileCount ?? 0;
+    const slotLimitReached = slotLimit >= 0 && profileCount >= slotLimit && !draftProfileId;
 
     useScrollToTop([currentStep]);
 
@@ -218,6 +260,10 @@ const NewProfile: React.FC = () => {
     };
 
     const handleSaveDraft = async () => {
+        if (slotLimitReached) {
+            toast.error(t('profile_new:toasts.slot_limit_reached') || 'Profile slot limit reached. Upgrade to save more.');
+            return;
+        }
         try {
             setIsSavingDraft(true);
             const draft = formToDraft(formData);
@@ -228,12 +274,17 @@ const NewProfile: React.FC = () => {
             const { indexedDBStorage } = await import('../../../lib/indexeddb');
             await indexedDBStorage.clearDraft();
             toast.success(t('profile_new:toasts.draft_success'));
+            queryClient.invalidateQueries({ queryKey: queryKeys.profile.my() });
             navigate('/manamaalai/my-profiles');
         } catch { toast.error(t('profile_new:toasts.draft_error')); }
         finally { setIsSavingDraft(false); }
     };
 
     const handleSubmit = async () => {
+        if (slotLimitReached) {
+            toast.error(t('profile_new:toasts.slot_limit_reached') || 'Profile slot limit reached. Upgrade to create more.');
+            return;
+        }
         const { validateCreate } = await import('../../../validation/profile-schema');
         const { translateError } = await import('../../../utils/translateError');
         const errors = validateCreate(formData).map(translateError);
@@ -247,10 +298,15 @@ const NewProfile: React.FC = () => {
             await createProfile({ ...draft, agreedToTerms: formData.agreedToTerms || false });
             await indexedDBStorage.clearDraft();
             toast.success(t('profile_new:toasts.success'));
+            queryClient.invalidateQueries({ queryKey: queryKeys.profile.my() });
             navigate('/manamaalai/my-profiles');
         } catch { toast.error(t('profile_new:toasts.publish_error')); }
         finally { setIsSubmitting(false); }
     };
+
+    if (slotLimitReached) {
+        return <LimitReachedBanner current={profileCount} limit={slotLimit} />;
+    }
 
     return (
         <div className="max-w-4xl mx-auto w-full pt-10 lg:pt-16 pb-8 lg:pb-12 px-2 sm:px-4 min-h-full flex flex-col">

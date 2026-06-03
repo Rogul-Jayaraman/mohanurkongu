@@ -168,7 +168,7 @@ export const WelcomeHeaderSection: React.FC<{ user: any; isLoading?: boolean }> 
               )}
               <div className="pt-1">
                 <Link
-                  to="/manamaalai/my-account?tab=membership"
+                  to="/manamaalai/my-account?tab=plans"
                   className="block text-center text-[10px] font-bold uppercase tracking-widest text-gold hover:text-rosewood transition-colors"
                 >
                   {i18n.language === 'ta' ? 'மேம்படுத்துக' : 'Upgrade'}

@@ -4,6 +4,7 @@ import { UserProfileCard, UserProfileCardSkeleton } from '@/components/features/
 import { PageHeader } from '@/components/ui/layout/PageHeader';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { useShortlistedQuery } from '@/queries/useProfileQueries';
+import { useBillingOverviewQuery } from '@/queries/useMembershipQueries';
 import type { ProfileSummary } from '@/types/profile';
 
 
@@ -85,6 +86,11 @@ const Shortlist: React.FC = () => {
     const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState('');
 
+    const billingQuery = useBillingOverviewQuery();
+    const billingData = billingQuery.data as any;
+    const caps = billingData?.capabilities;
+    const shortlistLimit = caps?.shortlistLimit ?? -1;
+
     const params: Record<string, any> = {};
     if (searchQuery?.trim()) params.q = searchQuery.trim();
     const shortlistedQuery = useShortlistedQuery(params);
@@ -121,9 +127,16 @@ const Shortlist: React.FC = () => {
                             <div className="w-8 h-8 rounded-full bg-linear-to-br from-rosewood/95 via-dark-rosewood/95 to-rosewood/95 text-white flex items-center justify-center text-[10px] font-bold shadow-sm">
                                 {profiles.length}
                             </div>
-                            <span className="text-rosewood/60 font-bold text-[10px] uppercase tracking-widest leading-none">
-                                {t('common:profiles', { defaultValue: 'Profiles' })}
-                            </span>
+                            <div className="flex flex-col">
+                                <span className="text-rosewood/60 font-bold text-[10px] leading-none">
+                                    {t('common:profiles', { defaultValue: 'Profiles' })}
+                                </span>
+                                {shortlistLimit >= 0 && (
+                                    <span className="text-rosewood/30 font-bold text-[8px] leading-none">
+                                        {t('common:membership_limit', { defaultValue: 'Membership Limit' })}: {shortlistLimit}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     }
                 />

@@ -11,6 +11,7 @@ import { Spinner } from '../../../ui/feedback/Spinner';
 import Select from '../../../ui/forms/Select';
 import api from '@/lib/api';
 import { getMaxDobDate, getMinDobDate } from '../../../../validation/profile-schema';
+import { getImageUrl } from '../../../../utils/getImageUrl';
 import type { StepProps } from './types';
 
 // ───────────────────────────────────────────────────────────
@@ -123,7 +124,7 @@ const HoroscopeUploadForm: React.FC<{
                 <div className={`relative rounded-2xl transition-all duration-500 overflow-hidden ${chartUploadId ? 'ring-2 ring-gold/30 shadow-xl shadow-rosewood/10 p-1.5 bg-white' : 'border-2 border-dashed border-gold-soft/40 bg-ivory/50 hover:bg-ivory hover:border-gold/60'}`}>
                     <div className="relative overflow-hidden rounded-xl size-44 sm:size-52">
                         {chartUploadId ? (
-                            <img src={chartUploadUrl || ''} alt={type} className="w-full h-full object-contain" />
+                            <img src={getImageUrl(chartUploadUrl) || ''} alt={type} className="w-full h-full object-contain" />
                         ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-6">
                                 <div className="size-16 rounded-2xl bg-rosewood/5 flex items-center justify-center"><span className="material-symbols-outlined text-4xl text-rosewood/40">cloud_upload</span></div>

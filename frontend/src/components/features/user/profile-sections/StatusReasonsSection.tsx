@@ -27,7 +27,7 @@ const StatusReasonsSection: React.FC<StatusReasonsSectionProps> = ({
         <div className="bg-red-50 rounded-xl p-4 border border-red-100">
           <div className="flex items-center gap-2 mb-2">
             <ShieldAlert size={16} className="text-red-500" />
-            <p className="text-[9px] text-red-400 font-bold uppercase tracking-wider">
+            <p className="text-[9px] text-red-400 font-bold">
               {isTamil ? "நிராகரிப்பு காரணம்" : "Rejection Reason"}
             </p>
           </div>
@@ -40,7 +40,7 @@ const StatusReasonsSection: React.FC<StatusReasonsSectionProps> = ({
         <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
           <div className="flex items-center gap-2 mb-2">
             <ShieldAlert size={16} className="text-amber-500" />
-            <p className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">
+            <p className="text-[9px] text-amber-400 font-bold">
               {isTamil ? "தடை காரணம்" : "Block Reason"}
             </p>
           </div>

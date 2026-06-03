@@ -5,7 +5,8 @@ export const myAccountEn = {
     },
     tabs: {
         details: "Account Details",
-        membership: "Membership & Billing",
+        membership: "Membership",
+        plans: "Plans",
     },
     details: {
         title: "Personal Information",

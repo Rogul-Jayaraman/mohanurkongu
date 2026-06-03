@@ -60,9 +60,6 @@ export const EditPackageModal: React.FC<EditPackageModalProps> = ({ isOpen, onCl
         setNewFunctions(prev => prev.filter((_, i) => i !== index));
     };
 
-    const updatePackage = useUpdatePackage();
-    const isSaving = updatePackage.isPending;
-
     const handleSave = async () => {
         const functionsDto: { id?: string; name: TranslationPair[]; status?: boolean }[] = [];
 

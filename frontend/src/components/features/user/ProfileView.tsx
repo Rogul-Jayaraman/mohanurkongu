@@ -44,7 +44,6 @@ const ProfileView: React.FC = () => {
     shortlisted,
     handleRetry,
     handleToggleShortlist,
-    handleSendInvite,
   } = useProfileView(id);
 
   const [viewDetails, setViewDetails] = useState<string>('FULL');
@@ -138,24 +137,24 @@ const ProfileView: React.FC = () => {
           <div className="flex gap-3 justify-center">
             <button
               onClick={() => navigate(-1)}
-              className="px-8 py-3 bg-rosewood text-white rounded-xl font-black text-xs uppercase tracking-widest-plus hover:scale-105 active:scale-95 transition-all shadow-lg shadow-rosewood/20"
+              className="px-8 py-3 bg-rosewood text-white rounded-xl font-black text-xs hover:scale-105 active:scale-95 transition-all shadow-lg shadow-rosewood/20"
             >
               {t('common:back')}
             </button>
             {errorType === 'NETWORK_ERROR' && (
               <button
                 onClick={handleRetry}
-                className="px-8 py-3 bg-gold/20 text-rosewood rounded-xl font-black text-xs uppercase tracking-widest-plus hover:scale-105 active:scale-95 transition-all"
+                className="px-8 py-3 bg-gold/20 text-rosewood rounded-xl font-black text-xs hover:scale-105 active:scale-95 transition-all"
               >
                 Retry
               </button>
             )}
             {errorType === 'FORBIDDEN' && (
               <button
-                onClick={() => navigate('/manamaalai/plans')}
-                className="px-8 py-3 bg-gold/20 text-rosewood rounded-xl font-black text-xs uppercase tracking-widest-plus hover:scale-105 active:scale-95 transition-all"
+                onClick={() => navigate('/manamaalai/my-account?tab=plans')}
+                className="px-8 py-3 bg-gold/20 text-rosewood rounded-xl font-black text-xs hover:scale-105 active:scale-95 transition-all"
               >
-                View Plans
+                Upgrade Plan
               </button>
             )}
           </div>
@@ -184,14 +183,14 @@ const ProfileView: React.FC = () => {
             onClick={() => navigate(-1)}
             className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2
                        bg-ivory-gold-gradient rounded-xl text-[10px] sm:text-xs
-                       font-black uppercase tracking-wider shadow-sm btn-shine shrink-0"
+                       font-black shadow-sm btn-shine shrink-0"
           >
             <ArrowLeft size={14} className="sm:size-4" />
             <span className="hidden sm:inline">{t('common:back')}</span>
           </motion.button>
 
           <div className="flex items-center gap-1.5 sm:gap-3">
-            <ActionBar viewerRole={viewerRole} isShortlisted={shortlisted} isOwner={isOwner} onToggleShortlist={handleToggleShortlist} onInvite={handleSendInvite} />
+            <ActionBar viewerRole={viewerRole} isShortlisted={shortlisted} isOwner={isOwner} onToggleShortlist={handleToggleShortlist} />
             {profile && (
               <>
                 {(canPrintHoroscope || bypassLocks) ? (
@@ -210,7 +209,7 @@ const ProfileView: React.FC = () => {
                   <motion.button
                     whileHover={{ y: -1 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => navigate('/manamaalai/plan-upgrade')}
+                    onClick={() => navigate('/manamaalai/my-account?tab=plans')}
                     className="flex items-center gap-1 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2
                                bg-gray-200 text-gray-400 rounded-xl text-[10px] sm:text-[11px]
                                font-bold shadow-sm shrink-0"
@@ -236,7 +235,7 @@ const ProfileView: React.FC = () => {
                   <motion.button
                     whileHover={{ y: -1 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => navigate('/manamaalai/plan-upgrade')}
+                    onClick={() => navigate('/manamaalai/my-account?tab=plans')}
                     className="flex items-center gap-1 sm:gap-2 px-2 sm:px-5 py-1.5 sm:py-2
                                 bg-gray-200 text-gray-400 rounded-xl text-[10px] sm:text-[11px]
                                 font-bold shadow-sm shrink-0"
@@ -282,9 +281,13 @@ const ProfileView: React.FC = () => {
 
         {/* Sections 1 + 2: Personal + Community */}
         <AnimatedSection>
-          <div id="section-personal" className="scroll-mt-20 grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-            <PersonalSection profile={profile} isLoading={loading} />
-            <CommunitySection profile={profile} isLoading={loading} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+            <div id="section-personal" className="scroll-mt-20">
+              <PersonalSection profile={profile} isLoading={loading} />
+            </div>
+            <div id="section-community" className="scroll-mt-20">
+              <CommunitySection profile={profile} isLoading={loading} />
+            </div>
           </div>
         </AnimatedSection>
         <SectionDivider />

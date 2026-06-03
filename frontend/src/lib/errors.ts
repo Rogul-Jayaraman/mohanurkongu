@@ -36,8 +36,17 @@ export function getErrorMessage(err: unknown, fallback = 'An unexpected error oc
 
 export type ErrorType = 'NOT_FOUND' | 'FORBIDDEN' | 'NETWORK_ERROR' | 'UNKNOWN' | null;
 
+const membershipErrorMessages: Record<string, string> = {
+  MEMBERSHIP_QUOTA_EXCEEDED: 'Your daily profile view limit has been reached. Upgrade your plan for more views.',
+  MEMBERSHIP_SLOT_LIMIT_REACHED: 'You have reached your profile slot limit. Upgrade to create more profiles.',
+  MEMBERSHIP_SHORTLIST_LIMIT_REACHED: 'You have reached your shortlist limit. Upgrade to shortlist more profiles.',
+  MEMBERSHIP_PREMIUM_REQUIRED: 'This action requires a premium membership plan.',
+};
+
 export function resolveErrorType(err: unknown): { type: ErrorType; message: string } {
   if (isAppError(err)) {
+    const membershipMessage = membershipErrorMessages[err.code];
+    if (membershipMessage) return { type: 'FORBIDDEN', message: membershipMessage };
     switch (err.code) {
       case 'NOT_FOUND': return { type: 'NOT_FOUND', message: err.message };
       case 'FORBIDDEN':

@@ -7,6 +7,7 @@ import type { Profile } from '@/types/profile';
 import { useProfileQuery } from '@/queries/useProfileQueries';
 import { useToggleShortlistMutation } from '@/queries/useProfileMutations';
 import { queryKeys } from '@/queries/queryKeys';
+import { useMyCapabilitiesQuery } from '@/queries/useMembershipQueries';
 
 export type ViewerRole = 'self' | 'admin' | 'public';
 
@@ -16,34 +17,44 @@ export interface UseProfileViewResult {
   errorType: ErrorType;
   errorMessage: string | null;
   viewerRole: ViewerRole;
-  inviteSent: boolean;
   shortlisted: boolean;
   handleRetry: () => void;
   handleToggleShortlist: () => Promise<void>;
-  handleSendInvite: () => Promise<void>;
 }
 
 export function useProfileView(profileId: string | undefined): UseProfileViewResult {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [inviteSent, setInviteSent] = useState(false);
   const [shortlisted, setShortlisted] = useState(false);
 
-  const profileQuery = useProfileQuery(profileId);
+  const capsQuery = useMyCapabilitiesQuery();
+  const capsData = capsQuery.data as any;
+  const caps = capsData?.capabilities;
+  const openRemaining = caps?.openRemaining ?? -1;
+  const openLimit = caps?.openLimit ?? -1;
+
+  const skipFetch = openRemaining === 0 && !!profileId && openLimit >= 0;
+
+  const profileQuery = useProfileQuery(profileId, { enabled: !skipFetch });
   const toggleMutation = useToggleShortlistMutation();
 
   const profile: Profile | null = profileQuery.data ?? null;
   const loading = profileQuery.isPending && !profileQuery.isFetched;
-  const errorType: ErrorType = profileQuery.error
-    ? resolveErrorType(profileQuery.error).type
-    : null;
-  const errorMessage = profileQuery.error
-    ? resolveErrorType(profileQuery.error).message
-    : null;
+
+  let errorType: ErrorType = null;
+  let errorMessage: string | null = null;
+
+  if (skipFetch && !profileQuery.isFetched) {
+    errorType = 'FORBIDDEN';
+    errorMessage = 'Your daily profile view limit has been reached. Upgrade your plan for more views.';
+  } else if (profileQuery.error) {
+    errorType = resolveErrorType(profileQuery.error).type;
+    errorMessage = resolveErrorType(profileQuery.error).message;
+  }
 
   const viewerRole: ViewerRole = (() => {
     if (!user || !profile) return 'public';
-    if (profile.createdBy === user.id) return 'self';
+    if (profile.isOwner) return 'self';
     if (user.roles?.includes('ADMIN')) return 'admin';
     return 'public';
   })();
@@ -65,21 +76,14 @@ export function useProfileView(profileId: string | undefined): UseProfileViewRes
     }
   }, [profile, shortlisted, toggleMutation]);
 
-  const handleSendInvite = useCallback(async () => {
-    if (!profile || inviteSent) return;
-    setInviteSent(true);
-  }, [profile, inviteSent]);
-
   return {
     profile,
     loading,
     errorType,
     errorMessage,
     viewerRole,
-    inviteSent,
     shortlisted,
     handleRetry,
     handleToggleShortlist,
-    handleSendInvite,
   };
 }

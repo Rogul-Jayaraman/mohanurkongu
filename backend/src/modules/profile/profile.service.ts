@@ -66,7 +66,7 @@ export class ProfileService {
     if (!basic.gender) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'GENDER_REQUIRED');
     if (!basic.dob) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'DOB_REQUIRED');
     if (!basic.diet) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'DIET_REQUIRED');
-    if (!basic.heightId && basic.heightId !== 0) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'HEIGHT_REQUIRED');
+    if (!basic.height) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'HEIGHT_REQUIRED');
     if (!basic.profileFor) throw new AppError(400, ErrorCodes.VALIDATION_ERROR, 'PROFILE_FOR_REQUIRED');
 
     if (!sections.community) {
@@ -91,9 +91,22 @@ export class ProfileService {
   async saveDraft(accountId: string, dto: any) {
     await this.upsertService.resolveUploadTokensInDto(dto);
     const { profileId: existingProfileId, translations, photos, ...sections } = dto;
+    console.log('[saveDraft] translations present:', !!translations, 'length:', translations?.length, 'firstName:', translations?.[0]?.firstName);
 
     const uploadIds = this.upsertService.collectUploadIds(dto);
     await this.upsertService.validateUploadOwnership(uploadIds, accountId);
+
+    if (this.membershipGuard && !existingProfileId) {
+      const caps = await this.membershipGuard.resolveCapabilities(accountId);
+      if (caps && caps.profileSlotLimit >= 0) {
+        const current = await prisma.profile.count({
+          where: { accountId, currentStatus: { in: ['DRAFT', 'PENDING', 'ACTIVE', 'ARCHIVED'] } },
+        });
+        if (current >= caps.profileSlotLimit) {
+          throw new AppError(403, ErrorCodes.MEMBERSHIP_SLOT_LIMIT_REACHED, 'MEMBERSHIP_SLOT_LIMIT_REACHED');
+        }
+      }
+    }
 
     return await prisma.$transaction(async (tx) => {
       let profile;
@@ -107,6 +120,11 @@ export class ProfileService {
       }
 
       await this.upsertService.upsertSections(tx, profile.id, sections, photos, translations);
+
+      await tx.profile.update({
+        where: { id: profile.id },
+        data: {},
+      });
 
       const historyCount = await tx.profileStateHistory.count({
         where: { profileId: profile.id },
@@ -182,7 +200,7 @@ export class ProfileService {
       });
 
       if (uploadIds.length > 0) {
-        await this.storageService.bulkTransitionStatus(uploadIds, ['TEMP'], 'ATTACHED', tx);
+        await this.storageService.bulkTransitionStatus(uploadIds, ['TEMP', 'ATTACHED'], 'ATTACHED', tx);
       }
 
       await tx.verificationQueue.upsert({

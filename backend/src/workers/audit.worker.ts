@@ -11,10 +11,16 @@ export function createAuditWorker(): Worker {
     async (job) => {
       const { event, accountId, details } = job.data;
       logger.info({ event, accountId, details }, 'Audit event');
+
+      if (!accountId) {
+        logger.warn({ event, details }, 'Audit event skipped: missing accountId');
+        return;
+      }
+
       try {
         await prisma.adminAuditEvent.create({
           data: {
-            actorId: accountId || '00000000-0000-0000-0000-000000000000',
+            actorId: accountId,
             action: event,
             ipAddress: details?.ipAddress || null,
             profileId: details?.profileId || null,

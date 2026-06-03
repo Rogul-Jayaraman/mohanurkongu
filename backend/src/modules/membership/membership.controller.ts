@@ -104,11 +104,12 @@ export class MembershipController {
   getBillingOverview = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const accountId = req.account.sub;
-      const [plans, caps, sub, history] = await Promise.all([
+      const [plans, caps, sub, history, usageCounts] = await Promise.all([
         this.membershipService.getActivePlans(),
         this.membershipGuard.resolveCapabilities(accountId),
         this.membershipService.getUserSubscription(accountId),
         this.membershipService.getSubscriptionHistory(accountId),
+        this.membershipService.getUsageCounts(accountId),
       ]);
 
       sendSuccess(res, {
@@ -120,7 +121,11 @@ export class MembershipController {
               searchLevel: caps.searchLevel,
               profileSlotLimit: caps.profileSlotLimit,
               shortlistLimit: caps.shortlistLimit,
+              openLimit: caps.openLimit,
+              openRemaining: caps.openRemaining,
               printProfile: caps.printProfile,
+              profileCount: usageCounts.profileCount,
+              shortlistCount: usageCounts.shortlistCount,
             }
           : null,
         plans: plans.map((p: any) => ({

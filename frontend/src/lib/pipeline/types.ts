@@ -1,6 +1,6 @@
 import { AppError } from '../errors';
 
-export interface PipelineContext<TInput = Record<string, unknown>, TOutput = unknown> {
+export interface PipelineContext<TInput = any, TOutput = unknown> {
   input: TInput;
   output: TOutput;
   errors: Array<{ step: string; error: AppError }>;

@@ -82,6 +82,19 @@ const TabBar: React.FC<{ activeTab: string; onTabChange: (t: any) => void }> = (
                     <div className="absolute bottom-0 left-3 md:left-6 right-3 md:right-6 h-0.5 bg-gold rounded-t-full" />
                 )}
             </button>
+            <button
+                onClick={() => onTabChange('plans')}
+                className={`h-full px-3 md:px-6 flex items-center ${isTamil ? 'text-xs md:text-sm' : 'text-sm md:text-base'} font-serif font-bold transition-colors relative ${
+                    activeTab === 'plans'
+                        ? 'text-rosewood'
+                        : 'text-rosewood/60 hover:text-rosewood'
+                }`}
+            >
+                {t('myaccount:tabs.plans')}
+                {activeTab === 'plans' && (
+                    <div className="absolute bottom-0 left-3 md:left-6 right-3 md:right-6 h-0.5 bg-gold rounded-t-full" />
+                )}
+            </button>
         </>
     );
 };
@@ -165,12 +178,12 @@ const TransactionRow: React.FC<{
 // Our Plans Section
 // ═══════════════════════════════════════════════════════════
 
-const OurPlansSection: React.FC<{ plans: any[]; isTamil: boolean; currentPlanCode?: string | null }> = ({ plans, isTamil, currentPlanCode }) => {
+const OurPlansSection: React.FC<{ plans: any[]; isTamil: boolean; currentPlanCode?: string | null; onUpgradeClick?: () => void }> = ({ plans, isTamil, currentPlanCode, onUpgradeClick }) => {
     const { t } = useLanguage();
 
     const handleUpgrade = (plan: any) => {
         if (plan.code === currentPlanCode) return;
-        toast.info(isTamil ? 'மேம்படுத்தும் பக்கம் விரைவில் வருகிறது' : 'Upgrade page coming soon');
+        onUpgradeClick?.();
     };
 
     return (
@@ -223,61 +236,87 @@ const PaymentCard: React.FC<{ icon: string; title: string; showOverlay?: boolean
 // Contact Banner (moved from Dashboard)
 // ═══════════════════════════════════════════════════════════
 
-const ContactBanner: React.FC<{ title: string; subtitle: string; onCopy: (text: string, label: string) => void }> = ({ title, subtitle, onCopy }) => (
-    <Card
-        variant="ivory"
-        className="mt-12 p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden bg-linear-to-br from-white via-ivory to-white shadow-lg shadow-gold/5 border border-gold/10"
-    >
-        <div className="absolute inset-0 bg-kolam-pattern opacity-[0.03] scale-125 pointer-events-none" />
-        <div className="absolute right-0 top-0 w-1/3 h-full bg-linear-to-l from-gold/10 to-transparent pointer-events-none" />
+const ContactBanner: React.FC = () => {
+    const { t } = useLanguage();
+    const [copiedField, setCopiedField] = useState<string | null>(null);
 
-        <div className="relative z-10 text-center lg:text-left">
-            <h3 className="text-lg md:text-xl font-heading font-bold text-rosewood mb-2">{title}</h3>
-            <p className="text-rosewood/50 text-xs md:text-sm font-body">{subtitle}</p>
-        </div>
+    const handleCopy = async (text: string, field: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedField(field);
+            toast.success(t('common:copied'), { duration: 2000 });
+            setTimeout(() => setCopiedField(null), 2000);
+        } catch {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            setCopiedField(field);
+            toast.success(t('common:copied'), { duration: 2000 });
+            setTimeout(() => setCopiedField(null), 2000);
+        }
+    };
 
-        <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6 md:gap-8">
-            <div
-                onClick={() => onCopy('+91 90807 25466', 'Phone')}
-                className="group cursor-pointer flex flex-col items-center sm:items-end"
-            >
-                <p className="text-micro md:text-tiny font-bold text-gold uppercase tracking-widest mb-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                    {subtitle}
+    return (
+        <Card
+            variant="ivory"
+            className="mt-12 p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden bg-linear-to-br from-white via-ivory to-white shadow-lg shadow-gold/5 border border-gold/10"
+        >
+            <div className="absolute inset-0 bg-kolam-pattern opacity-[0.03] scale-125 pointer-events-none" />
+            <div className="absolute right-0 top-0 w-1/3 h-full bg-linear-to-l from-gold/10 to-transparent pointer-events-none" />
+
+            <div className="relative z-10 text-center lg:text-left">
+                <h3 className="text-lg md:text-xl font-heading font-bold text-rosewood mb-2">{t('dashboard:contact_for_payment_title')}</h3>
+                <p className="text-xs md:text-sm text-rosewood/50 font-body leading-relaxed max-w-xs mx-auto lg:mx-0">
+                    {t('dashboard:contact_for_payment_desc')}
                 </p>
-                <div className="flex items-center gap-2 text-rosewood group-hover:text-gold transition-colors">
-                    <span className="text-lg font-medium font-body tracking-tighter">
-                        +91 90807 25466
-                    </span>
-                    <span className="material-symbols-outlined text-base md:text-lg opacity-40 group-hover:opacity-100 transition-opacity">
-                        content_copy
-                    </span>
+            </div>
+
+            <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6 md:gap-8">
+                <div
+                    onClick={() => handleCopy('+91 90807 25466', 'Phone')}
+                    className="group cursor-pointer flex flex-col items-center sm:items-end"
+                >
+                    <p className="text-micro md:text-tiny font-bold text-gold uppercase tracking-widest mb-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                        {t('dashboard:payment_support_label')}
+                    </p>
+                    <div className="flex items-center gap-2 text-rosewood group-hover:text-gold transition-colors whitespace-nowrap">
+                        <span className="text-lg md:text-xl font-medium font-body tracking-tighter">
+                            +91 90807 25466
+                        </span>
+                        <span className="material-symbols-outlined text-base md:text-lg opacity-40 group-hover:opacity-100 transition-opacity">
+                            {copiedField === 'Phone' ? 'check' : 'content_copy'}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="hidden sm:block w-px h-10 bg-gold/20" />
+
+                <div className="flex items-center gap-4">
+                    <a
+                        href="tel:+919080725466"
+                        className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-rosewood/10 hover:bg-rosewood/20 text-rosewood flex items-center justify-center transition-all border border-gold/10 shadow-lg group"
+                    >
+                        <span className="material-symbols-outlined text-xl md:text-2xl group-hover:scale-110 transition-transform">
+                            call
+                        </span>
+                    </a>
+                    <a
+                        href="https://wa.me/919080725466"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gold hover:bg-gold/80 text-rosewood flex items-center justify-center transition-all shadow-lg group"
+                        title="WhatsApp"
+                    >
+                        <WhatsAppIcon sx={{ fontSize: 24 }} />
+                    </a>
                 </div>
             </div>
-
-            <div className="hidden sm:block w-px h-10 bg-gold/20" />
-
-            <div className="flex items-center gap-4">
-                <a
-                    href="tel:+919080725466"
-                    className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-rosewood/10 hover:bg-rosewood/20 text-rosewood flex items-center justify-center transition-all border border-gold/10 shadow-lg group"
-                >
-                    <span className="material-symbols-outlined text-xl md:text-2xl group-hover:scale-110 transition-transform">
-                        call
-                    </span>
-                </a>
-                <a
-                    href="https://wa.me/919080725466"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gold hover:bg-gold/80 text-rosewood flex items-center justify-center transition-all shadow-lg group"
-                    title="WhatsApp"
-                >
-                    <WhatsAppIcon sx={{ fontSize: 24 }} />
-                </a>
-            </div>
-        </div>
-    </Card>
-);
+        </Card>
+    );
+};
 
 // ═══════════════════════════════════════════════════════════
 // Payment Section (moved from Dashboard)
@@ -470,11 +509,7 @@ const PaymentSection: React.FC = () => {
                 </motion.div>
 
                 <motion.div variants={paymentItemVariants}>
-                    <ContactBanner
-                        title={t('dashboard:contact_after_payment')}
-                        subtitle={t('dashboard:verify_transaction_subtext')}
-                        onCopy={handleCopy}
-                    />
+                    <ContactBanner />
                 </motion.div>
             </motion.div>
         </section>
@@ -637,10 +672,8 @@ const DangerZoneSection: React.FC = () => {
 const MembershipStatusSection: React.FC<{
     currentPlan: BillingOverview['currentPlan'];
     capabilities: BillingOverview['capabilities'];
-    scrollToPlans: () => void;
-    scrollToHistory: () => void;
     isLoading: boolean;
-}> = ({ currentPlan, capabilities, scrollToPlans, scrollToHistory, isLoading }) => {
+}> = ({ currentPlan, capabilities, isLoading }) => {
     const { t, language } = useLanguage();
     const isTamil = language === 'ta';
 
@@ -689,22 +722,62 @@ const MembershipStatusSection: React.FC<{
                     </div>
                 </div>
 
-                {capabilities && !isLoading && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                {isLoading && (
+                    <div className="mt-6">
+                        <div className="flex-1 h-11 skeleton rounded-xl!" />
+                    </div>
+                )}
+            </div>
+        </AnimatedSection>
+    );
+};
+
+// ═══════════════════════════════════════════════════════════
+// Usage Limits Section
+// ═══════════════════════════════════════════════════════════
+
+const UsageLimitsSection: React.FC<{
+    capabilities: BillingOverview['capabilities'];
+    isLoading: boolean;
+}> = ({ capabilities, isLoading }) => {
+    const { t, language } = useLanguage();
+    const isTamil = language === 'ta';
+
+    return (
+        <AnimatedSection>
+            <SectionHeader
+                title={isTamil ? 'பயன்பாட்டு வரம்புகள்' : 'Usage Limits'}
+                description={isTamil ? 'உங்கள் திட்டத்தின் பயன்பாட்டு விளக்கங்கள்' : 'Your plan usage breakdown'}
+            />
+            <div className="rounded-xl border border-gold/20 bg-ivory shadow-sm p-6 md:p-8">
+                {isLoading ? (
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        {[1,2,3,4,5].map(i => <div key={i} className="h-16 skeleton rounded-lg!" />)}
+                    </div>
+                ) : capabilities ? (
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                         <CapabilityBadge
                             icon={<Eye size={14} />}
                             label={isTamil ? 'தேடல்' : 'Search'}
                             value={capabilities.searchLevel || '—'}
                         />
-                        <CapabilityBadge
+                        <UsageBar
                             icon={<Users size={14} />}
                             label={isTamil ? 'சுயவிவரங்கள்' : 'Profiles'}
-                            value={capabilities.profileSlotLimit < 0 ? (isTamil ? 'வரம்பில்லை' : 'Unlimited') : `${capabilities.profileSlotLimit}`}
+                            current={capabilities.profileCount ?? 0}
+                            limit={capabilities.profileSlotLimit}
                         />
-                        <CapabilityBadge
+                        <UsageBar
                             icon={<Star size={14} />}
                             label={isTamil ? 'குறும்பட்டியல்' : 'Shortlists'}
-                            value={capabilities.shortlistLimit < 0 ? (isTamil ? 'வரம்பில்லை' : 'Unlimited') : `${capabilities.shortlistLimit}`}
+                            current={capabilities.shortlistCount ?? 0}
+                            limit={capabilities.shortlistLimit}
+                        />
+                        <UsageBar
+                            icon={<Eye size={14} />}
+                            label={isTamil ? 'தினசரி காட்சிகள்' : 'Daily Views'}
+                            current={Math.max(0, (capabilities.openLimit ?? 0) - (capabilities.openRemaining ?? 0))}
+                            limit={capabilities.openLimit}
                         />
                         <CapabilityBadge
                             icon={<Printer size={14} />}
@@ -712,31 +785,11 @@ const MembershipStatusSection: React.FC<{
                             value={capabilities.printProfile ? (isTamil ? 'ஆம்' : 'Yes') : (isTamil ? 'இல்லை' : 'No')}
                         />
                     </div>
+                ) : (
+                    <div className="p-8 text-center">
+                        <p className="text-rosewood/40 text-sm">{isTamil ? 'தரவு இல்லை' : 'No data available'}</p>
+                    </div>
                 )}
-
-                <div className="mt-6 flex flex-col md:flex-row gap-3">
-                    {isLoading ? (
-                        <>
-                            <div className="flex-1 h-11 skeleton rounded-xl!" />
-                            <div className="flex-1 h-11 skeleton rounded-xl!" />
-                        </>
-                    ) : (
-                        <>
-                            <button
-                                onClick={scrollToPlans}
-                                className={`flex-1 py-3 bg-rosewood-gradient rounded-xl font-bold ${isTamil ? 'text-[10px]' : 'text-xs'} shadow-md shadow-rosewood/30 hover:shadow-rosewood/40 hover:-translate-y-0.5 active:scale-95 transition-all`}
-                            >
-                                {t('myaccount:membership.upgrade')}
-                            </button>
-                            <button
-                                onClick={scrollToHistory}
-                                className={`flex-1 py-3 bg-white text-rosewood rounded-xl font-bold ${isTamil ? 'text-[10px]' : 'text-xs'} border border-gold/20 hover:bg-rosewood/5 transition-all`}
-                            >
-                                {t('myaccount:membership.history.title')}
-                            </button>
-                        </>
-                    )}
-                </div>
             </div>
         </AnimatedSection>
     );
@@ -751,6 +804,28 @@ const CapabilityBadge: React.FC<{ icon: React.ReactNode; label: string; value: s
         </div>
     </div>
 );
+
+const UsageBar: React.FC<{ icon: React.ReactNode; label: string; current: number; limit: number }> = ({ icon, label, current, limit }) => {
+    const pct = limit > 0 ? Math.min(100, Math.round((current / limit) * 100)) : 0;
+    const color = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500';
+    const barColor = pct >= 90 ? 'bg-red-100' : pct >= 70 ? 'bg-amber-100' : 'bg-emerald-100';
+    return (
+        <div className="p-2.5 rounded-lg bg-ivory border border-gold/10">
+            <div className="flex items-center gap-2 mb-1.5">
+                <div className="text-gold shrink-0">{icon}</div>
+                <div className="min-w-0 flex-1">
+                    <p className="text-[9px] font-bold text-rosewood/40 uppercase tracking-wider">{label}</p>
+                    <p className="text-[11px] font-bold text-rosewood truncate">{current}/{limit === -1 ? '∞' : limit}{limit >= 0 && limit > 0 ? ` (${pct}%)` : ''}</p>
+                </div>
+            </div>
+            {limit > 0 && (
+                <div className={`h-1.5 rounded-full ${barColor} overflow-hidden`}>
+                    <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                </div>
+            )}
+        </div>
+    );
+};
 
 // ═══════════════════════════════════════════════════════════
 // Purchase History Section (self-contained query + state)
@@ -847,27 +922,23 @@ const MyAccount: React.FC = () => {
     const { language } = useLanguage();
     const isTamil = language === 'ta';
 
-    const [activeTab, setActiveTab] = useState<'details' | 'membership'>('details');
+    const [activeTab, setActiveTab] = useState<'details' | 'membership' | 'plans'>('details');
     const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
     const [billing, setBilling] = useState<BillingOverview | null>(null);
+    const paymentRef = useRef<HTMLDivElement>(null);
+
+    const scrollToPayment = useCallback(() => {
+        paymentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, []);
     const [billingLoading, setBillingLoading] = useState(true);
     const [billingError, setBillingError] = useState(false);
-
-    const plansRef = useRef<HTMLDivElement>(null);
-    const historyRef = useRef<HTMLDivElement>(null);
-
-    const scrollToPlans = useCallback(() => {
-        plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, []);
-
-    const scrollToHistory = useCallback(() => {
-        historyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, []);
 
     useEffect(() => {
         const tabParam = searchParams.get('tab');
         if (tabParam === 'membership') {
             setActiveTab('membership');
+        } else if (tabParam === 'plans') {
+            setActiveTab('plans');
         }
     }, [searchParams]);
 
@@ -877,18 +948,9 @@ const MyAccount: React.FC = () => {
         return () => setHeaderContent(null);
     }, [activeTab, setHeaderContent]);
 
-    useEffect(() => {
-        if (activeTab === 'membership') {
-            const tabParam = searchParams.get('tab');
-            if (tabParam === 'membership') {
-                setTimeout(() => scrollToPlans(), 300);
-            }
-        }
-    }, [activeTab, searchParams, scrollToPlans]);
-
     const billingQuery = useBillingOverviewQuery();
     useEffect(() => {
-        if (activeTab !== 'membership') return;
+        if (activeTab !== 'membership' && activeTab !== 'plans') return;
         if (billingQuery.data !== undefined) {
             setBilling(billingQuery.data as BillingOverview);
             setBillingLoading(false);
@@ -911,7 +973,7 @@ const MyAccount: React.FC = () => {
                                 initial="hidden"
                                 animate="visible"
                                 exit={{ opacity: 0, y: -20 }}
-                                className="space-y-10"
+                                className="space-y-16"
                             >
                                 <PersonalInfoSection user={user} isLoading={!user} />
                                 <SecuritySection onChangePassword={() => setIsChangePasswordOpen(true)} />
@@ -926,31 +988,38 @@ const MyAccount: React.FC = () => {
                                 initial="hidden"
                                 animate="visible"
                                 exit={{ opacity: 0, y: -20 }}
-                                className="space-y-10"
+                                className="space-y-16"
                             >
                                 <MembershipStatusSection
                                     currentPlan={billing?.currentPlan ?? null}
                                     capabilities={billing?.capabilities ?? null}
-                                    scrollToPlans={scrollToPlans}
-                                    scrollToHistory={scrollToHistory}
                                     isLoading={billingLoading}
                                 />
+                                <UsageLimitsSection
+                                    capabilities={billing?.capabilities ?? null}
+                                    isLoading={billingLoading}
+                                />
+                                <PurchaseHistorySection
+                                    history={billing?.history ?? []}
+                                    isLoading={billingLoading}
+                                    hasError={billingError}
+                                />
+                            </motion.div>
+                        )}
 
-                                <div ref={plansRef}>
-                                    <AnimatedSection>
-                                        <OurPlansSection plans={billing?.plans ?? []} isTamil={isTamil} currentPlanCode={billing?.currentPlan?.planCode} />
-                                    </AnimatedSection>
+                        {activeTab === 'plans' && (
+                            <motion.div
+                                key="plans"
+                                variants={containerVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit={{ opacity: 0, y: -20 }}
+                                className="space-y-16"
+                            >
+                                <OurPlansSection plans={billing?.plans ?? []} isTamil={isTamil} currentPlanCode={billing?.currentPlan?.planCode} onUpgradeClick={scrollToPayment} />
+                                <div ref={paymentRef}>
+                                    <PaymentSection />
                                 </div>
-
-                                <div ref={historyRef}>
-                                    <PurchaseHistorySection
-                                        history={billing?.history ?? []}
-                                        isLoading={billingLoading}
-                                        hasError={billingError}
-                                    />
-                                </div>
-
-                                <PaymentSection />
                             </motion.div>
                         )}
                     </AnimatePresence>

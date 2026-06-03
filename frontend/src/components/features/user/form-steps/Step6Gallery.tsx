@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { getImageUrl } from '../../../../utils/getImageUrl';
 import type { StepProps } from './types';
 
 // ───────────────────────────────────────────────────────────
@@ -28,7 +29,7 @@ const IdentityPortraitUpload: React.FC<{
                             <motion.div layout className={`rounded-2xl overflow-hidden transition-all duration-500 ${uploadId ? 'ring-2 ring-gold/30 shadow-xl shadow-rosewood/10' : 'border-2 border-dashed border-gold-soft/40'}`}>
                                 <div className="relative w-48 md:w-56 aspect-4/5 bg-ivory">
                                     {uploadId ? (
-                                        <img src={uploadUrl || ''} alt="Portrait" className="w-full h-full object-cover" />
+                                        <img src={getImageUrl(uploadUrl) || ''} alt="Portrait" className="w-full h-full object-cover" />
                                     ) : isProcessing ? null : (
                                         <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-8">
                                             <div className="size-20 rounded-full bg-rosewood/5 flex items-center justify-center"><span className="material-symbols-outlined text-4xl text-rosewood/25">person</span></div>
@@ -82,7 +83,7 @@ const PhotoSlot: React.FC<{
             <div className={`rounded-xl overflow-hidden w-full transition-all duration-500 ${uploadId ? 'ring-2 ring-gold/20 shadow-md p-0.5 bg-white' : 'border-2 border-dashed border-gold-soft/30 bg-ivory/50'}`}>
                 <div className="relative aspect-[3/4] w-full">
                     {uploadId ? (
-                        <img src={uploadUrl || ''} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                        <img src={getImageUrl(uploadUrl) || ''} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
                     ) : !isProcessing ? (
                         <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4">
                             <span className="material-symbols-outlined text-3xl text-rosewood/25">image</span>

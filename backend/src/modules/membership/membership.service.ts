@@ -308,6 +308,16 @@ export class MembershipService {
     });
   }
 
+  async getUsageCounts(accountId: string): Promise<{ profileCount: number; shortlistCount: number }> {
+    const [profileCount, shortlistCount] = await Promise.all([
+      prisma.profile.count({
+        where: { accountId, currentStatus: { in: ['DRAFT', 'PENDING', 'ACTIVE', 'ARCHIVED'] } },
+      }),
+      prisma.shortlist.count({ where: { accountId } }),
+    ]);
+    return { profileCount, shortlistCount };
+  }
+
   async getAllSubscriptions(params: {
     limit?: number;
     cursor?: string;

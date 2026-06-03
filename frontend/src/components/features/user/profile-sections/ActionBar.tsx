@@ -1,12 +1,11 @@
 import React from 'react';
-import { Heart, Shield, Archive, Trash2, Edit, MessageSquare } from 'lucide-react';
+import { Heart, Shield, Archive, Trash2, Edit } from 'lucide-react';
 import type { ViewerRole } from '@/hooks/useProfileView';
 
 interface ActionBarProps {
   viewerRole: ViewerRole;
   isShortlisted: boolean;
   isOwner?: boolean;
-  onInvite?: () => void;
   onToggleShortlist?: () => void;
   onVerify?: () => void;
   onReject?: () => void;
@@ -18,7 +17,6 @@ interface ActionBarProps {
 const ActionBar: React.FC<ActionBarProps> = ({
   viewerRole,
   isShortlisted,
-  onInvite,
   onToggleShortlist,
   onVerify,
   onReject,
@@ -67,11 +65,6 @@ const ActionBar: React.FC<ActionBarProps> = ({
         <button onClick={onToggleShortlist} className="flex items-center gap-1.5 px-4 py-2 border border-rosewood/20 rounded-xl text-xs font-bold">
           <Heart size={14} className={isShortlisted ? 'fill-red-500 text-red-500' : ''} />
           <span>{isShortlisted ? 'Shortlisted' : 'Shortlist'}</span>
-        </button>
-      )}
-      {onInvite && (
-        <button onClick={onInvite} className="flex items-center gap-1.5 px-4 py-2 bg-rosewood text-white rounded-xl text-xs font-bold">
-          <MessageSquare size={14} /> <span>Send Invite</span>
         </button>
       )}
     </div>

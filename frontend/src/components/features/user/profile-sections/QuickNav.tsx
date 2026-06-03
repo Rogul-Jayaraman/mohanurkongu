@@ -9,9 +9,9 @@ const NAV_KEYS: { id: string; key: string }[] = [
   { id: 'family', key: 'family' },
   { id: 'assets', key: 'assets' },
   { id: 'contact', key: 'contact' },
+  { id: 'partner-preference', key: 'partner_preference' },
   { id: 'horoscope', key: 'horoscope' },
   { id: 'gallery', key: 'gallery' },
-  { id: 'partner-preference', key: 'partner_preference' },
 ];
 
 const QuickNav: React.FC = () => {
@@ -52,13 +52,13 @@ const QuickNav: React.FC = () => {
                 e.preventDefault();
                 document.getElementById(`section-${s.id}`)?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className={`relative flex-shrink-0 px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-widest-plus transition-colors whitespace-nowrap ${
-                isActive ? 'text-rosewood' : 'text-slate-400 hover:text-slate-600'
-              }`}
+              className={`h-full px-3 sm:px-5 flex items-center font-serif font-bold text-[11px] sm:text-sm whitespace-nowrap shrink-0 transition-colors duration-200 relative select-none ${
+                 isActive ? 'text-rosewood' : 'text-rosewood/60 hover:text-rosewood'
+               }`}
             >
-              {t(`common:nav.${s.key}`, { defaultValue: s.key })}
+              {t(`common:section_nav.${s.key}`)}
               {isActive && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-rosewood rounded-full" />
+                <div className="absolute bottom-0 left-3 sm:left-5 right-3 sm:right-5 h-0.5 bg-gold rounded-t-full" />
               )}
             </a>
           );

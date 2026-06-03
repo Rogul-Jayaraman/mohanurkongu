@@ -552,7 +552,7 @@ const NewBooking: React.FC = () => {
                       </div>
                       {selectedAddons.length > 0 && (
                         <div className="space-y-2.5 mb-4 pb-4 border-b border-dashed border-rosewood/10">
-                          {selectedAddons.map(a => {
+                          {selectedAddons.map((a: any) => {
                             const addonNameEn = a.translations?.find((t: any) => t.language === 'EN')?.name || '';
                             const addonNameTa = a.translations?.find((t: any) => t.language === 'TA')?.name || '';
                             const price = addonAmounts?.[a.id] ?? 0;

@@ -350,8 +350,8 @@ model AccountRole {
   roleId     Int
   assignedAt DateTime @default(now())
 
-  account Account @relation(fields: [accountId], references: [id])
-  role    Role    @relation(fields: [roleId], references: [id])
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  role    Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([accountId, roleId])
   @@map("account_roles")
@@ -419,8 +419,9 @@ model Subscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  account Account        @relation(fields: [accountId], references: [id])
-  plan    MembershipPlan @relation(fields: [planId], references: [id])
+  account       Account        @relation(fields: [accountId], references: [id])
+  plan          MembershipPlan @relation(fields: [planId], references: [id])
+  assignedAdmin Account?       @relation(fields: [assignedByAdminId], references: [id])
 
   profileOpens ProfileOpen[]
   usage        MembershipUsage?
@@ -472,6 +473,7 @@ model ProfileOpen {
   @@unique([viewerAccountId, profileId])
   @@index([viewerAccountId])
   @@index([profileId])
+  @@index([subscriptionId])
   @@map("profile_opens")
 }
 
@@ -1057,6 +1059,7 @@ model ProfileReview {
 
   @@index([profileId, createdAt])
   @@index([createdAt])
+  @@index([reviewerId])
   @@map("profile_reviews")
 }
 
@@ -1071,6 +1074,7 @@ model Shortlist {
 
   @@unique([profileId, accountId])
   @@index([accountId])
+  @@index([accountId, createdAt])
   @@index([profileId])
   @@map("shortlists")
 }
@@ -1112,6 +1116,8 @@ model MandapamBooking {
   bookingConfig Json          @db.JsonB
   notes         String?       @db.Text
   createdBy     String        @db.Uuid
+  customer      Account       @relation(fields: [customerId], references: [id])
+  creator       Account       @relation(fields: [createdBy], references: [id])
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -1132,6 +1138,7 @@ model MandapamBooking {
   @@index([packageCode])
   @@index([createdAt])
   @@index([customerId])
+  @@index([createdBy])
   @@index([status, createdAt])
   @@map("mandapam_bookings")
 }
@@ -1185,6 +1192,7 @@ model MandapamCalendarEntry {
   @@index([date])
   @@index([date, status])
   @@index([status])
+  @@index([bookingId])
   @@map("mandapam_calendar_entries")
 }
 
@@ -1281,7 +1289,9 @@ model MandapamSettlement {
   updatedAt     DateTime        @updatedAt
 
   booking MandapamBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  settledByAdmin Account?  @relation(fields: [settledBy], references: [id])
 
+  @@index([settledBy])
   @@map("mandapam_settlements")
 }
 

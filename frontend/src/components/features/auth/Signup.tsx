@@ -227,7 +227,6 @@ export const SignupFormWrapper: React.FC = () => {
             });
             setVerificationToken(result.verificationToken ?? null);
             setIsOTPVerified(true);
-            setIsOtpModalOpen(false);
             setGeneralError(null);
             setOtpError(null);
             toast.success(t('common.verified'));

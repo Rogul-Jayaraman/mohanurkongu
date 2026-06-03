@@ -118,20 +118,24 @@ export class ProfileUpsertService {
               const loc = await tx.location.create({ data: { isOther: true } });
               locationId = loc.id;
               for (const entry of [{ lang: 'EN', suffix: 'En' }, { lang: 'TA', suffix: 'Ta' }]) {
-                const transData: Record<string, any> = {};
                 const city = sections.basic[`${prefix}City${entry.suffix}`];
                 const state = sections.basic[`${prefix}State${entry.suffix}`];
                 const country = sections.basic[`${prefix}Country${entry.suffix}`];
-                if (city !== undefined) transData[`${prefix}City`] = city;
-                if (state !== undefined) transData[`${prefix}State`] = state;
-                if (country !== undefined) transData[`${prefix}Country`] = country;
-                if (Object.keys(transData).length > 0) {
-                  await tx.profileTranslation.upsert({
-                    where: { profileId_language: { profileId, language: entry.lang } },
-                    create: { profile: { connect: { id: profileId } }, language: entry.lang, ...transData },
-                    update: transData,
-                  });
-                }
+                await tx.profileTranslation.upsert({
+                  where: { profileId_language: { profileId, language: entry.lang } },
+                  create: {
+                    profile: { connect: { id: profileId } },
+                    language: entry.lang,
+                    [`${prefix}City`]: city ?? null,
+                    [`${prefix}State`]: state ?? null,
+                    [`${prefix}Country`]: country ?? null,
+                  },
+                  update: {
+                    [`${prefix}City`]: city ?? null,
+                    [`${prefix}State`]: state ?? null,
+                    [`${prefix}Country`]: country ?? null,
+                  },
+                });
               }
             } else {
               const d = await tx.district.findUnique({ where: { code: district } });
@@ -144,20 +148,24 @@ export class ProfileUpsertService {
               });
               locationId = loc.id;
               for (const entry of [{ lang: 'EN', suffix: 'En' }, { lang: 'TA', suffix: 'Ta' }]) {
-                const transData: Record<string, any> = {};
                 const city = sections.basic[`${prefix}City${entry.suffix}`];
                 const state = sections.basic[`${prefix}State${entry.suffix}`];
                 const country = sections.basic[`${prefix}Country${entry.suffix}`];
-                if (city !== undefined) transData[`${prefix}City`] = city;
-                if (state !== undefined) transData[`${prefix}State`] = state;
-                if (country !== undefined) transData[`${prefix}Country`] = country;
-                if (Object.keys(transData).length > 0) {
-                  await tx.profileTranslation.upsert({
-                    where: { profileId_language: { profileId, language: entry.lang } },
-                    create: { profile: { connect: { id: profileId } }, language: entry.lang, ...transData },
-                    update: transData,
-                  });
-                }
+                await tx.profileTranslation.upsert({
+                  where: { profileId_language: { profileId, language: entry.lang } },
+                  create: {
+                    profile: { connect: { id: profileId } },
+                    language: entry.lang,
+                    [`${prefix}City`]: city ?? null,
+                    [`${prefix}State`]: state ?? null,
+                    [`${prefix}Country`]: country ?? null,
+                  },
+                  update: {
+                    [`${prefix}City`]: city ?? null,
+                    [`${prefix}State`]: state ?? null,
+                    [`${prefix}Country`]: country ?? null,
+                  },
+                });
               }
             }
             if (locationId) {
@@ -315,8 +323,7 @@ export class ProfileUpsertService {
       if (data.rasiChartUploadId !== undefined) cleaned.rasiChartUploadId = data.rasiChartUploadId;
       if (data.navamsaChartUploadId !== undefined) cleaned.navamsaChartUploadId = data.navamsaChartUploadId;
       if (data.horoscopeJson !== undefined) cleaned.horoscopeJson = data.horoscopeJson;
-      if (Object.keys(cleaned).length > 0) {
-        if (cleaned.mode == null || cleaned.mode === 'none') return;
+      if (cleaned.mode != null && cleaned.mode !== 'none' && Object.keys(cleaned).length > 0) {
         const { rasiId, nakshatraId, lagnaId, rasiChartUploadId, navamsaChartUploadId, ...rest } = cleaned;
         await tx.profileHoroscope.upsert({
           where: { profileId },
@@ -413,26 +420,26 @@ export class ProfileUpsertService {
 
     if (translations && Array.isArray(translations)) {
       for (const t of translations) {
-        const transData: any = {};
-        if (t.firstName !== undefined) transData.firstName = t.firstName;
-        if (t.lastName !== undefined) transData.lastName = t.lastName;
-        if (t.kuladeivam !== undefined) transData.kuladeivam = t.kuladeivam;
-        if (t.fatherName !== undefined) transData.fatherName = t.fatherName;
-        if (t.motherName !== undefined) transData.motherName = t.motherName;
-        if (t.jobLocation !== undefined) transData.jobLocation = t.jobLocation;
-        if (t.currentCity !== undefined) transData.currentCity = t.currentCity;
-        if (t.currentState !== undefined) transData.currentState = t.currentState;
-        if (t.currentCountry !== undefined) transData.currentCountry = t.currentCountry;
-        if (t.nativeCity !== undefined) transData.nativeCity = t.nativeCity;
-        if (t.nativeState !== undefined) transData.nativeState = t.nativeState;
-        if (t.nativeCountry !== undefined) transData.nativeCountry = t.nativeCountry;
-        if (Object.keys(transData).length > 0) {
-          await tx.profileTranslation.upsert({
-            where: { profileId_language: { profileId, language: t.language } },
-            create: { profile: { connect: { id: profileId } }, language: t.language, ...transData },
-            update: transData,
-          });
+        console.log('[upsertSections] processing translation lang=%s firstName=%s lastName=%s', t.language, t.firstName, t.lastName);
+        const createData: any = {
+          profile: { connect: { id: profileId } },
+          language: t.language,
+        };
+        const updateData: any = {};
+        const translationFields = ['firstName', 'lastName', 'kuladeivam', 'fatherName', 'motherName', 'jobLocation', 'currentCity', 'currentState', 'currentCountry', 'nativeCity', 'nativeState', 'nativeCountry'];
+        for (const field of translationFields) {
+          if (t[field] !== undefined) {
+            createData[field] = t[field];
+            updateData[field] = t[field];
+          }
         }
+        console.log('[upsertSections] updateData keys=%s firstName=%s', Object.keys(updateData).join(','), updateData.firstName);
+        const result = await tx.profileTranslation.upsert({
+          where: { profileId_language: { profileId, language: t.language } },
+          create: createData,
+          update: updateData,
+        });
+        console.log('[upsertSections] upsert result id=%s firstName=%s', result.id, result.firstName);
       }
     }
   }
