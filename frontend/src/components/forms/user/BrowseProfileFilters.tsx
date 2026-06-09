@@ -319,7 +319,7 @@ export const BrowseProfileFilters: React.FC<BrowseProfileFiltersProps> = ({ isOp
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden filter-portal">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -450,11 +450,11 @@ export const BrowseProfileFilters: React.FC<BrowseProfileFiltersProps> = ({ isOp
                         </div>
 
                         <div className="shrink-0 relative z-50 p-6 bg-white/80 backdrop-blur-3xl border-t border-gold/10 flex flex-row gap-4 items-center">
-                            <button type="button" onClick={handleReset} className="flex-1 h-14 rounded-xl font-black text-xs text-rosewood/50 border-2 border-rosewood/10 hover:border-rosewood/30 hover:text-rosewood hover:bg-rosewood/5 transition-all flex items-center justify-center gap-3 group">
+                            <button type="button" onClick={handleReset} className="flex-1 h-14 rounded-xl font-black text-[10px] text-rosewood/50 border-2 border-rosewood/10 hover:border-rosewood/30 hover:text-rosewood hover:bg-rosewood/5 transition-all flex items-center justify-center gap-3 group">
                                 <RotateCcw size={16} className="group-hover:-rotate-45 transition-transform duration-500" />
                                 {t('browse:reset_filters')}
                             </button>
-                            <button type="button" onClick={handleApply} className="flex-1 h-14 bg-linear-to-br from-rosewood/80 via-dark-rosewood/95 to-rosewood/80 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-rosewood/20 hover:shadow-rosewood/30 hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3 relative overflow-hidden group">
+                            <button type="button" onClick={handleApply} className="flex-1 h-14 bg-linear-to-br from-rosewood/80 via-dark-rosewood/95 to-rosewood/80 text-white rounded-xl font-black text-[10px] shadow-lg shadow-rosewood/20 hover:shadow-rosewood/30 hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3 relative overflow-hidden group">
                                 <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                                 <Search size={16} className="relative z-10" />
                                 <span className="relative z-10">{t('browse:show_results')}</span>

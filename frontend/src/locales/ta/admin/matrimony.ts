@@ -40,6 +40,7 @@ export const adminMatrimonyTa = {
       rejected: "நிராகரிக்கப்பட்டது",
       active: "செயலில்",
       inactive: "செயலற்றது",
+      archived: "காப்பகப்படுத்தப்பட்டது",
       suspended: "இடைநீக்கம்",
       blocked: "தடுக்கப்பட்டது",
       noRecords: "பதிவுகள் ஏதுமில்லை",
@@ -70,6 +71,11 @@ export const adminMatrimonyTa = {
       confirmed: "உறுதிப்படுத்தப்பட்டது",
       completed: "முடிக்கப்பட்டது",
       cancelled: "ரத்து செய்யப்பட்டது",
+      filters: "வடிகட்டிகள்",
+      asc: "ஏறு",
+      desc: "இறங்கு",
+      clearFilters: "அனைத்து வடிகட்டிகளையும் அழி",
+      apply: "வடிகட்டிகளைப் பயன்படுத்து",
     },
     plans: {
       title: "உறுப்பினர் திட்டங்கள்",
@@ -216,6 +222,12 @@ export const adminMatrimonyTa = {
         created: "உருவாக்கப்பட்ட தேதி",
       },
       searchPlaceholder: "பெயர் அல்லது பதிவு எண் மூலம் தேடுக...",
+      gender: "பாலினம்",
+      dateRange: "தேதி வரம்பு",
+      from: "இருந்து",
+      to: "வரை",
+      sortBy: "வரிசைப்படுத்து",
+      sortOrder: "வரிசை முறை",
     },
     dashboard: {
       greeting: {

@@ -1,25 +1,20 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import type { MandapamAnalytics } from '@/types/analytics';
 import { MetricsGrid } from '../widgets/MetricsGrid';
 import { TrendComposedChart } from '../widgets/TrendComposedChart';
 import { DonutCard } from '../widgets/DonutCard';
 import { StackedBarCard } from '../widgets/StackedBarCard';
-import { Calendar, DollarSign, CreditCard, Activity, BarChart3, TrendingUp } from 'lucide-react';
+import { Calendar, DollarSign, BarChart3, TrendingUp, ClipboardList } from 'lucide-react';
+import { CHART } from '@/constants/analyticsColors';
 
 interface Props { data: MandapamAnalytics | null; loading: boolean }
-
-const REVENUE_KEYS = [
-  { key: 'standard', color: '#3B82F6', name: 'Standard' },
-  { key: 'royal', color: '#D4AF37', name: 'Royal' },
-  { key: 'grand', color: '#6B0028', name: 'Grand' },
-  { key: 'addon', color: '#10B981', name: 'Add-ons' },
-];
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const fadeUp = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
-const GlassCard: React.FC<{ title: string; subtitle?: string; icon?: React.ElementType; children: React.ReactNode; className?: string }> = ({ title, subtitle, icon: Icon, children, className = '' }) => (
+const CardSection: React.FC<{ title: string; subtitle?: string; icon?: React.ElementType; children: React.ReactNode; className?: string }> = ({ title, subtitle, icon: Icon, children, className = '' }) => (
   <div className={`relative bg-white/10 backdrop-blur-2xl border-2 border-gold/30 rounded-xl overflow-hidden ${className}`}>
     <div className="absolute inset-0 bg-linear-to-br from-white/40 to-white/5 rounded-xl pointer-events-none" />
     <div className="absolute top-0 right-0 w-40 h-40 bg-gold/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
@@ -33,8 +28,8 @@ const GlassCard: React.FC<{ title: string; subtitle?: string; icon?: React.Eleme
             </div>
           )}
           <div>
-            <h3 className="text-xl font-serif font-black text-rosewood">{title}</h3>
-            {subtitle && <p className="text-[9px] text-gold font-black uppercase tracking-[0.2em] mt-0.5">{subtitle}</p>}
+            <h3 className="text-lg font-serif font-bold text-rosewood">{title}</h3>
+            {subtitle && <p className="text-xs text-dark-brown/60 mt-0.5">{subtitle}</p>}
           </div>
         </div>
       </div>
@@ -44,80 +39,116 @@ const GlassCard: React.FC<{ title: string; subtitle?: string; icon?: React.Eleme
 );
 
 export const MandapamSection: React.FC<Props> = ({ data, loading }) => {
+  const { t } = useTranslation('analytics');
   const o = data?.overview;
-  const metrics = o ? [
-    { label: 'Occupancy Rate', value: `${Math.round(o.occupancyRate)}%` },
-    { label: 'Active Bookings', value: o.activeBookings },
-    { label: 'Revenue MTD', value: `₹${(o.revenueMTD / 100000).toFixed(1)}L` },
-    { label: 'Outstanding', value: `₹${(o.outstandingBalance / 100000).toFixed(1)}L` },
+
+  const overviewMetrics = o ? [
+    { label: t('metrics.occupancyRate'), value: `${Math.round(o.occupancyRate)}%` },
+    { label: t('metrics.activeBookings'), value: o.activeBookings },
+    { label: t('metrics.monthRevenue'), value: `₹${(o.revenueMTD / 100000).toFixed(1)}L` },
+    { label: t('metrics.dueAmount'), value: `₹${(o.outstandingBalance / 100000).toFixed(1)}L` },
   ] : [];
 
-  const wowMetrics = o ? [
-    { label: 'Revenue WoW', value: `${o.revenueWoW >= 0 ? '+' : ''}${o.revenueWoW}%` },
-    { label: 'Occupancy WoW', value: `${o.occupancyWoW >= 0 ? '+' : ''}${o.occupancyWoW}%` },
-    { label: 'Bookings WoW', value: `${o.bookingWoW >= 0 ? '+' : ''}${o.bookingWoW}%` },
-    { label: 'Outstanding WoW', value: `${o.outstandingWoW >= 0 ? '+' : ''}${o.outstandingWoW}%` },
+  const weeklyMetrics = o ? [
+    { label: t('metrics.revenueChange'), value: `${o.revenueWoW >= 0 ? '+' : ''}${o.revenueWoW}%` },
+    { label: t('metrics.occupancyChange'), value: `${o.occupancyWoW >= 0 ? '+' : ''}${o.occupancyWoW}%` },
+    { label: t('metrics.bookingChange'), value: `${o.bookingWoW >= 0 ? '+' : ''}${o.bookingWoW}%` },
+    { label: t('metrics.dueAmountChange'), value: `${o.outstandingWoW >= 0 ? '+' : ''}${o.outstandingWoW}%` },
   ] : [];
 
   const lifecycle = data?.bookingLifecycle ? [
-    { name: 'Confirmed', value: data.bookingLifecycle.confirmed, color: '#3B82F6' },
-    { name: 'In Progress', value: data.bookingLifecycle.eventInProgress, color: '#F59E0B' },
-    { name: 'Settlement Pending', value: data.bookingLifecycle.settlementPending, color: '#EC4899' },
-    { name: 'Completed', value: data.bookingLifecycle.completed, color: '#10B981' },
-    { name: 'Cancelled', value: data.bookingLifecycle.cancelled, color: '#EF4444' },
+    { name: t('charts.lifecycle.confirmed'), value: data.bookingLifecycle.confirmed, color: CHART.lifecycle.confirmed },
+    { name: t('charts.lifecycle.eventInProgress'), value: data.bookingLifecycle.eventInProgress, color: CHART.lifecycle.eventInProgress },
+    { name: t('charts.lifecycle.settlementPending'), value: data.bookingLifecycle.settlementPending, color: CHART.lifecycle.settlementPending },
+    { name: t('charts.lifecycle.completed'), value: data.bookingLifecycle.completed, color: CHART.lifecycle.completed },
+    { name: t('charts.lifecycle.cancelled'), value: data.bookingLifecycle.cancelled, color: CHART.lifecycle.cancelled },
   ].filter(d => d.value > 0) : [];
 
+  const bookingStats = data?.bookingLifecycle ? [
+    { label: t('metrics.totalBookings'), value: Object.values(data.bookingLifecycle).reduce((a, b) => a + b, 0) },
+    { label: t('metrics.confirmed'), value: data.bookingLifecycle.confirmed },
+    { label: t('metrics.inProgress'), value: data.bookingLifecycle.eventInProgress },
+    { label: t('metrics.pendingSettlement'), value: data.bookingLifecycle.settlementPending },
+    { label: t('metrics.completed'), value: data.bookingLifecycle.completed },
+    { label: t('metrics.cancelled'), value: data.bookingLifecycle.cancelled },
+  ] : [];
+
+  const revenueKeys = [
+    { key: 'standard', color: CHART.revenuePackage.standard, name: t('charts.revenuePackage.standard') },
+    { key: 'royal', color: CHART.revenuePackage.royal, name: t('charts.revenuePackage.royal') },
+    { key: 'grand', color: CHART.revenuePackage.grand, name: t('charts.revenuePackage.grand') },
+    { key: 'addon', color: CHART.revenuePackage.addon, name: t('charts.revenuePackage.addon') },
+  ];
+
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
-      {/* Overview KPIs */}
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+      {/* Section 1: At a Glance */}
       <motion.div variants={fadeUp}>
-        <MetricsGrid metrics={metrics} loading={loading} />
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-bold text-dark-brown">{t('sections.atAGlance')}</h2>
+          <div className="h-px flex-1 bg-gold/10" />
+        </div>
+        <MetricsGrid metrics={overviewMetrics} loading={loading} />
       </motion.div>
 
-      {/* WoW Trends */}
+      {/* Section 2: Weekly Changes */}
       <motion.div variants={fadeUp}>
-        <GlassCard title="Week-over-Week Trends" subtitle="Changes compared to the previous week" icon={TrendingUp}>
-          <MetricsGrid metrics={wowMetrics} loading={loading} />
-        </GlassCard>
+        <CardSection title={t('sections.weeklyChanges')} subtitle="Compared to the previous week" icon={TrendingUp}>
+          <MetricsGrid metrics={weeklyMetrics} loading={loading} />
+        </CardSection>
       </motion.div>
 
-      {/* Booking & Revenue Trend */}
+      {/* Section 3: Booking Trends (full width) */}
       <motion.div variants={fadeUp}>
-        <GlassCard title="Booking & Revenue Trend" subtitle="Monthly bookings with revenue overlay" icon={Activity}>
+        <CardSection title={t('charts.monthlyBookings')} subtitle={t('charts.monthlyBookingsSub')} icon={Calendar}>
           <TrendComposedChart
             title=""
             data={data?.bookingTrend?.map(d => ({ ...d })) ?? []}
             series={[
-              { key: 'bookings', type: 'bar', color: '#D4AF37', name: 'Bookings' },
-              { key: 'revenue', type: 'line', color: '#8B1D3D', name: 'Revenue' },
+              { key: 'bookings', type: 'bar', color: CHART.trendBar, name: t('charts.lifecycle.confirmed') },
+              { key: 'revenue', type: 'line', color: CHART.trendLine, name: t('metrics.monthRevenue') },
             ]}
             xKey="month"
             loading={loading}
           />
-        </GlassCard>
+        </CardSection>
       </motion.div>
 
-      {/* Lifecycle & Revenue Breakdown */}
+      {/* Section 4: Booking Status & Revenue (2-column) */}
       <motion.div variants={fadeUp}>
-        <GlassCard title="Lifecycle & Revenue Breakdown" subtitle="Booking status distribution and revenue by package tier" icon={BarChart3}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-bold text-dark-brown">{t('sections.bookingStatusRevenue')}</h2>
+          <div className="h-px flex-1 bg-gold/10" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CardSection title={t('charts.bookingStatus')} subtitle={t('charts.bookingStatusSub')} icon={BarChart3}>
             <DonutCard
-              title="Booking Lifecycle"
-              subtitle="Current statuses"
+              title=""
+              subtitle=""
               data={lifecycle}
               centerLabel={String(data?.bookingLifecycle ? Object.values(data.bookingLifecycle).reduce((a, b) => a + b, 0) : 0)}
               loading={loading}
             />
+          </CardSection>
+          <CardSection title={t('charts.revenueByPackage')} subtitle={t('charts.revenueByPackageSub')} icon={DollarSign}>
             <StackedBarCard
-              title="Revenue by Package"
-              subtitle="Monthly by tier"
+              title=""
               data={data?.revenueBreakdown ?? []}
-              keys={REVENUE_KEYS}
+              keys={revenueKeys}
               xKey="month"
               loading={loading}
             />
-          </div>
-        </GlassCard>
+          </CardSection>
+        </div>
+      </motion.div>
+
+      {/* Section 5: Booking Stats */}
+      <motion.div variants={fadeUp}>
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-bold text-dark-brown">{t('sections.bookingStats')}</h2>
+          <div className="h-px flex-1 bg-gold/10" />
+        </div>
+        <MetricsGrid metrics={bookingStats} loading={loading} />
       </motion.div>
     </motion.div>
   );

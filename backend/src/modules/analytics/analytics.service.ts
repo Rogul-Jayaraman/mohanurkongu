@@ -48,6 +48,7 @@ export class AnalyticsService {
         this.repo.activeSubscriptionPrices(),
         this.repo.membershipCounts(),
         this.repo.renewalForecast(),
+        this.repo.getVerificationStats(),
       ]),
       QUERY_TIMEOUT,
       'getManamaalaiAnalytics',
@@ -71,6 +72,7 @@ export class AnalyticsService {
       mrrPrices,
       membershipCounts,
       renewals,
+      verificationStats,
     ] = data;
 
     // ── Overview ──
@@ -201,6 +203,7 @@ export class AnalyticsService {
       membershipFunnel,
       membershipPlanDistribution,
       renewalForecast,
+      verificationStats,
     };
 
     await this.cache.set('manamaalai', response, 300);

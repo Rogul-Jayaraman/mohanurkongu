@@ -2,6 +2,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { EmptyState } from '@/components/ui/feedback/EmptyState';
 import { Layers } from 'lucide-react';
+import { CHART } from '@/constants/analyticsColors';
 
 interface FunnelStage {
   stage: string;
@@ -16,7 +17,7 @@ interface Props {
   height?: number;
 }
 
-const COLORS = ['#3B82F6', '#6366F1', '#8B5CF6', '#A855F7', '#D946EF'];
+const COLORS = CHART.funnelStages;
 const STAGE_WIDTHS = [100, 88, 76, 64, 52];
 
 const CustomTooltip = ({ active, payload }: any) => {
@@ -62,7 +63,7 @@ export const FunnelChart: React.FC<Props> = React.memo(({ title, subtitle, data,
       <div className="bg-white border border-gold/20 rounded-xl shadow-sm">
         <div className="px-6 py-4 border-b border-gold/10">
           <h3 className="font-serif font-bold text-rosewood">{title}</h3>
-          {subtitle && <p className="text-[10px] font-black text-gold uppercase tracking-widest mt-0.5">{subtitle}</p>}
+          {subtitle && <p className="text-xs text-dark-brown/60 mt-0.5">{subtitle}</p>}
         </div>
         <div className="p-6"><EmptyState message="No funnel data yet" icon={Layers} variant="dashed" /></div>
       </div>
@@ -72,7 +73,7 @@ export const FunnelChart: React.FC<Props> = React.memo(({ title, subtitle, data,
     <div className="bg-white border border-gold/20 rounded-xl shadow-sm">
       <div className="px-6 py-4 border-b border-gold/10">
         <h3 className="font-serif font-bold text-rosewood">{title}</h3>
-        {subtitle && <p className="text-[10px] font-black text-gold uppercase tracking-widest mt-0.5">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-dark-brown/60 mt-0.5">{subtitle}</p>}
       </div>
       <div className="p-4">
         <div style={{ height }}>

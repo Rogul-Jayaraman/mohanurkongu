@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Check, X } from 'lucide-react';
+import { Shield, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/context/LanguageContext';
-import { Input } from '@/components/ui/forms/Input';
 import { PasswordField } from '@/components/ui/forms/PasswordField';
+import { ModalShell } from '@/components/ui/modals/ModalShell';
 import { useChangePasswordMutation } from '@/queries/useAuthMutations';
 
 interface ChangePasswordFormProps {
@@ -40,12 +38,12 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ isOpen, 
     }, [formData.newPassword, t]);
 
     useEffect(() => {
-        if (isOpen) { document.body.style.overflow = 'hidden'; }
-        return () => { document.body.style.overflow = ''; };
+        if (!isOpen) {
+            setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+        }
     }, [isOpen]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async () => {
         if (formData.newPassword !== formData.confirmPassword) {
             toast.error(t('myaccount:drawers.change_password.errors.mismatch'));
             return;
@@ -61,93 +59,103 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ isOpen, 
             });
             toast.success(t('myaccount:drawers.change_password.success'));
             onClose();
-            setFormData({ oldPassword: '', newPassword: '', confirmPassword: '' });
         } catch (error: any) {
             toast.error(translateError(error) || t('myaccount:drawers.change_password.errors.failed'));
         }
     };
 
-    return createPortal(
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-9999 flex items-end justify-center overflow-hidden">
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-gold-soft/20 backdrop-blur-sm" />
-                    <motion.div
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }}
-                        exit={{ y: '100%' }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="relative w-full max-w-4xl max-h-[85vh] bg-gold-soft/10 backdrop-blur-2xl border-t border-gold/20 rounded-t-3xl flex flex-col overflow-hidden shadow-[0_-20px_40px_rgba(0,0,0,0.1)]"
-                    >
-                        <div className="w-full flex justify-center pt-3 pb-1 absolute top-0 left-0 z-50 bg-gold-soft/5 backdrop-blur-md">
-                            <div className="w-12 h-1.5 rounded-full bg-gray-200" />
-                        </div>
-                        <div className="pt-10 px-8 pb-6 border-b border-gold/10 flex items-center justify-between sticky top-0 bg-white/40 backdrop-blur-xl z-40">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-rosewood/10 text-rosewood flex items-center justify-center">
-                                    <Shield size={24} strokeWidth={2} />
-                                </div>
-                                <div>
-                                    <h2 className="text-xl font-serif font-black text-rosewood">{t('drawers.change_password.title')}</h2>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{t('drawers.change_password.subtitle')}</p>
-                                </div>
-                            </div>
-                            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-rosewood transition-colors">
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto px-8 py-8 pb-12 custom-scrollbar bg-gold-soft/5 backdrop-blur-sm shadow-inner">
-                            <div className="max-w-xl mx-auto">
-                                <form onSubmit={handleSubmit} className="space-y-6">
-                                    <PasswordField label={t('drawers.change_password.fields.old_password')} name="oldPassword" icon="lock" required value={formData.oldPassword} onChange={(e) => setFormData({ ...formData, oldPassword: e.target.value })} placeholder={t('drawers.change_password.fields.placeholders.old')} />
-                                    <div className="space-y-3">
-                                        <PasswordField label={t('drawers.change_password.fields.new_password')} name="newPassword" icon="lock_open" required value={formData.newPassword} onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })} placeholder={t('drawers.change_password.fields.placeholders.new')} />
-                                        {formData.newPassword && (
-                                            <div className="bg-white/50 backdrop-blur-sm border border-gold/10 rounded-2xl p-4 mt-2">
-                                                <div className="flex justify-between items-center mb-3">
-                                                    <span className="text-[10px] font-black text-rosewood/60 uppercase tracking-widest">{t('drawers.change_password.strength.label', { label: strength.label })}</span>
-                                                    <span className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest">{t('drawers.change_password.strength.score', { percent: Math.round((strength.score / 4) * 100) })}</span>
-                                                </div>
-                                                <div className="flex gap-1.5 h-1.5 mb-4">
-                                                    {[1, 2, 3, 4].map((step) => (
-                                                        <div key={step} className={`flex-1 rounded-full transition-all duration-500 ${strength.score >= step ? strength.color : 'bg-gray-100'}`} />
-                                                    ))}
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-y-2.5 gap-x-4">
-                                                    {[
-                                                        { label: t('drawers.change_password.strength.requirements.length'), met: formData.newPassword.length >= 8 },
-                                                        { label: t('drawers.change_password.strength.requirements.uppercase'), met: /[A-Z]/.test(formData.newPassword) },
-                                                        { label: t('drawers.change_password.strength.requirements.number'), met: /[0-9]/.test(formData.newPassword) },
-                                                    ].map(req => (
-                                                        <div key={req.label} className="flex items-center gap-2">
-                                                            <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition-colors ${req.met ? 'bg-green-500' : 'bg-gray-100'}`}>
-                                                                {req.met && <Check size={8} className="text-white" strokeWidth={5} />}
-                                                            </div>
-                                                            <span className={`text-[10px] font-bold tracking-tight ${req.met ? 'text-green-600' : 'text-gray-400'}`}>{req.label}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <PasswordField label={t('drawers.change_password.fields.confirm_password')} name="confirmPassword" icon="verified_user" required value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} placeholder={t('drawers.change_password.fields.placeholders.confirm')} error={formData.confirmPassword && formData.newPassword !== formData.confirmPassword ? t('drawers.change_password.errors.mismatch') : undefined} />
-                                    <button type="submit" disabled={isLoading || strength.score < 3 || formData.newPassword !== formData.confirmPassword} className="w-full py-4 bg-rosewood text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-rosewood/20 hover:scale-[1.02] active:scale-95 transition-all disabled:bg-sage/20 disabled:text-rosewood/20 disabled:shadow-none disabled:hover:scale-100 disabled:active:scale-100 mt-4 flex items-center justify-center gap-3">
-                                        {isLoading ? (
-                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        ) : (
-                                            <>
-                                                <Shield size={16} />
-                                                {t('drawers.change_password.submit')}
-                                            </>
-                                        )}
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </motion.div>
-                </div>
+    const submitButton = (
+        <button
+            onClick={handleSubmit}
+            disabled={isLoading || strength.score < 3 || formData.newPassword !== formData.confirmPassword}
+            className="w-full py-4 bg-rosewood text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-rosewood/20 hover:scale-[1.02] active:scale-95 transition-all disabled:bg-sage/20 disabled:text-rosewood/20 disabled:shadow-none disabled:hover:scale-100 disabled:active:scale-100 flex items-center justify-center gap-3"
+        >
+            {isLoading ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+                <>
+                    <Shield size={16} />
+                    {t('drawers.change_password.submit')}
+                </>
             )}
-        </AnimatePresence>,
-        document.body
+        </button>
+    );
+
+    return (
+        <ModalShell
+            isOpen={isOpen}
+            onClose={onClose}
+            icon={<Shield size={24} className="text-rosewood" />}
+            title={t('drawers.change_password.title')}
+            size="xl"
+            footer={submitButton}
+        >
+            <div className="space-y-6 max-w-xl mx-auto">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest -mt-2">
+                    {t('drawers.change_password.subtitle')}
+                </p>
+                <PasswordField
+                    label={t('drawers.change_password.fields.old_password')}
+                    name="oldPassword"
+                    icon="lock"
+                    required
+                    value={formData.oldPassword}
+                    onChange={(e) => setFormData({ ...formData, oldPassword: e.target.value })}
+                    placeholder={t('drawers.change_password.fields.placeholders.old')}
+                />
+                <div className="space-y-3">
+                    <PasswordField
+                        label={t('drawers.change_password.fields.new_password')}
+                        name="newPassword"
+                        icon="lock_open"
+                        required
+                        value={formData.newPassword}
+                        onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                        placeholder={t('drawers.change_password.fields.placeholders.new')}
+                    />
+                    {formData.newPassword && (
+                        <div className="bg-white/50 backdrop-blur-sm border border-gold/10 rounded-2xl p-4 mt-2">
+                            <div className="flex justify-between items-center mb-3">
+                                <span className="text-[10px] font-black text-rosewood/60 uppercase tracking-widest">
+                                    {t('drawers.change_password.strength.label', { label: strength.label })}
+                                </span>
+                                <span className="text-[10px] font-black text-rosewood/40 uppercase tracking-widest">
+                                    {t('drawers.change_password.strength.score', { percent: Math.round((strength.score / 4) * 100) })}
+                                </span>
+                            </div>
+                            <div className="flex gap-1.5 h-1.5 mb-4">
+                                {[1, 2, 3, 4].map((step) => (
+                                    <div key={step} className={`flex-1 rounded-full transition-all duration-500 ${strength.score >= step ? strength.color : 'bg-gray-100'}`} />
+                                ))}
+                            </div>
+                            <div className="grid grid-cols-2 gap-y-2.5 gap-x-4">
+                                {[
+                                    { label: t('drawers.change_password.strength.requirements.length'), met: formData.newPassword.length >= 8 },
+                                    { label: t('drawers.change_password.strength.requirements.uppercase'), met: /[A-Z]/.test(formData.newPassword) },
+                                    { label: t('drawers.change_password.strength.requirements.number'), met: /[0-9]/.test(formData.newPassword) },
+                                ].map(req => (
+                                    <div key={req.label} className="flex items-center gap-2">
+                                        <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition-colors ${req.met ? 'bg-green-500' : 'bg-gray-100'}`}>
+                                            {req.met && <Check size={8} className="text-white" strokeWidth={5} />}
+                                        </div>
+                                        <span className={`text-[10px] font-bold tracking-tight ${req.met ? 'text-green-600' : 'text-gray-400'}`}>{req.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <PasswordField
+                    label={t('drawers.change_password.fields.confirm_password')}
+                    name="confirmPassword"
+                    icon="verified_user"
+                    required
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    placeholder={t('drawers.change_password.fields.placeholders.confirm')}
+                    error={formData.confirmPassword && formData.newPassword !== formData.confirmPassword ? t('drawers.change_password.errors.mismatch') : undefined}
+                />
+            </div>
+        </ModalShell>
     );
 };

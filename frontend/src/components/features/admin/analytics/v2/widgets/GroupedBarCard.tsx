@@ -21,7 +21,7 @@ export const GroupedBarCard: React.FC<Props> = React.memo(({ title, subtitle, da
     <div className="bg-white border border-gold/20 rounded-xl shadow-sm">
       <div className="px-6 py-4 border-b border-gold/10">
         <h3 className="font-serif font-bold text-rosewood">{title}</h3>
-        {subtitle && <p className="text-[10px] font-black text-gold uppercase tracking-widest mt-0.5">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-dark-brown/60 mt-0.5">{subtitle}</p>}
       </div>
       {data.length === 0 ? (
         <div className="p-6"><EmptyState message="No data yet" icon={BarChart3} variant="dashed" /></div>

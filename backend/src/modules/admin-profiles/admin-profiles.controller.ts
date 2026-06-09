@@ -19,10 +19,11 @@ export class AdminProfilesController {
       const regNo = req.query.regNo as string | undefined;
       const createdAtFrom = req.query.createdAtFrom as string | undefined;
       const createdAtTo = req.query.createdAtTo as string | undefined;
+      const gender = req.query.gender as string | undefined;
       const result = await this.adminProfilesService.listProfiles({
         page, limit, search, status,
         sortBy, sortOrder, communityId, regNo,
-        createdAtFrom, createdAtTo,
+        createdAtFrom, createdAtTo, gender,
       });
       sendSuccess(res, result);
     } catch (err) {

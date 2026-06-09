@@ -74,6 +74,7 @@ export async function fetchAdminAccounts(params: { page: number; search?: string
     profileCount: a.profileCount ?? 0,
     joinedDate: a.createdAt,
     accountStatus: a.currentState ?? 'ACTIVE',
+    emailVerified: a.emailVerified ?? false,
   }));
   return { accounts, meta: raw.meta };
 }

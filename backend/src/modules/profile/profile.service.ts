@@ -526,6 +526,10 @@ export class ProfileService {
         id: p.id,
         regNo: p.regNo ?? '-',
         status: p.currentStatus,
+        adminVerified: p.currentStatus === 'ACTIVE' ? 'ACCEPTED'
+          : p.currentStatus === 'PENDING' ? 'PENDING'
+          : p.currentStatus === 'REJECTED' ? 'REJECTED'
+          : null,
         isOwner: true,
         name,
 
@@ -1254,11 +1258,14 @@ export class ProfileService {
     result.preferredLocationEn = pp?.preferredLocation ?? null;
 
     // Contact (gated: ADVANCED→hidden, FULL/OWNER→visible)
-    if (showContact) {
-      result.phone = !owner ? profile.account?.credential?.phone ?? null : null;
-      result.email = !owner ? profile.account?.credential?.email ?? null : null;
+    // For own profiles, contact is deliberately omitted from the response
+    if (showContact && !owner) {
+      result.phone = profile.account?.credential?.phone ?? null;
+      result.email = profile.account?.credential?.email ?? null;
       result.contactLocked = false;
     } else {
+      result.phone = null;
+      result.email = null;
       result.contactLocked = true;
     }
 

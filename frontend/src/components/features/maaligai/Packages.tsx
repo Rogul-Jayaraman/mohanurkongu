@@ -46,8 +46,8 @@ export const PackagesHero: React.FC<PackagesHeroProps> = () => {
 
   const ls = (enClasses: string, taClasses: string) => isTamil ? taClasses : enClasses;
   const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
-  const h2 = isTamil ? 'text-xl md:text-2xl lg:text-3xl' : 'text-2xl md:text-4xl lg:text-5xl';
-  const body = isTamil ? 'font-tamil-body text-sm md:text-base' : 'font-body text-base md:text-lg';
+  const h2 = 'text-2xl md:text-4xl lg:text-5xl';
+  const body = `${isTamil ? 'font-tamil-body' : 'font-body'} text-base md:text-lg`;
   const weight = (en: string, ta: string = 'font-bold') => isTamil ? ta : en;
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -195,7 +195,7 @@ export const PackagesHero: React.FC<PackagesHeroProps> = () => {
                 {displayed.map((fn, fIdx) => (
                   <div key={fIdx} className="flex items-center gap-3">
                     <CheckCircle2 className="text-gold-accent w-5 h-5 shrink-0" />
-                    <span className={`text-dark-gray ${ls('text-sm', 'text-xs')}`}>{fn.name}</span>
+                    <span className={`text-dark-gray text-sm`}>{fn.name}</span>
                   </div>
                 ))}
                 {pkg.functions.length > VISIBLE_FUNCTIONS && (
@@ -292,7 +292,7 @@ export const PackagesHero: React.FC<PackagesHeroProps> = () => {
                 <span className="material-symbols-outlined text-3xl text-rosewood mb-2">
                   {resolveIcon(addon.iconName)}
                 </span>
-                <span className={`font-medium text-dark-gray ${ls('text-sm', 'text-xs')}`}>
+                <span className={`font-medium text-dark-gray text-sm`}>
                   {addon.name}
                 </span>
               </motion.div>

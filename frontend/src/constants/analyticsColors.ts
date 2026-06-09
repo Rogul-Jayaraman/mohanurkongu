@@ -1,0 +1,55 @@
+export const COLORS = {
+  rosewood: '#8B1D3D',
+  darkRosewood: '#65152C',
+  rosewoodDark: '#6B0028',
+  gold: '#D4AF37',
+  goldSoft: '#F3E6B3',
+  gold300: '#ffe699',
+  gold400: '#e6c55c',
+  gold600: '#B8960F',
+  ivory: '#FCF9F2',
+  sage: '#8A9A5B',
+  deepSage: '#4A6E4A',
+  sageSoft: '#CCD5AE',
+  roseBeige: '#D8A7A7',
+  darkBrown: '#3A2F2F',
+  darkGray: '#3A3A3A',
+} as const;
+
+export const CHART = {
+  funnelStages: [COLORS.rosewood, COLORS.darkRosewood, COLORS.gold, COLORS.deepSage, COLORS.sage],
+  genderMale: COLORS.gold,
+  genderFemale: COLORS.rosewood,
+  plans: {
+    Basic: COLORS.sage,
+    Gold: COLORS.gold,
+    Elite: COLORS.rosewood,
+  },
+  status: {
+    draft: COLORS.sage,
+    pending: COLORS.gold,
+    active: COLORS.rosewood,
+    rejected: COLORS.darkRosewood,
+    archived: COLORS.gold600,
+  },
+  lifecycle: {
+    confirmed: COLORS.sage,
+    eventInProgress: COLORS.gold,
+    settlementPending: COLORS.roseBeige,
+    completed: COLORS.deepSage,
+    cancelled: COLORS.darkRosewood,
+  },
+  revenuePackage: {
+    standard: COLORS.sage,
+    royal: COLORS.gold,
+    grand: COLORS.rosewood,
+    addon: COLORS.goldSoft,
+  },
+  trendBar: COLORS.gold,
+  trendLine: COLORS.rosewood,
+} as const;
+
+export const GRADIENTS = {
+  rosewood: 'bg-rosewood-gradient',
+  ivoryGold: 'bg-ivory-gold-gradient',
+} as const;

@@ -31,7 +31,7 @@ export const HomeHero: React.FC<HomeHeroProps> = () => {
     const body = 'font-body';
     const weight = (en: string, ta: string) => isTamil ? ta : en;
     const tracking = isTamil ? 'tracking-normal' : 'tracking-widest';
-    const h1 = isTamil ? 'text-3xl md:text-5xl' : 'text-3xl md:text-7xl';
+    const h1 = 'text-3xl md:text-7xl';
 
     return (
         <section className="relative h-[85vh] md:h-screen min-h-[600px] flex items-center justify-center overflow-hidden">
@@ -48,7 +48,7 @@ export const HomeHero: React.FC<HomeHeroProps> = () => {
 
             <div className="relative z-10 text-center px-4 sm:px-6 max-w-6xl flex flex-col items-center">
                 <div className="reveal-frame">
-                    <p className={`reveal-item ${fontDecorative} text-primary ${ls('text-2xl md:text-5xl', 'text-xl md:text-3xl')} mb-4 drop-shadow-lg`}>
+                    <p className={`reveal-item ${fontDecorative} text-primary text-2xl md:text-5xl mb-4 drop-shadow-lg`}>
                         {t('home.hero.welcome')}
                     </p>
                 </div>
@@ -80,13 +80,13 @@ export const HomeHero: React.FC<HomeHeroProps> = () => {
                     <div className="reveal-item delay-400 flex flex-col sm:flex-row gap-6 justify-center w-full max-w-[300px] sm:max-w-none">
                         <button
                         onClick={() => navigate('/maaligai/hall-availability')}
-                            className={`btn-shine bg-primary text-dark-gray px-10 md:px-14 py-4 md:py-5 rounded-lg ${weight('font-black', 'font-bold')} ${ls('text-sm md:text-lg', 'text-xs md:text-base')} transition-all shadow-2xl active:scale-95`}
+                            className={`btn-shine bg-primary text-dark-gray px-10 md:px-14 py-4 md:py-5 rounded-lg ${weight('font-black', 'font-bold')} text-sm md:text-lg transition-all shadow-2xl active:scale-95`}
                         >
                             {t('home.hero.bookDate')}
                         </button>
                         <button
                             onClick={() => navigate('/maaligai/facilities')}
-                            className={`btn-shine border-2 border-primary/50 text-white px-10 md:px-14 py-4 md:py-5 rounded-lg ${weight('font-black', 'font-bold')} ${ls('text-sm md:text-lg', 'text-xs md:text-base')} transition-all backdrop-blur-md active:scale-95`}
+                            className={`btn-shine border-2 border-primary/50 text-white px-10 md:px-14 py-4 md:py-5 rounded-lg ${weight('font-black', 'font-bold')} text-sm md:text-lg transition-all backdrop-blur-md active:scale-95`}
                         >
                             {t('home.hero.viewGallery')}
                         </button>
@@ -111,8 +111,8 @@ export const WhyUs: React.FC<WhyUsProps> = () => {
     const fontDecorative = 'font-decorative';
     const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
     const body = 'font-body';
-    const h2 = isTamil ? 'text-2xl md:text-3xl' : 'text-3xl md:text-5xl';
-    const h3 = isTamil ? 'text-xl' : 'text-xl md:text-2xl';
+    const h2 = 'text-3xl md:text-5xl';
+    const h3 = 'text-xl md:text-2xl';
     const weight = (w: string) => w;
 
     const items = t('home.whyUs.items', { returnObjects: true }) as Array<{icon: string, title: string, desc: string}>;
@@ -121,7 +121,7 @@ export const WhyUs: React.FC<WhyUsProps> = () => {
         <section className="bg-ivory-tint section-spacing relative overflow-hidden">
             <div className="max-w-7xl mx-auto px-6 lg:px-20 text-center reveal-frame">
                 <div className="reveal-item">
-                    <p className={`${fontDecorative} text-gold-accent ${ls('text-4xl', 'text-2xl')} mb-4`}>{t('home.whyUs.script')}</p>
+                    <p className={`${fontDecorative} text-gold-accent text-4xl mb-4`}>{t('home.whyUs.script')}</p>
                     <h2 className={`${fontSerif} text-rosewood ${h2} ${weight('font-bold')} mb-16`}>{t('home.whyUs.heading')}</h2>
                 </div>
 
@@ -150,7 +150,7 @@ export const Testimonials: React.FC<TestimonialsProps> = () => {
     const fontDecorative = 'font-decorative';
     const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
     const fontDisplay = isTamil ? 'font-tamil-body' : 'font-body';
-    const h2 = isTamil ? 'text-2xl md:text-3xl' : 'text-3xl md:text-5xl';
+    const h2 = 'text-3xl md:text-5xl';
     const italic = '';
 
     const items = t('home.testimonials.items', { returnObjects: true }) as Array<{quote: string, author: string, location: string}>;
@@ -163,7 +163,7 @@ export const Testimonials: React.FC<TestimonialsProps> = () => {
 
             <div className="reveal-frame text-center mb-16">
                 <div className="reveal-item">
-                    <p className={`${fontDecorative} text-gold-accent ${ls('text-4xl', 'text-2xl')} mb-4`}>{t('home.testimonials.script')}</p>
+                    <p className={`${fontDecorative} text-gold-accent text-4xl mb-4`}>{t('home.testimonials.script')}</p>
                     <h2 className={`${fontSerif} text-rosewood ${h2} font-bold`}>{t('home.testimonials.heading')}</h2>
                     <div className="h-[2px] w-24 bg-primary mx-auto mt-4"></div>
                 </div>
@@ -174,7 +174,7 @@ export const Testimonials: React.FC<TestimonialsProps> = () => {
                     <div key={idx} className="reveal-frame h-full">
                         <div className={`reveal-item h-full bg-white p-10 rounded-2xl shadow-xl border border-rosewood/5 relative hover:-translate-y-2 transition-all duration-300 group`} style={{ transitionDelay: `${idx * 150}ms` }}>
                             <span className="material-symbols-outlined text-rosewood/10 absolute top-4 left-4 text-7xl font-bold">format_quote</span>
-                            <p className={`${fontSerif} ${italic} ${ls('text-lg', 'text-base')} mb-8 ${ls('leading-relaxed', 'leading-[1.6]')} text-gray-700 relative z-10`}>
+                            <p className={`${fontSerif} ${italic} text-lg mb-8 ${ls('leading-relaxed', 'leading-[1.6]')} text-gray-700 relative z-10`}>
                                 "{item.quote}"
                             </p>
                             <div className="flex items-center gap-4">
@@ -199,7 +199,7 @@ export const Stats: React.FC<StatsProps> = () => {
     const isTamil = i18n.language === 'ta';
 
     const ls = (enClasses: string, taClasses: string) => isTamil ? taClasses : enClasses;
-    const h3 = isTamil ? 'text-xl md:text-2xl' : 'text-2xl md:text-3xl';
+    const h3 = 'text-2xl md:text-3xl';
     const label = isTamil ? 'tracking-normal' : 'tracking-widest uppercase';
     const fontDisplay = isTamil ? 'font-tamil-serif' : 'font-heading';
     const weight = (w: string) => w;
@@ -227,7 +227,7 @@ export const Stats: React.FC<StatsProps> = () => {
                             <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg md:shadow-2xl border-t-4 border-rose-beige flex flex-col items-center text-center transition-all hover:-translate-y-2 h-full">
                                 <span className="material-symbols-outlined text-rosewood text-3xl md:text-4xl mb-3 md:mb-4">{stat.icon}</span>
                                 <h3 className={`${fontDisplay} ${h3} ${weight('font-bold')} text-dark-gray`}>{stat.value}</h3>
-                                <p className={`text-gray-500 font-bold mt-2 ${ls('text-[10px] md:text-xs', 'text-[11px] md:text-xs')} ${label}`}>
+                                <p className={`text-gray-500 font-bold mt-2 text-[10px] md:text-xs ${label}`}>
                                     {stat.label}
                                 </p>
                             </div>
@@ -284,7 +284,7 @@ export const GalleryPreview: React.FC<GalleryPreviewProps> = () => {
     const navigate = useNavigate();
 
     const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
-    const h2 = isTamil ? 'text-2xl md:text-3xl' : 'text-3xl md:text-5xl';
+    const h2 = 'text-3xl md:text-5xl';
     const tracking = isTamil ? 'tracking-normal' : 'tracking-widest uppercase';
 
     return (
@@ -351,7 +351,7 @@ export const HomeCTA: React.FC<CTAProps> = () => {
     const ls = (enClasses: string, taClasses: string) => isTamil ? taClasses : enClasses;
     const fontDecorative = 'font-decorative';
     const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
-    const h1 = isTamil ? 'text-3xl md:text-4xl' : 'text-4xl md:text-6xl';
+    const h1 = 'text-4xl md:text-6xl';
 
     return (
         <section className="section-spacing px-6 relative overflow-hidden bg-background-light">
@@ -359,12 +359,12 @@ export const HomeCTA: React.FC<CTAProps> = () => {
 
             <div ref={frameRef} className="reveal-frame max-w-4xl mx-auto text-center relative z-10 pt-8 pb-8">
                 <div className="reveal-item">
-                    <p className={`${fontDecorative} text-gold-accent ${ls('text-4xl lg:text-5xl', 'text-2xl lg:text-3xl')} mb-4`}>{t('home.cta.sub')}</p>
+                    <p className={`${fontDecorative} text-gold-accent text-4xl lg:text-5xl mb-4`}>{t('home.cta.sub')}</p>
                     <h2 className={`text-rosewood ${h1} ${fontSerif} font-bold mb-10 ${ls('leading-tight', 'leading-[1.4]')}`}>{t('home.cta.heading')}</h2>
 
                     <button
                         onClick={() => navigate('/maaligai/hall-availability')}
-                        className={`btn-shine bg-rosewood text-white px-10 py-4 rounded-full font-bold hover:bg-dark-rosewood transition-all duration-300 shadow-xl active:scale-95 ${ls(`uppercase text-sm tracking-widest`, `text-xs md:text-sm tracking-normal`)}`}
+                        className={`btn-shine bg-rosewood text-white px-10 py-4 rounded-full font-bold hover:bg-dark-rosewood transition-all duration-300 shadow-xl active:scale-95 ${isTamil ? 'tracking-normal' : 'uppercase tracking-widest'} text-sm`}
                     >
                         {t('home.cta.btn')}
                     </button>
@@ -382,8 +382,8 @@ export const BookingSteps: React.FC<BookingStepsProps> = () => {
     const ls = (enClasses: string, taClasses: string) => isTamil ? taClasses : enClasses;
     const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
     const fontDisplay = isTamil ? 'font-tamil-body' : 'font-body';
-    const h2 = isTamil ? 'text-2xl md:text-3xl' : 'text-3xl md:text-5xl';
-    const h3 = isTamil ? 'text-xl' : 'text-xl md:text-2xl';
+    const h2 = 'text-3xl md:text-5xl';
+    const h3 = 'text-xl md:text-2xl';
     const body = 'font-body';
     const label = isTamil ? 'tracking-normal' : 'tracking-widest uppercase';
 
@@ -393,7 +393,7 @@ export const BookingSteps: React.FC<BookingStepsProps> = () => {
         <section className="relative section-spacing overflow-hidden bg-white">
             <div className="max-w-7xl mx-auto px-6 text-center mb-16 md:mb-20 relative z-10 reveal-frame">
                 <div className="reveal-item">
-                    <span className={`${fontDisplay} text-gold-accent mb-6 block font-bold opacity-80 ${ls('text-xs', 'text-[11px]')} ${label}`}>
+                    <span className={`${fontDisplay} text-gold-accent mb-6 block font-bold opacity-80 text-xs ${label}`}>
                         {t('home.steps.label')}
                     </span>
                     <h2 className={`${fontSerif} text-rosewood ${h2} mb-10`}>
@@ -436,7 +436,7 @@ export const BookingSteps: React.FC<BookingStepsProps> = () => {
                 <div className="reveal-item" style={{ transitionDelay: '400ms' }}>
                     <button
                         onClick={() => navigate('/maaligai/hall-availability')}
-                        className={`group relative px-12 md:px-16 py-5 md:py-6 overflow-hidden bg-transparent border border-rosewood text-rosewood ${fontDisplay} font-bold transition-all duration-500 hover:text-white rounded-sm ${ls('tracking-widest text-xs md:text-sm uppercase', 'tracking-normal text-xs md:text-base')}`}
+                        className={`group relative px-12 md:px-16 py-5 md:py-6 overflow-hidden bg-transparent border border-rosewood text-rosewood ${fontDisplay} font-bold transition-all duration-500 hover:text-white rounded-sm ${isTamil ? 'tracking-normal' : 'tracking-widest uppercase'} text-xs md:text-sm`}
                     >
                         <span className="relative z-10">{t('home.steps.button')}</span>
                         <div className="absolute inset-0 bg-rosewood translate-x-[-101%] group-hover:translate-x-0 transition-transform duration-500 ease-out"></div>
@@ -456,7 +456,7 @@ export const HomeAboutSection: React.FC<AboutSectionProps> = () => {
     const fontDecorative = 'font-decorative';
     const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
     const body = 'font-body';
-    const h2 = isTamil ? 'text-2xl md:text-3xl lg:text-4xl' : 'text-3xl md:text-5xl';
+    const h2 = 'text-3xl md:text-5xl';
     const weight = (w: string) => w;
 
     return (
@@ -464,7 +464,7 @@ export const HomeAboutSection: React.FC<AboutSectionProps> = () => {
             <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16 max-w-7xl mx-auto relative z-10">
                 <div className="flex-1 reveal-frame">
                     <div className="reveal-item space-y-6 text-center lg:text-left relative">
-                        <p className={`${fontDecorative} text-rosewood ${ls('text-4xl', 'text-2xl')} mb-4`}>{t('home.about.script')}</p>
+                        <p className={`${fontDecorative} text-rosewood text-4xl mb-4`}>{t('home.about.script')}</p>
                         <h2 className={`${fontSerif} text-rosewood ${h2} ${weight('font-bold')} mb-8 relative inline-block`}>
                             {t('home.about.heading')}
                         </h2>

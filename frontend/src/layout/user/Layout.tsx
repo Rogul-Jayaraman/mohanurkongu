@@ -29,7 +29,7 @@ export const UserLayout: React.FC = () => {
   const isFullWidthPage = location.pathname.includes("/new-profile") || location.pathname.includes("/new-booking") || location.pathname.includes("/my-account");
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen user-layout">
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 w-full xl:ml-72 bg-white h-dvh overflow-hidden transition-all flex flex-col">

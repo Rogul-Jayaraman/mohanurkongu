@@ -4,11 +4,11 @@ export class AdminProfilesRepository {
   async findAll(params: {
     page: number; limit: number; search?: string; status?: string;
     sortBy?: string; sortOrder?: string; communityId?: string; regNo?: string;
-    createdAtFrom?: string; createdAtTo?: string;
+    createdAtFrom?: string; createdAtTo?: string; gender?: string;
   }) {
     const {
       page, limit, search, status, sortBy, sortOrder,
-      communityId, regNo, createdAtFrom, createdAtTo,
+      communityId, regNo, createdAtFrom, createdAtTo, gender,
     } = params;
     const where: any = {};
 
@@ -28,6 +28,10 @@ export class AdminProfilesRepository {
     if (communityId) {
       const parsed = parseInt(communityId, 10);
       if (!isNaN(parsed)) where.community = { communityId: parsed };
+    }
+
+    if (gender) {
+      where.basic = { ...where.basic, gender };
     }
 
     if (regNo) {

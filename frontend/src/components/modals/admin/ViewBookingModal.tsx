@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Calendar, User, Phone, Package, CreditCard, Clock, Mail, Hash, Wallet, RotateCcw, Receipt, BadgeCheck } from 'lucide-react';
+import { FileText, Calendar, Phone, Package, CreditCard, Mail, Hash, Wallet, RotateCcw, Receipt, BadgeCheck } from 'lucide-react';
 import { ModalShell } from '@/components/ui/modals/ModalShell';
 import type { Booking } from '@/types/mandapam';
 import { getBookingStatusColor, getComputedPaymentStatus, getPaymentStatusColor } from '@/constants/admin/statusColors';
@@ -16,7 +16,7 @@ interface ViewBookingModalProps {
 }
 
 const SectionLabel: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon, label }) => (
-    <div className="flex items-center gap-1.5 text-[10px] font-black text-rosewood/30 uppercase tracking-widest">
+    <div className="flex items-center gap-1.5 text-[10px] font-bold text-rosewood/40">
         {icon}
         {label}
     </div>
@@ -24,7 +24,7 @@ const SectionLabel: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon
 
 const InfoRow: React.FC<{ label: string; value: string | React.ReactNode; className?: string }> = ({ label, value, className }) => (
     <div className={`space-y-0.5 ${className}`}>
-        <p className="text-[10px] font-bold text-rosewood/40 uppercase tracking-wider">{label}</p>
+        <p className="text-[10px] font-bold text-rosewood/40">{label}</p>
         <p className="text-sm font-bold text-rosewood/80">{value}</p>
     </div>
 );
@@ -51,7 +51,7 @@ export const ViewBookingModal: React.FC<ViewBookingModalProps> = ({ isOpen, book
             footer={
                 <button
                     onClick={onClose}
-                    className="w-full py-4 bg-gradient-to-r from-rosewood to-dark-rosewood text-ivory font-black rounded-xl hover:shadow-xl transition-all text-xs uppercase tracking-[0.2em] shadow-lg shadow-rosewood/20 active:scale-[0.98]"
+                    className="w-full py-4 bg-gradient-to-r from-rosewood to-dark-rosewood text-ivory font-bold rounded-xl hover:shadow-xl transition-all text-xs shadow-lg shadow-rosewood/20 active:scale-[0.97]"
                 >
                     {t('common.close') || 'Done / Close'}
                 </button>
@@ -62,7 +62,7 @@ export const ViewBookingModal: React.FC<ViewBookingModalProps> = ({ isOpen, book
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-5 border-b border-gold/10">
                     <div className="space-y-1.5 w-full sm:w-auto">
                         <SectionLabel icon={<Calendar size={12} />} label={t('adminMandapam.bookings.eventName') || 'Event Title'} />
-                        <h4 className="text-xl md:text-2xl font-black text-rosewood tracking-tight leading-tight">
+                        <h4 className="text-xl md:text-2xl font-black text-rosewood leading-tight">
                             {isTamil ? booking.eventTitle.ta : booking.eventTitle.en}
                         </h4>
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -85,7 +85,7 @@ export const ViewBookingModal: React.FC<ViewBookingModalProps> = ({ isOpen, book
                             )}
                         </div>
                     </div>
-                    <span className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full shadow-sm ring-1 ring-white/20 shrink-0 ${getBookingStatusColor(booking.status)}`}>
+                    <span className={`px-4 py-1.5 text-[10px] font-bold rounded-full shadow-sm ring-1 ring-white/20 shrink-0 ${getBookingStatusColor(booking.status)}`}>
                         {booking.status.replace(/_/g, ' ')}
                     </span>
                 </div>
@@ -171,7 +171,7 @@ export const ViewBookingModal: React.FC<ViewBookingModalProps> = ({ isOpen, book
                         <SectionLabel icon={<Package size={12} />} label={t('adminMandapam.bookings.package') || 'Package'} />
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-2">
                             <div>
-                                <h5 className="text-base font-black text-rosewood uppercase tracking-tight">
+                                <h5 className="text-base font-black text-rosewood">
                                     {isTamil ? booking.packageSnapshot?.packageName?.ta : booking.packageSnapshot?.packageName?.en}
                                 </h5>
                                 <p className="text-xs font-medium text-rosewood/50 mt-0.5 flex items-center gap-2">
@@ -184,7 +184,7 @@ export const ViewBookingModal: React.FC<ViewBookingModalProps> = ({ isOpen, book
                                 </p>
                             </div>
                             <div className="text-left md:text-right">
-                                <p className="text-[10px] font-bold text-rosewood/40 uppercase">{t('adminMandapam.bookings.bookingTotal') || 'Package Fee'}</p>
+                                <p className="text-[10px] font-bold text-rosewood/40">{t('adminMandapam.bookings.bookingTotal') || 'Package Fee'}</p>
                                 <p className="text-xl font-black text-rosewood">{formatCurrency(booking.packageSnapshot?.packagePrice || 0)}</p>
                             </div>
                         </div>
@@ -214,25 +214,20 @@ export const ViewBookingModal: React.FC<ViewBookingModalProps> = ({ isOpen, book
                 <div className="bg-gradient-to-br from-rosewood/[0.02] to-rosewood/[0.01] rounded-2xl p-5 border border-rosewood/10">
                     <div className="flex items-center justify-between mb-4">
                         <SectionLabel icon={<CreditCard size={12} />} label={t('adminMandapam.bookings.paymentStatus') || 'Payment Lifecycle'} />
-                        <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.15em] rounded-full shadow-sm ring-1 ring-white/20 ${getPaymentStatusColor(paymentStatus)}`}>
+                        <span className={`px-3 py-1 text-[10px] font-bold rounded-full shadow-sm ring-1 ring-white/20 ${getPaymentStatusColor(paymentStatus)}`}>
                             {paymentStatus.replace(/_/g, ' ')}
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                        <div className="p-3.5 bg-white/80 rounded-xl border border-gold/5">
-                            <p className="text-[9px] font-bold text-rosewood/40 uppercase mb-1">{t('adminMandapam.bookings.totalCharges') || 'Total Charges'}</p>
-                            <p className="text-base font-black text-rosewood">{formatCurrency(charges)}</p>
+                    <div className="mb-4">
+                        <div className="flex justify-between text-xs mb-2">
+                            <span className="font-bold text-rosewood/60">{t('adminMandapam.bookings.totalCharges') || 'Total'}: {formatCurrency(charges)}</span>
+                            <span className="font-bold text-emerald-700">{t('adminMandapam.bookings.paidToDate') || 'Paid'}: {formatCurrency(payments)}</span>
+                            <span className={`font-bold ${outstanding <= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{t('adminMandapam.bookings.outstanding') || 'Due'}: {formatCurrency(outstanding)}</span>
                         </div>
-                        <div className="p-3.5 bg-white/80 rounded-xl border border-gold/5">
-                            <p className="text-[9px] font-bold text-rosewood/40 uppercase mb-1">{t('adminMandapam.bookings.paidToDate') || 'Paid to Date'}</p>
-                            <p className="text-base font-black text-emerald-700">{formatCurrency(payments)}</p>
-                        </div>
-                        <div className="p-3.5 bg-white/80 rounded-xl border border-gold/5">
-                            <p className="text-[9px] font-bold text-rosewood/40 uppercase mb-1">{t('adminMandapam.bookings.outstanding') || 'Outstanding'}</p>
-                            <p className={`text-base font-black ${outstanding <= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                {formatCurrency(outstanding)}
-                            </p>
+                        <div className="h-2.5 bg-gold/10 rounded-full overflow-hidden flex">
+                            <div className="h-full bg-emerald-500 transition-all" style={{width: `${charges > 0 ? (payments / charges) * 100 : 0}%`}} />
+                            <div className="h-full bg-rose-300 transition-all" style={{width: `${charges > 0 ? (outstanding / charges) * 100 : 0}%`}} />
                         </div>
                     </div>
 

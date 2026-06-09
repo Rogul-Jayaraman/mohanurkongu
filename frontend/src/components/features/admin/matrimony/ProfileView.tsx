@@ -30,6 +30,7 @@ import {
   SectionDivider,
 } from '@/components/features/matrimony/ProfileViewPrimitives';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
+import AuditPanel from './AuditPanel';
 
 // ═══════════════════════════════════════════════════════════
 // QuickNav
@@ -743,11 +744,24 @@ const AdminControls: React.FC<{
   onActionClick: (mode: 'REJECT' | 'ARCHIVE') => void;
   onDelete: () => void;
   isStatusPending: boolean;
-}> = ({ profile, isTamil, onVerify, onToggleStatus, onActionClick, onDelete, isStatusPending }) => {
+  onAudit: (id: string) => void;
+}> = ({ profile, isTamil, id, onVerify, onToggleStatus, onActionClick, onDelete, isStatusPending, onAudit }) => {
   const { t } = useLanguage();
   if (!profile) return null;
 
   const status = profile.status;
+
+  const handleAudit = () => {
+    if (id) onAudit(id);
+  };
+
+  const auditBtn = (
+    <motion.button whileHover={{ y: -2 }} whileTap={{ y: 0 }} onClick={handleAudit}
+      className={`${btnBase} flex-1 border border-gold-soft/30 text-rosewood/70 hover:bg-gold-soft/5`}>
+      <Shield size={16} strokeWidth={2} />
+      {t('adminMatrimony.verification.audit') || 'Audit'}
+    </motion.button>
+  );
 
   const actionRow = (() => {
     switch (status) {
@@ -764,6 +778,7 @@ const AdminControls: React.FC<{
               <X size={16} strokeWidth={2.5} />
               {t('adminMatrimony.common.reject')}
             </motion.button>
+            {auditBtn}
           </div>
         );
       case 'ACTIVE':
@@ -779,6 +794,7 @@ const AdminControls: React.FC<{
               <Trash2 size={16} strokeWidth={2.5} />
               {t('adminMatrimony.common.delete')}
             </motion.button>
+            {auditBtn}
           </div>
         );
       case 'ARCHIVED':
@@ -794,26 +810,29 @@ const AdminControls: React.FC<{
               <Trash2 size={16} strokeWidth={2.5} />
               {t('adminMatrimony.common.delete')}
             </motion.button>
+            {auditBtn}
           </div>
         );
       case 'REJECTED':
         return (
-          <div className="flex justify-center">
+          <div className="flex gap-2">
             <motion.button whileHover={{ y: -2 }} whileTap={{ y: 0 }} onClick={onDelete}
-              className={`${btnBase} w-auto min-w-[180px] bg-linear-to-br from-red-500 to-red-700 text-white shadow-red-500/20`}>
+              className={`${btnBase} flex-1 bg-linear-to-br from-red-500 to-red-700 text-white shadow-red-500/20`}>
               <Trash2 size={16} strokeWidth={2.5} />
               {t('adminMatrimony.common.deleteProfile')}
             </motion.button>
+            {auditBtn}
           </div>
         );
       case 'DRAFT':
         return (
-          <div className="flex justify-center">
+          <div className="flex gap-2">
             <motion.button whileHover={{ y: -2 }} whileTap={{ y: 0 }} onClick={onDelete}
-              className={`${btnBase} w-auto min-w-[180px] bg-linear-to-br from-red-500 to-red-700 text-white shadow-red-500/20`}>
+              className={`${btnBase} flex-1 bg-linear-to-br from-red-500 to-red-700 text-white shadow-red-500/20`}>
               <Trash2 size={16} strokeWidth={2.5} />
               {t('adminMatrimony.common.deleteProfile')}
             </motion.button>
+            {auditBtn}
           </div>
         );
       case 'DELETED':
@@ -964,6 +983,7 @@ const AdminProfileView: React.FC = () => {
   const isError = profileQuery.isError;
 
   const [editSection, setEditSection] = useState<SectionKey | null>(null);
+  const [auditProfileId, setAuditProfileId] = React.useState<string | null>(null);
   const [rejectionModal, setRejectionModal] = React.useState<{ open: boolean; mode: 'REJECT' | 'ARCHIVE' }>({ open: false, mode: 'REJECT' });
   const [deleteModal, setDeleteModal] = React.useState<{ open: boolean }>({ open: false });
   const [restoreModal, setRestoreModal] = React.useState<{ open: boolean }>({ open: false });
@@ -1253,11 +1273,17 @@ const AdminProfileView: React.FC = () => {
               onActionClick={handleActionClick}
               onDelete={() => setDeleteModal({ open: true })}
               isStatusPending={false}
+              onAudit={(id) => setAuditProfileId(id)}
             />
           </div>
         </AnimatedSection>
       </div>
 
+      <AuditPanel
+        profileId={auditProfileId || ''}
+        isOpen={auditProfileId !== null}
+        onClose={() => setAuditProfileId(null)}
+      />
       <RejectionModal
         isOpen={rejectionModal.open}
         onClose={() => setRejectionModal({ open: false, mode: 'REJECT' })}

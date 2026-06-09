@@ -26,7 +26,7 @@ export const FacilitiesHero: React.FC<FacilitiesHeroProps> = () => {
     const fontDisplay = isTamil ? 'font-tamil-serif' : 'font-heading';
     const weight = (w: string) => w;
     const tracking = isTamil ? 'tracking-normal' : 'tracking-widest';
-    const h1 = isTamil ? 'text-3xl md:text-5xl lg:text-6xl' : 'text-5xl md:text-7xl lg:text-8xl';
+    const h1 = 'text-5xl md:text-7xl lg:text-8xl';
 
     return (
         <section className="relative h-[85vh] flex items-center justify-center overflow-hidden bg-[#1a1810]">
@@ -41,7 +41,7 @@ export const FacilitiesHero: React.FC<FacilitiesHeroProps> = () => {
                 <div className="absolute inset-0 kolam-pattern opacity-10"></div>
             </div>
             <div className="relative z-10 text-center px-6 max-w-5xl flex flex-col items-center reveal-frame">
-                <p className={`reveal-item ${fontDecorative} text-primary ${ls('text-3xl md:text-6xl', 'text-xl md:text-3xl')} mb-6 ${weight('font-medium')}`}>{t('facilities.heroScript')}</p>
+                                        <p className={`reveal-item ${fontDecorative} text-primary text-3xl md:text-6xl mb-6 ${weight('font-medium')}`}>{t('facilities.heroScript')}</p>
                 <h2 className={`reveal-item delay-100 ${fontSerif} ${h1} text-white ${weight('font-black')} mb-8 ${ls('leading-tight', 'leading-[1.4]')}`}>{t('facilities.heroTitle')}</h2>
                 <OrnamentalDivider
                     stretch
@@ -51,7 +51,7 @@ export const FacilitiesHero: React.FC<FacilitiesHeroProps> = () => {
                     iconSize="text-4xl"
                     className="reveal-item delay-200 mb-8 w-full"
                 />
-                <p className={`reveal-item delay-300 text-white ${weight('font-light')} ${fontDisplay} ${ls('text-lg md:text-2xl', 'text-sm md:text-lg')} ${tracking}`}>{t('facilities.heroSubtitle')}</p>
+                <p className={`reveal-item delay-300 text-white ${weight('font-light')} ${fontDisplay} text-lg md:text-2xl ${tracking}`}>{t('facilities.heroSubtitle')}</p>
             </div>
         </section>
     );
@@ -64,8 +64,8 @@ export const MainHall: React.FC<MainHallProps> = () => {
     const ls = (enClasses: string, taClasses: string) => isTamil ? taClasses : enClasses;
     const fontDecorative = 'font-decorative';
     const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
-    const body = isTamil ? 'font-tamil-body text-sm md:text-[15px]' : 'font-body text-base md:text-lg';
-    const h3 = isTamil ? 'text-3xl md:text-4xl' : 'text-4xl md:text-5xl';
+    const body = `${isTamil ? 'font-tamil-body' : 'font-body'} text-base md:text-lg`;
+    const h3 = 'text-4xl md:text-5xl';
     const weight = (w: string) => w;
 
     const hallFeatures = t('facilities.hallFeatures', { returnObjects: true }) as any[];
@@ -86,7 +86,7 @@ export const MainHall: React.FC<MainHallProps> = () => {
                 </div>
                 <div className="flex-1 space-y-10 text-center lg:text-left reveal-frame">
                     <div className="reveal-item-right delay-200 space-y-8">
-                        <span className={`${fontDecorative} text-rosewood ${ls('text-4xl', 'text-2xl')} block mb-4`}>{t('facilities.hallLabel')}</span>
+                        <span className={`${fontDecorative} text-rosewood text-4xl block mb-4`}>{t('facilities.hallLabel')}</span>
                         <h3 className={`${fontSerif} ${h3} ${weight('font-bold')} ${ls('leading-tight', 'leading-[1.4]')} text-rosewood mb-8`}>{t('facilities.hallTitle')}</h3>
                         <p className={`text-gray-600 ${ls('leading-relaxed', 'leading-[1.6]')} ${body}`}>{t('facilities.hallP1')}</p>
                         <ul className="space-y-8 text-left">
@@ -94,7 +94,7 @@ export const MainHall: React.FC<MainHallProps> = () => {
                                 <li key={i} className="flex items-start gap-6 group">
                                     <span className="material-symbols-outlined text-rosewood text-3xl md:text-4xl transition-transform duration-500 group-hover:scale-110">{feat.icon}</span>
                                     <div>
-                                        <h4 className={`${weight('font-bold')} ${ls('text-lg md:text-xl', 'text-base md:text-lg')} text-dark-gray mb-1`}>{feat.title}</h4>
+                                        <h4 className={`${weight('font-bold')} text-lg md:text-xl text-dark-gray mb-1`}>{feat.title}</h4>
                                         <p className={`text-gray-500 ${body} ${ls('leading-relaxed', 'leading-[1.6]')}`}>{feat.desc}</p>
                                     </div>
                                 </li>
@@ -114,8 +114,8 @@ export const DiningHall: React.FC<DiningHallProps> = () => {
     const ls = (enClasses: string, taClasses: string) => isTamil ? taClasses : enClasses;
     const fontDecorative = 'font-decorative';
     const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
-    const body = isTamil ? 'font-tamil-body text-sm md:text-[15px]' : 'font-body text-base md:text-lg';
-    const h3 = isTamil ? 'text-3xl md:text-4xl' : 'text-4xl md:text-5xl';
+    const body = `${isTamil ? 'font-tamil-body' : 'font-body'} text-base md:text-lg`;
+    const h3 = 'text-4xl md:text-5xl';
     const weight = (w: string) => w;
 
     const diningGrid = t('facilities.diningGrid', { returnObjects: true }) as any[];
@@ -136,14 +136,14 @@ export const DiningHall: React.FC<DiningHallProps> = () => {
                 </div>
                 <div className="flex-1 space-y-10 text-center lg:text-left reveal-frame">
                     <div className="reveal-item-left delay-200 space-y-8">
-                        <span className={`${fontDecorative} text-rosewood ${ls('text-4xl', 'text-2xl')} block mb-4`}>{t('facilities.diningLabel')}</span>
+                        <span className={`${fontDecorative} text-rosewood text-4xl block mb-4`}>{t('facilities.diningLabel')}</span>
                         <h3 className={`${fontSerif} ${h3} ${weight('font-bold')} ${ls('leading-tight', 'leading-[1.4]')} text-rosewood mb-8`}>{t('facilities.diningTitle')}</h3>
                         <p className={`text-gray-600 ${ls('leading-relaxed', 'leading-[1.6]')} ${body}`}>{t('facilities.diningP1')}</p>
                         <div className="grid grid-cols-1 gap-5 text-left">
                             {diningGrid.map((item: { icon: string; text: string }, i: number) => (
                                 <div key={i} className="flex items-center gap-6 bg-white p-6 rounded-2xl shadow-sm border border-sage-green/20">
                                     <span className="material-symbols-outlined text-rosewood text-2xl md:text-3xl">{item.icon}</span>
-                                    <span className={`text-dark-gray ${weight('font-semibold')} ${ls('text-base md:text-lg', 'text-sm md:text-base')}`}>{item.text}</span>
+                                    <span className={`text-dark-gray ${weight('font-semibold')} text-base md:text-lg`}>{item.text}</span>
                                 </div>
                             ))}
                         </div>
@@ -161,8 +161,8 @@ export const Parking: React.FC<ParkingProps> = () => {
     const ls = (enClasses: string, taClasses: string) => isTamil ? taClasses : enClasses;
     const fontDecorative = 'font-decorative';
     const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
-    const body = isTamil ? 'font-tamil-body text-sm md:text-[15px]' : 'font-body text-base md:text-lg';
-    const h3 = isTamil ? 'text-3xl md:text-4xl' : 'text-4xl md:text-5xl';
+    const body = `${isTamil ? 'font-tamil-body' : 'font-body'} text-base md:text-lg`;
+    const h3 = 'text-4xl md:text-5xl';
     const weight = (w: string) => w;
 
     const parkingGrid = t('facilities.parkingGrid', { returnObjects: true }) as any[];
@@ -183,14 +183,14 @@ export const Parking: React.FC<ParkingProps> = () => {
                 </div>
                 <div className="flex-1 space-y-10 text-center lg:text-left reveal-frame">
                     <div className="reveal-item-right delay-200 space-y-8">
-                        <span className={`${fontDecorative} text-rosewood ${ls('text-4xl', 'text-2xl')} block mb-4`}>{t('facilities.parkingLabel')}</span>
+                        <span className={`${fontDecorative} text-rosewood text-4xl block mb-4`}>{t('facilities.parkingLabel')}</span>
                         <h3 className={`${fontSerif} ${h3} ${weight('font-bold')} ${ls('leading-tight', 'leading-[1.4]')} text-rosewood mb-8`}>{t('facilities.parkingTitle')}</h3>
                         <p className={`text-gray-600 ${ls('leading-relaxed', 'leading-[1.6]')} ${body}`}>{t('facilities.parkingP1')}</p>
                         <div className="grid grid-cols-1 gap-5 text-left">
                             {parkingGrid.map((item: { icon: string; text: string }, i: number) => (
                                 <div key={i} className="flex items-center gap-6 bg-sage-green/20 p-6 rounded-2xl shadow-sm border border-sage-green/20">
                                     <span className="material-symbols-outlined text-rosewood text-2xl md:text-3xl">{item.icon}</span>
-                                    <span className={`text-dark-gray ${weight('font-semibold')} ${ls('text-base md:text-lg', 'text-sm md:text-base')}`}>{item.text}</span>
+                                    <span className={`text-dark-gray ${weight('font-semibold')} text-base md:text-lg`}>{item.text}</span>
                                 </div>
                             ))}
                         </div>
@@ -208,7 +208,7 @@ export const FacilitiesList: React.FC<FacilitiesListProps> = () => {
     const ls = (enClasses: string, taClasses: string) => isTamil ? taClasses : enClasses;
     const fontDecorative = 'font-decorative';
     const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
-    const h2 = isTamil ? 'text-2xl md:text-3xl lg:text-4xl' : 'text-3xl md:text-5xl';
+    const h2 = 'text-3xl md:text-5xl';
     const weight = (w: string) => w;
 
     const glanceItems = t('facilities.glanceItems', { returnObjects: true }) as any[];
@@ -272,7 +272,7 @@ export const FacilitiesList: React.FC<FacilitiesListProps> = () => {
             className="group flex flex-col items-center justify-center p-8 bg-white border border-gold-accent/10 rounded-2xl shadow-sm h-48 shrink-0 w-full"
         >
             <span className="material-symbols-outlined text-rosewood text-4xl mb-4">{item.icon}</span>
-            <h3 className={`${fontSerif} ${weight('font-bold')} text-dark-gray ${ls('text-lg', 'text-base')}`}>{item.label}</h3>
+            <h3 className={`${fontSerif} ${weight('font-bold')} text-dark-gray text-lg`}>{item.label}</h3>
         </div>
     );
 
@@ -281,7 +281,7 @@ export const FacilitiesList: React.FC<FacilitiesListProps> = () => {
             <CornerFlourish />
 
             <div className="max-w-7xl mx-auto px-6 lg:px-20 py-16 lg:py-0 text-center reveal-frame pt-8 pb-8 relative z-10">
-                <p className={`${fontDecorative} text-gold-accent ${ls('text-4xl', 'text-2xl')} mb-4 reveal-item`}>{t('facilities.glanceLabel')}</p>
+                <p className={`${fontDecorative} text-gold-accent text-4xl mb-4 reveal-item`}>{t('facilities.glanceLabel')}</p>
                 <h2 className={`text-rosewood ${h2} ${fontSerif} ${weight('font-bold')} mb-16 reveal-item delay-100`}>{t('facilities.glanceTitle')}</h2>
 
                 {isMobile ? (
@@ -340,7 +340,7 @@ export const FacilitiesCTA: React.FC<FacilitiesCTAProps> = () => {
     
     const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
     const fontDisplay = isTamil ? 'font-tamil-serif' : 'font-heading';
-    const h2 = isTamil ? 'text-2xl md:text-3xl lg:text-4xl' : 'text-3xl md:text-5xl';
+    const h2 = 'text-3xl md:text-5xl';
     const weight = (w: string) => w;
     const label = 'uppercase tracking-widest';
 

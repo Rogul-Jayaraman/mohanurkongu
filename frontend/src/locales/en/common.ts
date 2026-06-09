@@ -158,6 +158,7 @@ export const commonEn = {
     update: "Update",
     search: "Search....",
     save: "Save",
+    saving: "Saving...",
     saveChanges: "Save Changes",
     close: "Close",
     next: "Next",

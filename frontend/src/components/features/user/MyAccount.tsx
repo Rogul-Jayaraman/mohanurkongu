@@ -58,7 +58,7 @@ const TabBar: React.FC<{ activeTab: string; onTabChange: (t: any) => void }> = (
         <>
             <button
                 onClick={() => onTabChange('details')}
-                className={`h-full px-3 md:px-6 flex items-center ${isTamil ? 'text-xs md:text-sm' : 'text-sm md:text-base'} font-serif font-bold transition-colors relative ${
+                className={`h-full px-3 md:px-6 flex items-center text-sm md:text-base font-serif font-bold transition-colors relative ${
                     activeTab === 'details'
                         ? 'text-rosewood'
                         : 'text-rosewood/60 hover:text-rosewood'
@@ -71,7 +71,7 @@ const TabBar: React.FC<{ activeTab: string; onTabChange: (t: any) => void }> = (
             </button>
             <button
                 onClick={() => onTabChange('membership')}
-                className={`h-full px-3 md:px-6 flex items-center ${isTamil ? 'text-xs md:text-sm' : 'text-sm md:text-base'} font-serif font-bold transition-colors relative ${
+                className={`h-full px-3 md:px-6 flex items-center text-sm md:text-base font-serif font-bold transition-colors relative ${
                     activeTab === 'membership'
                         ? 'text-rosewood'
                         : 'text-rosewood/60 hover:text-rosewood'
@@ -84,7 +84,7 @@ const TabBar: React.FC<{ activeTab: string; onTabChange: (t: any) => void }> = (
             </button>
             <button
                 onClick={() => onTabChange('plans')}
-                className={`h-full px-3 md:px-6 flex items-center ${isTamil ? 'text-xs md:text-sm' : 'text-sm md:text-base'} font-serif font-bold transition-colors relative ${
+                className={`h-full px-3 md:px-6 flex items-center text-sm md:text-base font-serif font-bold transition-colors relative ${
                     activeTab === 'plans'
                         ? 'text-rosewood'
                         : 'text-rosewood/60 hover:text-rosewood'
@@ -119,7 +119,7 @@ const InfoRow: React.FC<{
                     <div className="h-4 w-32 skeleton" />
                 ) : (
                     <>
-                        <span className={`${isTamil ? 'text-xs' : 'text-sm'} text-dark-brown font-body`}>{value || t('myaccount:details.not_specified')}</span>
+                        <span className="text-sm text-dark-brown font-body">{value || t('myaccount:details.not_specified')}</span>
                         {verified && <BadgeCheck size={14} className="text-emerald-500 shrink-0" />}
                     </>
                 )}
@@ -146,7 +146,7 @@ const TransactionRow: React.FC<{
         <div className="group p-4 md:p-5 rounded-xl border border-gold/10 hover:border-gold-500/20 hover:bg-ivory transition-all cursor-default">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                 <div className="flex items-center gap-3 flex-wrap">
-                    <span className={`${isTamil ? 'text-xs' : 'text-sm'} font-bold text-rosewood`}>
+                    <span className="text-sm font-bold text-rosewood">
                         {t('myaccount:membership.history.plan_label', { plan })}
                     </span>
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
@@ -158,7 +158,7 @@ const TransactionRow: React.FC<{
                         {isActive ? t('myaccount:membership.history.active') : t('myaccount:membership.history.expired')}
                     </span>
                 </div>
-                <span className={`${isTamil ? 'text-xs' : 'text-sm'} font-black text-rosewood`}>{formatCurrency(amount)}</span>
+                <span className="text-sm font-black text-rosewood">{formatCurrency(amount)}</span>
             </div>
             <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 mt-1.5">
                 <p className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
@@ -580,13 +580,13 @@ const SecuritySection: React.FC<{ onChangePassword: () => void }> = ({ onChangeP
                             <Lock size={20} />
                         </div>
                         <div>
-                            <p className={`${isTamil ? 'text-xs' : 'text-sm'} font-bold text-rosewood`}>{t('myaccount:details.update_password')}</p>
+                            <p className="text-sm font-bold text-rosewood">{t('myaccount:details.update_password')}</p>
                             <p className="text-xs text-slate-500 mt-0.5">{t('myaccount:details.update_password_desc')}</p>
                         </div>
                     </div>
                     <button
                         onClick={onChangePassword}
-                        className={`shrink-0 px-6 py-3 bg-ivory-premium rounded-xl font-bold ${isTamil ? 'text-[10px]' : 'text-xs'} shadow-lg shadow-gold/20 hover:shadow-gold/30 hover:-translate-y-0.5 active:scale-95 transition-all`}
+                        className="shrink-0 px-6 py-3 bg-ivory-premium rounded-xl font-bold text-xs shadow-lg shadow-gold/20 hover:shadow-gold/30 hover:-translate-y-0.5 active:scale-95 transition-all"
                     >
                         {t('myaccount:details.change_password')}
                     </button>
@@ -628,14 +628,14 @@ const DangerZoneSection: React.FC = () => {
                         <Trash2 size={28} />
                     </div>
                     <div className="flex-1 text-center md:text-left">
-                        <h4 className={`${isTamil ? 'text-sm' : 'text-base'} font-bold text-rosewood mb-1`}>{t('myaccount:details.deactivate.title')}</h4>
+                        <h4 className="text-base font-bold text-rosewood mb-1">{t('myaccount:details.deactivate.title')}</h4>
                         <p className="text-xs text-rosewood/60 leading-relaxed max-w-lg">
                             {t('myaccount:details.deactivate.description')}
                         </p>
                         {!isDeactivateConfirm ? (
                                 <button
                                     onClick={() => setIsDeactivateConfirm(true)}
-                                    className={`mt-5 px-6 py-3 bg-rosewood-premium rounded-xl font-bold ${isTamil ? 'text-[10px]' : 'text-xs'} shadow-md shadow-rosewood/20 hover:shadow-rosewood/30 hover:-translate-y-0.5 transition-all active:scale-95`}
+                                    className="mt-5 px-6 py-3 bg-rosewood-premium rounded-xl font-bold text-xs shadow-md shadow-rosewood/20 hover:shadow-rosewood/30 hover:-translate-y-0.5 transition-all active:scale-95"
                                 >
                                     {t('myaccount:details.deactivate.button')}
                                 </button>
@@ -692,7 +692,7 @@ const MembershipStatusSection: React.FC<{
                     {isLoading ? (
                         <div className="h-8 w-40 skeleton mt-1" />
                     ) : (
-                        <h3 className={`${isTamil ? 'text-xl' : 'text-2xl'} font-serif font-black text-gold tracking-tight`}>
+                        <h3 className="text-2xl font-serif font-black text-gold tracking-tight">
                             {planName}
                         </h3>
                     )}
@@ -895,7 +895,7 @@ const PurchaseHistorySection: React.FC<{
                     {(history?.length ?? 0) > 3 && (
                         <button
                             onClick={() => setShowAllHistory(!showAllHistory)}
-                            className={`w-full py-3 rounded-xl border border-gold/20 bg-white text-rosewood font-bold ${isTamil ? 'text-[10px]' : 'text-xs'} flex items-center justify-center gap-2 hover:bg-rosewood/5 transition-all`}
+                            className="w-full py-3 rounded-xl border border-gold/20 bg-white text-rosewood font-bold text-xs flex items-center justify-center gap-2 hover:bg-rosewood/5 transition-all"
                         >
                             {showAllHistory ? (
                                 <>{t('myaccount:membership.history.show_less')} <ChevronUp size={14} /></>

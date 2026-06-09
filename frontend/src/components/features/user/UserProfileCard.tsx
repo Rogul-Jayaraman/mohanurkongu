@@ -293,6 +293,8 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
                 ) : (
                   <>
                     {variant !== "browse" &&
+                      profile.status !== "INACTIVE" &&
+                      profile.status !== "ARCHIVED" &&
                       profile.adminVerified !== "ACCEPTED" && (
                         <StatusBadge
                           status={
@@ -303,6 +305,9 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = React.memo(
                       )}
                     {profile.status === "INACTIVE" && (
                       <StatusBadge status="inactive" minimal />
+                    )}
+                    {profile.status === "ARCHIVED" && (
+                      <StatusBadge status="archived" minimal />
                     )}
                   </>
                 )}

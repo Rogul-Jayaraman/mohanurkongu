@@ -28,6 +28,7 @@ export function useApproveProfileMutation() {
       qc.invalidateQueries({ queryKey: queryKeys.profile.adminLists() });
       qc.invalidateQueries({ queryKey: queryKeys.profile.adminDetail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.profile.detail(id) });
+      qc.invalidateQueries({ queryKey: queryKeys.profile.my() });
       toast.success('Profile approved');
     },
     onError: (err) => showErrorToast(err, 'Could not approve profile'),
@@ -45,6 +46,7 @@ export function useRejectProfileMutation() {
       qc.invalidateQueries({ queryKey: queryKeys.profile.adminLists() });
       qc.invalidateQueries({ queryKey: queryKeys.profile.adminDetail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.profile.detail(id) });
+      qc.invalidateQueries({ queryKey: queryKeys.profile.my() });
       toast.success('Profile rejected');
     },
     onError: (err) => showErrorToast(err, 'Could not reject profile'),
@@ -103,6 +105,7 @@ export function useArchiveProfileMutation() {
       qc.invalidateQueries({ queryKey: queryKeys.profile.adminDetail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.profile.detail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.profile.showcase() });
+      qc.invalidateQueries({ queryKey: queryKeys.profile.my() });
       toast.success('Profile archived');
     },
     onSettled: (_data, _err, { id }) => {
@@ -130,6 +133,7 @@ export function useRestoreProfileMutation() {
       qc.invalidateQueries({ queryKey: queryKeys.profile.adminDetail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.profile.detail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.profile.showcase() });
+      qc.invalidateQueries({ queryKey: queryKeys.profile.my() });
       toast.success('Profile restored');
     },
     onSettled: (_data, _err, id) => {
@@ -152,6 +156,7 @@ export function useDeleteProfileMutation() {
       qc.invalidateQueries({ queryKey: queryKeys.profile.adminDetail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.profile.detail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.profile.showcase() });
+      qc.invalidateQueries({ queryKey: queryKeys.profile.my() });
       qc.removeQueries({ queryKey: queryKeys.profile.detail(id) });
       toast.success('Profile deleted');
     },

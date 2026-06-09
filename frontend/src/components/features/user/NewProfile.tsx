@@ -24,7 +24,7 @@ const LimitReachedBanner: React.FC<{ current: number; limit: number }> = ({ curr
                 <div className="w-16 h-16 bg-rosewood/5 rounded-xl flex items-center justify-center mx-auto mb-6">
                     <span className="material-symbols-outlined text-3xl text-rosewood">block</span>
                 </div>
-                <h3 className={`${isTamil ? 'text-lg' : 'text-xl'} font-serif font-bold text-rosewood mb-3`}>
+                <h3 className="text-xl font-serif font-bold text-rosewood mb-3">
                     {isTamil ? 'சுயவிவர வரம்பு எட்டப்பட்டது' : 'Profile Slot Limit Reached'}
                 </h3>
                 <p className="text-rosewood/60 text-sm mb-2">

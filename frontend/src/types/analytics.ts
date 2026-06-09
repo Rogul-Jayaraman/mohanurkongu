@@ -29,6 +29,13 @@ export interface ManamaalaiAnalytics {
   membershipFunnel: { stage: string; count: number }[];
   membershipPlanDistribution: { plan: string; count: number; percentage: number }[];
   renewalForecast: { bucket: string; silver: number; gold: number; platinum: number }[];
+  verificationStats: {
+    pendingTotal: number;
+    pendingToday: number;
+    approvedToday: number;
+    rejectedToday: number;
+    avgReviewTimeHours: number;
+  };
 }
 
 export interface MandapamAnalytics {

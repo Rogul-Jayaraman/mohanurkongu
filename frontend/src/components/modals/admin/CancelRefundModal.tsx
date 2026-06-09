@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { XCircle, Info, ArrowRight, Loader2, BadgeCheck } from 'lucide-react';
+import { XCircle, Loader2 } from 'lucide-react';
 import { ModalShell } from '@/components/ui/modals/ModalShell';
+import { Input } from '@/components/ui/forms/Input';
 import type { Booking, PaymentMethodType } from '@/types/mandapam';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/utils/format';
@@ -62,26 +63,26 @@ export const CancelRefundModal: React.FC<CancelRefundModalProps> = ({ isOpen, bo
             isOpen={isOpen}
             onClose={onClose}
             icon={<XCircle size={24} className="text-rose-600" />}
-            title={isTamil ? 'ரத்துசெய் மற்றும் பணத்திரும்பம்' : (t('adminMandapam.bookings.cancelBookingTitle') || 'Cancel & Refund')}
-            size="sm"
+            title={t('adminMandapam.bookings.cancelBookingTitle') || 'Cancel & Refund'}
+            size="md"
             footer={
                 <div className="flex gap-3">
                     <button
                         onClick={onClose}
                         disabled={isSubmitting}
-                        className="flex-1 px-6 py-3 border border-gold/20 text-rosewood font-bold rounded-xl hover:bg-ivory transition-all text-sm disabled:opacity-30"
+                        className="flex-1 px-6 py-3 border border-gold/20 text-rosewood font-bold rounded-xl hover:bg-ivory transition-all text-sm active:scale-[0.97] disabled:opacity-30"
                     >
-                        {t('common.cancel') || (isTamil ? 'பின் செல்' : 'Go Back')}
+                        {t('common.cancel') || 'Go Back'}
                     </button>
                     <button
                         onClick={() => onConfirm(booking, refundOption, refundAmount, refundMethod, reason)}
                         disabled={!isValid || isSubmitting}
-                        className="flex-1 px-6 py-3 bg-rose-700 text-ivory font-bold rounded-xl hover:shadow-lg transition-all text-sm shadow-lg shadow-rose-700/20 active:scale-95 disabled:opacity-30 inline-flex items-center justify-center gap-2"
+                        className="flex-1 px-6 py-3 bg-gradient-to-r from-rose-700 to-rose-600 text-ivory font-bold rounded-xl hover:shadow-xl transition-all text-sm shadow-lg shadow-rose-700/20 active:scale-[0.97] disabled:opacity-30 inline-flex items-center justify-center gap-2"
                     >
                         {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
                         {isSubmitting
-                            ? (t('common.saving') || (isTamil ? 'செயலாக்குகிறது...' : 'Processing...'))
-                            : (isTamil ? 'ரத்துசெய்வதை உறுதிப்படுத்து' : (t('adminMandapam.bookings.confirmCancel') || 'Confirm Cancellation'))}
+                            ? (t('common.saving') || 'Processing...')
+                            : (t('adminMandapam.bookings.confirmCancel') || 'Confirm Cancellation')}
                     </button>
                 </div>
             }
@@ -91,10 +92,10 @@ export const CancelRefundModal: React.FC<CancelRefundModalProps> = ({ isOpen, bo
                 <div className="bg-gradient-to-br from-rose-50/80 to-white rounded-2xl p-5 border border-rose-200/50">
                     <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-black text-rose-800/40 uppercase tracking-[0.15em] mb-1">
+                            <p className="text-[10px] font-bold text-rose-800/40 mb-1">
                                 {t('adminMandapam.bookings.eventName') || 'Event Name'}
                             </p>
-                            <p className="text-base font-black text-rosewood tracking-tight truncate">
+                            <p className="text-base font-black text-rosewood truncate">
                                 {isTamil ? booking.eventTitle.ta : booking.eventTitle.en}
                             </p>
                             <p className="text-xs font-bold text-rosewood/50 mt-1 truncate">
@@ -107,29 +108,34 @@ export const CancelRefundModal: React.FC<CancelRefundModalProps> = ({ isOpen, bo
                             </p>
                         </div>
                         <div className="text-right shrink-0">
-                            <p className="text-[10px] font-bold text-rosewood/40 uppercase mb-1">
-                                {isTamil ? 'நிகர செலுத்தம்' : (t('adminMandapam.bookings.paidToDate') || 'Net Paid')}
+                            <p className="text-[10px] font-bold text-rosewood/40 mb-1">
+                                {t('adminMandapam.bookings.netPaid') || 'Net Paid'}
                             </p>
                             <p className="text-xl font-black text-rose-700">{formatCurrency(netPaid)}</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Warning */}
-                <div className="bg-amber-50 border-l-4 border-amber-500 rounded-xl p-4 flex items-start gap-3">
-                    <Info size={16} className="text-amber-600 shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-800 font-medium leading-relaxed">
-                        {isTamil
-                            ? 'இது முன்பதிவை ரத்துசெய்து நேர ஒதுக்கீட்டை விடுவிக்கும். இந்த செயலை மாற்ற முடியாது.'
-                            : (t('adminMandapam.bookings.cancelBookingWarning') || 'This will cancel the booking and release the slot. This action cannot be undone.')}
-                    </p>
+                {/* Danger Warning Banner */}
+                <div className="bg-rose-50 border-2 border-rose-200 rounded-2xl p-5 flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                        <XCircle size={22} className="text-rose-600" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-bold text-rose-800 mb-1">
+                            {t('adminMandapam.bookings.cancelBookingWarning') || 'This will cancel the booking and release the slot.'}
+                        </p>
+                        <p className="text-xs font-medium text-rose-600">
+                            {isTamil ? 'இந்த செயலை மீளமுடியாது. தயவுசெய்து பணத்திரும்ப விவரங்களைச் சரிபார்க்கவும்.' : 'This action cannot be undone. Please review the refund details below before proceeding.'}
+                        </p>
+                    </div>
                 </div>
 
                 {/* Refund Options */}
                 <div className="space-y-2.5">
-                    <label className="text-[10px] font-black text-rosewood/30 uppercase tracking-[0.2em] block ml-1">
-                        {isTamil ? 'பணத்திரும்ப தேர்வு' : (t('adminMandapam.bookings.refundStatus') || 'Refund Disposition')}
-                    </label>
+                    <p className="text-[10px] font-bold text-rosewood/40 ml-1">
+                        {t('adminMandapam.bookings.refundStatus') || 'Refund Disposition'}
+                    </p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         {REFUND_OPTIONS.map(ro => (
                             <button
@@ -160,9 +166,9 @@ export const CancelRefundModal: React.FC<CancelRefundModalProps> = ({ isOpen, bo
                 {needsRefundEntry && (
                     <>
                         <div className="space-y-2.5">
-                            <label className="text-[10px] font-black text-rosewood/30 uppercase tracking-[0.2em] block ml-1">
-                                {isTamil ? 'பணத்திரும்ப முறை' : (t('adminMandapam.bookings.refundMethod') || 'Refund Method')}
-                            </label>
+                            <p className="text-[10px] font-bold text-rosewood/40 ml-1">
+                                {t('adminMandapam.bookings.refundMethod') || 'Refund Method'}
+                            </p>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {REFUND_METHODS.map(rm => (
                                     <button
@@ -183,30 +189,27 @@ export const CancelRefundModal: React.FC<CancelRefundModalProps> = ({ isOpen, bo
                         <div className="space-y-3">
                             {refundOption === 'FULL_REFUND' ? (
                                 <div className="px-4 py-3.5 bg-ivory border border-gold/15 rounded-xl">
-                                    <span className="text-[10px] font-black text-rosewood/40 tracking-wider block mb-0.5 uppercase">
-                                        {isTamil ? 'பணத்திரும்ப தொகை' : (t('adminMandapam.bookings.refundAmount') || 'Refund Amount')}
-                                    </span>
-                                    <span className="text-lg font-black text-rose-700">{formatCurrency(netPaid)}</span>
-                                    <p className="text-[10px] text-rosewood/30 mt-0.5">
-                                        {isTamil ? 'முழு பணத்திரும்பம் — தொகை நிர்ணயிக்கப்பட்டது' : 'Full refund — amount is fixed'}
-                                    </p>
+                                <p className="text-[10px] font-bold text-rosewood/40 mb-0.5">
+                                    {t('adminMandapam.bookings.refundAmount') || 'Refund Amount'}
+                                </p>
+                                <p className="text-lg font-black text-rose-700">{formatCurrency(netPaid)}</p>
+                                <p className="text-[10px] text-rosewood/30 mt-0.5">
+                                    {t('adminMandapam.bookings.fullRefundFixed') || 'Full refund — amount is fixed'}
+                                </p>
                                 </div>
                             ) : (
                                 <div>
-                                    <label className="block text-[11px] font-bold text-rosewood tracking-tight ml-3 mb-2">
-                                        {isTamil ? 'பணத்திரும்ப தொகை' : (t('adminMandapam.bookings.refundAmount') || 'Refund Amount')}
-                                    </label>
-                                    <div className="relative">
-                                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-rosewood/30 text-[20px]">currency_rupee</span>
-                                        <input
-                                            type="text"
-                                            inputMode="decimal"
-                                            value={refundAmount}
-                                            onChange={(e) => setRefundAmount(e.target.value)}
-                                            placeholder="0.00"
-                                            className="w-full h-14 pl-12 pr-4 rounded-xl border border-gold/20 text-sm font-medium text-rosewood/70 placeholder:text-rosewood/30 bg-white focus:border-rosewood focus:ring-4 focus:ring-rosewood/5 outline-none transition-all"
-                                        />
-                                    </div>
+                                    <Input
+                                        label={t('adminMandapam.bookings.refundAmount') || 'Refund Amount'}
+                                        name="refundAmount"
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={refundAmount}
+                                        onChange={(e) => setRefundAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        icon="currency_rupee"
+                                        autoFormat={true}
+                                    />
                                     {numAmount > netPaid && (
                                         <p className="text-[10px] font-bold text-rose-600 flex items-center gap-1 mt-1 ml-2">
                                             <span className="material-symbols-outlined text-[14px]">error</span>
@@ -218,19 +221,16 @@ export const CancelRefundModal: React.FC<CancelRefundModalProps> = ({ isOpen, bo
                                 </div>
                             )}
                             {numAmount > 0 && (
-                                <div className="px-4 py-3.5 bg-ivory border border-gold/15 rounded-xl">
-                                    <span className="text-[10px] font-black text-rosewood/40 tracking-wider block mb-0.5 uppercase">
-                                        {isTamil ? 'உறுதிப்படுத்தப்பட்ட பணத்திரும்பம்' : (t('adminMandapam.bookings.confirmedRefundAmount') || 'Refund Amount')}
-                                    </span>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-lg font-black text-rose-700">
-                                            {formatCurrency(numAmount)}
-                                        </span>
-                                        <span className="text-[10px] font-bold text-rosewood/40 flex items-center gap-1">
-                                            <ArrowRight size={10} />
-                                            {isTamil ? (REFUND_METHODS.find(rm => rm.value === refundMethod)?.labelTa || refundMethod) : refundMethod}
-                                        </span>
+                                <div className="px-4 py-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[10px] font-bold text-emerald-700">
+                                            {t('adminMandapam.bookings.confirmedRefundAmount') || 'Confirmed Refund'}
+                                        </p>
+                                        <p className="text-xs text-emerald-600 mt-0.5">
+                                            via {isTamil ? (REFUND_METHODS.find(rm => rm.value === refundMethod)?.labelTa || refundMethod) : refundMethod}
+                                        </p>
                                     </div>
+                                    <span className="text-xl font-black text-rose-700">{formatCurrency(numAmount)}</span>
                                 </div>
                             )}
                         </div>
@@ -239,10 +239,10 @@ export const CancelRefundModal: React.FC<CancelRefundModalProps> = ({ isOpen, bo
 
                 {/* Reason */}
                 <div className="space-y-2">
-                    <label className="block text-[11px] font-bold text-rosewood tracking-tight ml-3">
-                        {isTamil ? 'ரத்துசெய் காரணம்' : (t('adminMandapam.bookings.cancelReason') || 'Cancellation Reason')}
+                    <p className="block text-[11px] font-bold text-rosewood ml-3">
+                        {t('adminMandapam.bookings.cancelReason') || 'Cancellation Reason'}
                         <span className="text-rose-500"> *</span>
-                    </label>
+                    </p>
                     <textarea
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
@@ -255,8 +255,8 @@ export const CancelRefundModal: React.FC<CancelRefundModalProps> = ({ isOpen, bo
                 {/* Payment History */}
                 {booking.paymentEntries.length > 0 && (
                     <div className="bg-ivory/50 rounded-xl border border-gold/10 p-4">
-                        <p className="text-[10px] font-black text-rosewood/40 uppercase tracking-wider mb-2">
-                            {isTamil ? 'கட்டண வரலாறு' : (t('adminMandapam.bookings.payments') || 'Existing Payments')}
+                        <p className="text-[10px] font-bold text-rosewood/40 mb-2">
+                            {t('adminMandapam.bookings.payments') || 'Existing Payments'}
                         </p>
                         <div className="space-y-1.5">
                             {booking.paymentEntries.map(p => (

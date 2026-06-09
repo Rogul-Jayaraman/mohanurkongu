@@ -11,7 +11,7 @@ export const MaaligaiLayout: React.FC = () => {
   useRevealAnimations();
 
   return (
-    <div className="min-h-screen bg-ivory text-dark-brown font-body selection:bg-gold-500 selection:text-rosewood">
+    <div className="min-h-screen bg-ivory text-dark-brown font-body selection:bg-gold-500 selection:text-rosewood maaligai-layout">
       <ScrollToTop dependencies={[location.pathname]} />
       <Header />
 

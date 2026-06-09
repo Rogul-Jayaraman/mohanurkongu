@@ -26,9 +26,7 @@ export const ContactHero: React.FC<ContactHeroProps> = () => {
   const ls = (enClasses: string, taClasses: string) =>
     isTamil ? taClasses : enClasses;
   const fontSerif = isTamil ? "font-tamil-serif" : "font-heading";
-  const h1 = isTamil
-    ? "text-xl md:text-2xl lg:text-4xl"
-    : "text-3xl md:text-5xl lg:text-7xl";
+  const h1 = "text-3xl md:text-5xl lg:text-7xl";
   const weight = (en: string, ta: string = "font-bold") => (isTamil ? ta : en);
 
   useEffect(() => {
@@ -70,7 +68,7 @@ export const ContactHero: React.FC<ContactHeroProps> = () => {
         />
 
         <p
-          className={`reveal-item delay-200 mt-2 font-decorative text-primary ${ls("text-2xl md:text-5xl", "text-lg md:text-xl")} ${weight("font-medium", "font-bold")}`}
+          className={`reveal-item delay-200 mt-2 font-decorative text-primary text-2xl md:text-5xl ${weight("font-medium", "font-bold")}`}
         >
           {t("contact.heroSubtitle")}
         </p>
@@ -85,15 +83,11 @@ export const ContactInfo: React.FC<ContactInfoProps> = () => {
 
   const cards = t("contact.cards", { returnObjects: true }) as ContactCard[];
 
-  const body = isTamil
-    ? "font-tamil-body text-sm md:text-base"
-    : "font-body text-base md:text-lg";
-  const small = isTamil ? "text-xs md:text-sm" : "text-sm md:text-base";
+  const body = `${isTamil ? "font-tamil-body" : "font-body"} text-base md:text-lg`;
+  const small = "text-sm md:text-base";
   const fontDisplay = isTamil ? "font-tamil-serif" : "font-heading";
   const weight = (en: string, ta: string = "font-bold") => (isTamil ? ta : en);
-  const label = isTamil
-    ? "text-sm md:text-base"
-    : "text-xs md:text-sm uppercase tracking-wider";
+  const label = `${isTamil ? "" : "uppercase tracking-wider"} text-xs md:text-sm`;
 
   return (
     <section
@@ -156,13 +150,13 @@ export const InquiryForm: React.FC<InquiryFormProps> = () => {
     }
   }, []);
 
-  const body = isTamil ? "font-tamil-body text-sm md:text-base" : "font-body text-base md:text-lg";
+  const body = `${isTamil ? "font-tamil-body" : "font-body"} text-base md:text-lg`;
   const fontSerif = isTamil ? "font-tamil-serif" : "font-heading";
   const fontDisplay = isTamil ? "font-tamil-body" : "font-body";
   const weight = (en: string, ta: string = "font-bold") => (isTamil ? ta : en);
-  const label = isTamil ? "text-xs md:text-sm uppercase" : "text-[10px] md:text-xs uppercase tracking-widest";
-  const h2 = isTamil ? "text-xl md:text-2xl lg:text-4xl" : "text-2xl md:text-4xl lg:text-5xl";
-  const small = isTamil ? "text-xs md:text-sm" : "text-sm md:text-base";
+  const label = `uppercase ${isTamil ? "" : "tracking-widest"} text-[10px] md:text-xs`;
+  const h2 = "text-2xl md:text-4xl lg:text-5xl";
+  const small = "text-sm md:text-base";
 
   const actions = [
     { icon: "call", href: "tel:+919080725466" },
@@ -227,18 +221,12 @@ export const LocationMap: React.FC<LocationMapProps> = () => {
   const { t, i18n } = useTranslation("maaligai");
   const isTamil = i18n.language === "ta";
 
-  const h2 = isTamil
-    ? "text-xl md:text-2xl lg:text-4xl"
-    : "text-2xl md:text-4xl lg:text-5xl";
-  const body = isTamil
-    ? "font-tamil-body text-sm md:text-base"
-    : "font-body text-base md:text-lg";
+  const h2 = "text-2xl md:text-4xl lg:text-5xl";
+  const body = `${isTamil ? "font-tamil-body" : "font-body"} text-base md:text-lg`;
   const fontDisplay = isTamil ? "font-tamil-body" : "font-body";
   const fontSerif = isTamil ? "font-tamil-serif" : "font-heading";
   const weight = (en: string, ta: string = "font-bold") => (isTamil ? ta : en);
-  const label = isTamil
-    ? "text-xs md:text-sm uppercase"
-    : "text-[10px] md:text-xs uppercase tracking-[0.2em]";
+  const label = `uppercase ${isTamil ? "" : "tracking-[0.2em]"} text-[10px] md:text-xs`;
 
   return (
   <section className="px-6 lg:px-20 section-spacing bg-[#fdfcf8] relative overflow-hidden">

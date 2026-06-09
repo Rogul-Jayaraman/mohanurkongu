@@ -7,19 +7,19 @@ export class AdminDashboardController {
 
   getStats = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const stats = await this.dashboardService.getStats();
+      const result = await this.dashboardService.getStats();
       sendSuccess(res, {
         stats: {
-          totalUsers: stats.totalUsers,
-          totalProfiles: stats.totalProfiles,
-          activeProfiles: stats.activeProfiles,
-          totalBookings: 0,
-          totalRevenue: 0,
-          newUsers: stats.newUsers,
-          pendingVerifications: stats.pendingVerifications,
-          bookingsToday: 0,
+          totalUsers: result.totalUsers,
+          totalProfiles: result.totalProfiles,
+          activeProfiles: result.activeProfiles,
+          totalBookings: result.totalBookings,
+          totalRevenue: result.totalRevenue,
+          newUsers: result.newUsers,
+          pendingVerifications: result.pendingVerifications,
+          bookingsToday: result.bookingsToday,
         },
-        recentBookings: [],
+        todaysEvents: result.todaysEvents,
       });
     } catch (err) {
       next(err);

@@ -47,9 +47,7 @@ export const LoginHero: React.FC = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4 }}
-                        className={`font-script text-gold drop-shadow-md ${
-                            isTamil ? 'text-2xl lg:text-3xl' : 'text-3xl lg:text-4xl'
-                        }`}
+                        className="font-script text-gold drop-shadow-md text-3xl lg:text-4xl"
                     >
                         {t('login.hero.tags')}
                     </motion.p>
@@ -58,9 +56,7 @@ export const LoginHero: React.FC = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.6 }}
-                        className={`font-serif font-bold leading-tight drop-shadow-lg ${
-                            isTamil ? 'text-2xl lg:text-3xl' : 'text-3xl lg:text-4xl'
-                        }`}
+                        className="font-serif font-bold leading-tight drop-shadow-lg text-3xl lg:text-4xl"
                     >
                         {t('login.hero.title')}
                     </motion.h1>
@@ -89,8 +85,8 @@ export const LoginHero: React.FC = () => {
                                     <span className="material-symbols-outlined text-gold text-3xl font-variation-medium">{item.icon}</span>
                                 </div>
                                 <span className={`font-bold text-white drop-shadow-sm ${
-                                    isTamil ? 'text-[9px] tracking-normal' : 'text-[10px] tracking-[0.2em] uppercase'
-                                }`}>
+                                    isTamil ? 'tracking-normal' : 'tracking-[0.2em] uppercase'
+                                } text-[10px]`}>
                                     {item.label}
                                 </span>
                             </motion.div>
@@ -106,8 +102,7 @@ export const LoginHero: React.FC = () => {
  * LoginFormWrapper – visual container with glass-card, ornaments, and the login form (40% width).
  */
 export const LoginFormWrapper: React.FC = () => {
-    const { t, language } = useTranslations(['auth']);
-    const isTamil = language === 'ta';
+    const { t } = useTranslations(['auth']);
 
     return (
         <section className="w-full lg:w-[50%] flex items-center justify-center lg:px-6 lg:py-6 md:py-8 relative bg-gold-soft/10 min-h-[auto] lg:min-h-[520px]">
@@ -134,8 +129,8 @@ export const LoginFormWrapper: React.FC = () => {
                         <span className="material-symbols-outlined text-rosewood text-3xl sm:text-4xl">grass</span>
                     </motion.div>
 
-                    <motion.h2 variants={loginItemVariants} className={`font-serif font-bold text-dark-brown mb-1 sm:mb-2 ${isTamil ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'}`}>{t('login.title')}</motion.h2>
-                    <motion.p variants={loginItemVariants} className={`text-logo-dark font-medium ${isTamil ? 'text-[11px] sm:text-xs' : 'text-xs sm:text-sm'}`}>{t('login.subtitle')}</motion.p>
+                    <motion.h2 variants={loginItemVariants} className="font-serif font-bold text-dark-brown mb-1 sm:mb-2 text-2xl sm:text-3xl">{t('login.title')}</motion.h2>
+                    <motion.p variants={loginItemVariants} className="text-logo-dark font-medium text-xs sm:text-sm">{t('login.subtitle')}</motion.p>
                 </motion.div>
 
                 <LoginForm />

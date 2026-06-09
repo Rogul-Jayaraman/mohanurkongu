@@ -2,6 +2,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { EmptyState } from '@/components/ui/feedback/EmptyState';
 import { CalendarClock } from 'lucide-react';
+import { CHART } from '@/constants/analyticsColors';
 
 interface ForecastItem {
   bucket: string;
@@ -18,9 +19,9 @@ interface Props {
 }
 
 const KEYS = [
-  { key: 'silver', color: '#9CA3AF', name: 'Silver' },
-  { key: 'gold', color: '#D4AF37', name: 'Gold' },
-  { key: 'platinum', color: '#8B5CF6', name: 'Platinum' },
+  { key: 'silver', color: CHART.plans.Basic, name: 'Basic' },
+  { key: 'gold', color: CHART.plans.Gold, name: 'Gold' },
+  { key: 'platinum', color: CHART.plans.Elite, name: 'Elite' },
 ];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -53,7 +54,7 @@ export const RenewalForecastChart: React.FC<Props> = React.memo(({ title, subtit
     <div className="bg-white border border-gold/20 rounded-xl shadow-sm">
       <div className="px-6 py-4 border-b border-gold/10">
         <h3 className="font-serif font-bold text-rosewood">{title}</h3>
-        {subtitle && <p className="text-[10px] font-black text-gold uppercase tracking-widest mt-0.5">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-dark-brown/60 mt-0.5">{subtitle}</p>}
       </div>
       {data.length === 0 ? (
         <div className="p-6"><EmptyState message="No forecast data" icon={CalendarClock} variant="dashed" /></div>

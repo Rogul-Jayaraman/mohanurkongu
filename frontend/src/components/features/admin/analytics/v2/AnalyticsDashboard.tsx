@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { useAnalyticsData, SectionKey } from './hooks/useAnalyticsData';
 import { ManamaalaiSection } from './sections/ManamaalaiSection';
 import { MandapamSection } from './sections/MandapamSection';
@@ -13,20 +14,45 @@ const SECTION_COMPONENTS: Record<SectionKey, React.FC<{ data: any; loading: bool
   mandapam: MandapamSection,
 };
 
-const GlassHeader: React.FC<{
-  activeSection: SectionKey;
-  onChange: (key: string) => void;
-}> = ({ activeSection, onChange }) => (
-  <div className="relative bg-white/10 backdrop-blur-2xl border-2 border-gold/30 rounded-xl overflow-hidden">
-    <div className="absolute inset-0 bg-linear-to-br from-white/40 to-white/5 rounded-xl pointer-events-none" />
-    <div className="absolute top-0 right-0 w-40 h-40 bg-gold/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
-    <div className="absolute bottom-0 left-0 w-32 h-32 bg-gold/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
-    <div className="relative z-10">
-      <div className="px-6 py-6 bg-linear-to-r from-ivory/80 via-gold-soft/10 to-ivory/80 backdrop-blur-xl">
-        <div className="flex items-center justify-center">
+const SECTION_TITLES: Record<SectionKey, { en: string; ta: string }> = {
+  manamaalai: { en: 'Manamaalai Analytics', ta: 'மணமாலை பகுப்பாய்வு' },
+  mandapam: { en: 'Mandapam Analytics', ta: 'மண்டபம் பகுப்பாய்வு' },
+};
+
+const SECTION_SUBTITLES: Record<SectionKey, { en: string; ta: string }> = {
+  manamaalai: { en: 'Platform overview and trends', ta: 'தள கண்ணோட்டம் மற்றும் போக்குகள்' },
+  mandapam: { en: 'Venue booking performance and revenue trends', ta: 'இட முன்பதிவு செயல்திறன் மற்றும் வருவாய் போக்குகள்' },
+};
+
+export const AnalyticsDashboard: React.FC = () => {
+  const { t, i18n } = useTranslation('analytics');
+  const lang = i18n.language as 'en' | 'ta';
+  const { sections, refetchSection, activeSection, setActiveSection } = useAnalyticsData();
+
+  const ActiveComponent = SECTION_COMPONENTS[activeSection];
+  const activeState = sections[activeSection];
+  const activeData = activeState.data;
+  const activeLoading = activeState.loading;
+  const activeError = activeState.error;
+  const title = SECTION_TITLES[activeSection];
+  const subtitle = SECTION_SUBTITLES[activeSection];
+
+  return (
+    <div className="w-full space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Header - Left title + Right toggle */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-serif font-bold text-rosewood">
+            {title[lang] ?? title.en}
+          </h1>
+          <p className="text-sm text-dark-brown/60 mt-0.5">
+            {subtitle[lang] ?? subtitle.en}
+          </p>
+        </div>
+        <div className="shrink-0">
           <CentralToggleButton
             value={activeSection}
-            onChange={onChange}
+            onChange={(val) => setActiveSection(val as SectionKey)}
             options={[
               { value: 'manamaalai', label: { en: 'Manamaalai', ta: 'மணமாலை' } },
               { value: 'mandapam', label: { en: 'Mandapam', ta: 'மண்டபம்' } },
@@ -37,23 +63,8 @@ const GlassHeader: React.FC<{
           />
         </div>
       </div>
-    </div>
-  </div>
-);
 
-export const AnalyticsDashboard: React.FC = () => {
-  const { sections, refetchSection, activeSection, setActiveSection } = useAnalyticsData();
-
-  const ActiveComponent = SECTION_COMPONENTS[activeSection];
-  const activeState = sections[activeSection];
-  const activeData = activeState.data;
-  const activeLoading = activeState.loading;
-  const activeError = activeState.error;
-
-  return (
-    <div className="w-full space-y-8 max-w-7xl mx-auto pb-12">
-      <GlassHeader activeSection={activeSection} onChange={(val) => setActiveSection(val as SectionKey)} />
-
+      {/* Error banner */}
       <AnimatePresence>
         {activeError && (
           <motion.div
@@ -70,10 +81,10 @@ export const AnalyticsDashboard: React.FC = () => {
                 <span className="text-sm text-red-700 flex-1">{activeError}</span>
                 <button
                   onClick={() => refetchSection(activeSection)}
-                  className="flex items-center gap-1.5 px-5 py-2.5 bg-rosewood-gradient text-gold text-xs font-black uppercase tracking-widest rounded-xl hover:shadow-lg transition-all shadow-md"
+                  className="flex items-center gap-1.5 px-5 py-2.5 bg-rosewood-gradient text-gold text-xs font-bold rounded-xl hover:shadow-lg transition-all shadow-md"
                 >
                   <RefreshCw size={14} />
-                  Retry
+                  {t('page.retry')}
                 </button>
               </div>
             </div>
@@ -81,6 +92,7 @@ export const AnalyticsDashboard: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* Section content */}
       <AnimatePresence mode="wait">
         {activeLoading && !activeData ? (
           <motion.div
@@ -92,7 +104,7 @@ export const AnalyticsDashboard: React.FC = () => {
           >
             <div className="flex flex-col items-center gap-4">
               <Spinner size="lg" color="gold" />
-              <p className="text-xs font-black text-gold uppercase tracking-widest animate-pulse">Loading {activeSection} data</p>
+              <p className="text-sm text-dark-brown/60">{t('page.loading', { section: activeSection })}</p>
             </div>
           </motion.div>
         ) : (
@@ -111,20 +123,20 @@ export const AnalyticsDashboard: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Status Alert */}
-      <div className="relative bg-white/10 backdrop-blur-2xl border border-gold/30 rounded-xl overflow-hidden">
+      {/* System status */}
+      <div className="relative bg-white/10 backdrop-blur-2xl border border-gold/20 rounded-xl overflow-hidden">
         <div className="absolute inset-0 bg-linear-to-br from-white/40 to-white/5 rounded-xl pointer-events-none" />
-        <div className="absolute -top-10 -right-10 w-24 h-24 bg-gold/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 px-6 py-6 flex items-center gap-4">
-          <div className="size-12 shrink-0 rounded-xl bg-rosewood-gradient flex items-center justify-center shadow-md">
-            <ShieldCheck size={24} className="text-gold" />
+        <div className="relative z-10 px-6 py-5 flex items-center gap-4">
+          <div className="size-10 shrink-0 rounded-xl bg-rosewood-gradient flex items-center justify-center shadow-md">
+            <ShieldCheck size={20} className="text-gold" />
           </div>
-          <div>
-            <p className="text-[9px] font-black text-rosewood/50 uppercase tracking-[0.2em] mb-0.5">STATUS WATCH</p>
-            <h4 className="text-sm font-serif font-black text-rosewood leading-tight">
-              {activeError ? 'System requires attention' : activeLoading ? 'Decrypting intelligence streams...' : `All systems operational — ${activeSection} analytics online`}
-            </h4>
-          </div>
+          <p className="text-sm font-medium text-dark-brown">
+            {activeError
+              ? t('page.needAttention')
+              : activeLoading
+                ? t('page.systemLoading')
+                : t('page.systemOnline')}
+          </p>
         </div>
       </div>
     </div>

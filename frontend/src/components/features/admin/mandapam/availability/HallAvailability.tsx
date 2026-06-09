@@ -39,7 +39,7 @@ const HallAvailability: React.FC = () => {
         const pb: number[] = [];
         const bl: number[] = [];
         for (const e of entries) {
-            const [y, m, d] = e.date.split('-').map(Number);
+            const [y, m, d] = e.date.split('T')[0].split('-').map(Number);
             if (y !== currentYear || m !== currentMonth) continue;
             if (e.status === 'FULLY_BOOKED') fb.push(d);
             else if (e.status === 'PARTIALLY_BOOKED') pb.push(d);

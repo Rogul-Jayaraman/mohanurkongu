@@ -170,7 +170,50 @@ export class AnalyticsRepository {
     return prisma.profile.count();
   }
 
-  // Mandapam — kept as-is
+  async getVerificationStats() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const [pendingTotal, pendingToday, approvedToday, rejectedToday, recentReviews] = await Promise.all([
+      prisma.profile.count({ where: { currentStatus: 'PENDING' } }),
+      prisma.profile.count({
+        where: { currentStatus: 'PENDING', createdAt: { gte: today } },
+      }),
+      prisma.profileReview.count({
+        where: { action: 'APPROVED', createdAt: { gte: today } },
+      }),
+      prisma.profileReview.count({
+        where: { action: 'REJECTED', createdAt: { gte: today } },
+      }),
+      prisma.profileReview.findMany({
+        where: { createdAt: { gte: thirtyDaysAgo }, action: { in: ['APPROVED', 'REJECTED'] } },
+        select: { profileId: true, createdAt: true },
+      }),
+    ]);
+
+    let avgReviewTimeHours = 0;
+    if (recentReviews.length > 0) {
+      const profileIds = recentReviews.map((r) => r.profileId);
+      const profiles = await prisma.profile.findMany({
+        where: { id: { in: profileIds } },
+        select: { id: true, createdAt: true },
+      });
+      const profileMap = new Map(profiles.map((p) => [p.id, p.createdAt]));
+      let totalMinutes = 0;
+      for (const review of recentReviews) {
+        const profileCreatedAt = profileMap.get(review.profileId);
+        if (profileCreatedAt) {
+          totalMinutes += (review.createdAt.getTime() - profileCreatedAt.getTime()) / 60000;
+        }
+      }
+      avgReviewTimeHours = Math.round((totalMinutes / recentReviews.length / 60) * 10) / 10;
+    }
+
+    return { pendingTotal, pendingToday, approvedToday, rejectedToday, avgReviewTimeHours };
+  }
+
+  // Mandapam
   async bookingCountByStatus() {
     const rows = await prisma.mandapamBooking.groupBy({ by: ['status'], _count: true });
     return rows.map(r => ({ status: r.status, count: r._count }));

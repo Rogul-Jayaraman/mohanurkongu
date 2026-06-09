@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import type { ManamaalaiAnalytics } from '@/types/analytics';
 import { MetricsGrid } from '../widgets/MetricsGrid';
 import { TrendComposedChart } from '../widgets/TrendComposedChart';
@@ -9,23 +10,15 @@ import { StackedBarCard } from '../widgets/StackedBarCard';
 import { GroupedBarCard } from '../widgets/GroupedBarCard';
 import { FunnelChart } from '../widgets/FunnelChart';
 import { RenewalForecastChart } from '../widgets/RenewalForecastChart';
-import { BarChart3, DollarSign, Activity, Users, Layers, TrendingUp } from 'lucide-react';
+import { BarChart3, DollarSign, Activity, Users, Layers, TrendingUp, ShieldCheck } from 'lucide-react';
+import { CHART } from '@/constants/analyticsColors';
 
 interface Props { data: ManamaalaiAnalytics | null; loading: boolean }
-
-const STATUS_KEYS = [
-  { key: 'draft', color: '#9CA3AF', name: 'Draft' },
-  { key: 'pending', color: '#F59E0B', name: 'Pending' },
-  { key: 'active', color: '#10B981', name: 'Active' },
-  { key: 'rejected', color: '#EF4444', name: 'Rejected' },
-  { key: 'archived', color: '#6B7280', name: 'Archived' },
-];
-const REVENUE_DONUT = ['#2563EB', '#D4AF37', '#8B5CF6'];
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const fadeUp = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
-const GlassCard: React.FC<{ title: string; subtitle?: string; icon?: React.ElementType; children: React.ReactNode; className?: string }> = ({ title, subtitle, icon: Icon, children, className = '' }) => (
+const CardSection: React.FC<{ title: string; subtitle?: string; icon?: React.ElementType; children: React.ReactNode; className?: string }> = ({ title, subtitle, icon: Icon, children, className = '' }) => (
   <div className={`relative bg-white/10 backdrop-blur-2xl border-2 border-gold/30 rounded-xl overflow-hidden ${className}`}>
     <div className="absolute inset-0 bg-linear-to-br from-white/40 to-white/5 rounded-xl pointer-events-none" />
     <div className="absolute top-0 right-0 w-40 h-40 bg-gold/20 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
@@ -39,8 +32,8 @@ const GlassCard: React.FC<{ title: string; subtitle?: string; icon?: React.Eleme
             </div>
           )}
           <div>
-            <h3 className="text-xl font-serif font-black text-rosewood">{title}</h3>
-            {subtitle && <p className="text-[9px] text-gold font-black uppercase tracking-[0.2em] mt-0.5">{subtitle}</p>}
+            <h3 className="text-lg font-serif font-bold text-rosewood">{title}</h3>
+            {subtitle && <p className="text-xs text-dark-brown/60 mt-0.5">{subtitle}</p>}
           </div>
         </div>
       </div>
@@ -50,122 +43,176 @@ const GlassCard: React.FC<{ title: string; subtitle?: string; icon?: React.Eleme
 );
 
 export const ManamaalaiSection: React.FC<Props> = ({ data, loading }) => {
+  const { t } = useTranslation('analytics');
   const o = data?.overview;
   const rev = data?.membershipRevenue;
+  const vs = data?.verificationStats;
 
   const overviewMetrics = o ? [
-    { label: 'Active Profiles', value: o.activeProfiles },
-    { label: 'Pending Verifications', value: o.pendingVerifications },
-    { label: 'New Registrations (7d)', value: o.newRegistrations7d },
-    { label: 'Active Memberships', value: o.activeMemberships },
+    { label: t('metrics.activeMembers'), value: o.activeProfiles },
+    { label: t('metrics.pendingApprovals'), value: o.pendingVerifications },
+    { label: t('metrics.newThisWeek'), value: o.newRegistrations7d },
+    { label: t('metrics.paidMembers'), value: o.activeMemberships },
   ] : [];
 
   const revenueMetrics = rev ? [
-    { label: 'MRR', value: `₹${(rev.mrr / 1000).toFixed(1)}K` },
-    { label: 'ARR', value: `₹${(rev.arr / 100000).toFixed(1)}L` },
-    { label: 'Avg Revenue/User', value: `₹${rev.arpu}` },
-    { label: 'Churn Rate', value: `${rev.churnRate}%` },
+    { label: t('metrics.monthlyRevenue'), value: `₹${(rev.mrr / 1000).toFixed(1)}K` },
+    { label: t('metrics.annualRevenue'), value: `₹${(rev.arr / 100000).toFixed(1)}L` },
+    { label: t('metrics.revenuePerMember'), value: `₹${rev.arpu}` },
+    { label: t('metrics.dropoffRate'), value: `${rev.churnRate}%` },
   ] : [];
 
+  const verificationMetrics = vs ? [
+    { label: t('metrics.pendingTotal'), value: vs.pendingTotal },
+    { label: t('metrics.addedToday'), value: vs.pendingToday },
+    { label: t('metrics.approvedToday'), value: vs.approvedToday },
+    { label: t('metrics.rejectedToday'), value: vs.rejectedToday },
+  ] : [];
+
+  const planColors = [CHART.plans.Basic, CHART.plans.Gold, CHART.plans.Elite];
   const membershipDonut = data?.membershipPlanDistribution?.map((d, i) => ({
-    name: d.plan,
+    name: d.plan === 'SILVER' ? t('charts.planBasic') : d.plan === 'GOLD' ? t('charts.planGold') : t('charts.planElite'),
     value: d.count,
-    color: REVENUE_DONUT[i % REVENUE_DONUT.length],
+    color: planColors[i % planColors.length],
   })) ?? [];
 
+  const funnelLabels = {
+    'Registered Account': t('charts.funnelStages.registeredAccount'),
+    'Profile Created': t('charts.funnelStages.profileCreated'),
+    'Verified': t('charts.funnelStages.verified'),
+    'Membership Purchased': t('charts.funnelStages.membershipPurchased'),
+    'Active Membership': t('charts.funnelStages.activeMembership'),
+  };
+
+  const funnelData = data?.membershipFunnel?.map(d => ({
+    ...d,
+    stage: funnelLabels[d.stage as keyof typeof funnelLabels] ?? d.stage,
+  })) ?? [];
+
+  const statusKeys = [
+    { key: 'draft', color: CHART.status.draft, name: t('charts.status.draft') },
+    { key: 'pending', color: CHART.status.pending, name: t('charts.status.pending') },
+    { key: 'active', color: CHART.status.active, name: t('charts.status.active') },
+    { key: 'rejected', color: CHART.status.rejected, name: t('charts.status.rejected') },
+    { key: 'archived', color: CHART.status.archived, name: t('charts.status.archived') },
+  ];
+
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
-      {/* Overview KPIs */}
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+      {/* Section 1: At a Glance */}
       <motion.div variants={fadeUp}>
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-bold text-dark-brown">{t('sections.atAGlance')}</h2>
+          <div className="h-px flex-1 bg-gold/10" />
+        </div>
         <MetricsGrid metrics={overviewMetrics} loading={loading} />
       </motion.div>
 
-      {/* Membership Revenue */}
+      {/* Section 2: Revenue Summary */}
       <motion.div variants={fadeUp}>
-        <GlassCard title="Membership Revenue" subtitle="MRR, ARR, ARPU & Churn rate overview" icon={DollarSign}>
+        <CardSection title={t('sections.revenueSummary')} subtitle={`${t('metrics.monthlyRevenue')}, ${t('metrics.annualRevenue')}, ${t('metrics.revenuePerMember')} & ${t('metrics.dropoffRate')}`} icon={DollarSign}>
           <MetricsGrid metrics={revenueMetrics} loading={loading} />
-        </GlassCard>
+        </CardSection>
       </motion.div>
 
-      {/* Profile Growth */}
+      {/* Section 3: Growth & Timeline (2-column) */}
       <motion.div variants={fadeUp}>
-        <GlassCard title="Profile Growth" subtitle="Daily new profile registrations" icon={Activity}>
-          <TrendComposedChart
-            title=""
-            data={data?.profileGrowth ?? []}
-            series={[{ key: 'count', type: 'bar', color: '#D4AF37', name: 'Profiles' }]}
-            xKey="date"
-            loading={loading}
-          />
-        </GlassCard>
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-bold text-dark-brown">{t('sections.growthTimeline')}</h2>
+          <div className="h-px flex-1 bg-gold/10" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CardSection title={t('charts.newMembers')} subtitle={t('charts.dailyRegistrations')} icon={Activity}>
+            <TrendComposedChart
+              title=""
+              data={data?.profileGrowth ?? []}
+              series={[{ key: 'count', type: 'bar', color: CHART.trendBar, name: t('charts.newMembers') }]}
+              xKey="date"
+              loading={loading}
+            />
+          </CardSection>
+          <CardSection title={t('charts.memberStatus')} subtitle={t('charts.dailyStatusBreakdown')} icon={Activity}>
+            <StackedBarCard
+              title=""
+              data={data?.profileStatusStack ?? []}
+              keys={statusKeys}
+              xKey="date"
+              loading={loading}
+              height={320}
+              stacked
+            />
+          </CardSection>
+        </div>
       </motion.div>
 
-      {/* Demographics & Plan Distribution */}
+      {/* Section 4: Member Profiles (2-column) */}
       <motion.div variants={fadeUp}>
-        <GlassCard title="Demographics & Plans" subtitle="Profile traits and membership breakdown" icon={BarChart3}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-bold text-dark-brown">{t('sections.memberProfiles')}</h2>
+          <div className="h-px flex-1 bg-gold/10" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CardSection title={t('charts.demographics')} subtitle={t('charts.demographicsSub')} icon={Users}>
             <RadarComparison
-              title="Demographics Radar"
-              subtitle="Male vs Female by trait"
+              title=""
+              subtitle=""
               labels={data?.demographicsRadar?.labels ?? []}
               male={data?.demographicsRadar?.male ?? []}
               female={data?.demographicsRadar?.female ?? []}
               loading={loading}
             />
+          </CardSection>
+          <CardSection title={t('charts.ageGroups')} subtitle={t('charts.ageGroupsSub')} icon={BarChart3}>
+            <GroupedBarCard
+              title=""
+              data={data?.ageGenderMatrix ?? []}
+              keys={[
+                { key: 'male', color: CHART.genderMale, name: t('charts.genders.male') },
+                { key: 'female', color: CHART.genderFemale, name: t('charts.genders.female') },
+              ]}
+              xKey="bucket"
+              loading={loading}
+            />
+          </CardSection>
+        </div>
+      </motion.div>
+
+      {/* Section 5: Plans & Conversion (2-column) */}
+      <motion.div variants={fadeUp}>
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-bold text-dark-brown">{t('sections.plansConversion')}</h2>
+          <div className="h-px flex-1 bg-gold/10" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CardSection title={t('charts.planDistribution')} subtitle={t('charts.planDistributionSub')} icon={BarChart3}>
             <DonutCard
-              title="Plan Distribution"
-              subtitle="Silver, Gold, Platinum"
+              title=""
+              subtitle=""
               data={membershipDonut}
               centerLabel={String(data?.membershipPlanDistribution?.reduce((s, p) => s + p.count, 0) ?? 0)}
               loading={loading}
             />
-          </div>
-        </GlassCard>
+          </CardSection>
+          <CardSection title={t('charts.conversionFunnel')} subtitle={t('charts.conversionFunnelSub')} icon={Layers}>
+            <FunnelChart title="" subtitle="" data={funnelData} loading={loading} />
+          </CardSection>
+        </div>
       </motion.div>
 
-      {/* Age-Gender Matrix */}
+      {/* Section 6: Renewal Outlook (full width) */}
       <motion.div variants={fadeUp}>
-        <GlassCard title="Age-Gender Matrix" subtitle="Profile distribution by age bucket and gender" icon={Users}>
-          <GroupedBarCard
-            title=""
-            data={data?.ageGenderMatrix ?? []}
-            keys={[
-              { key: 'male', color: '#D4AF37', name: 'Male' },
-              { key: 'female', color: '#8B1D3D', name: 'Female' },
-            ]}
-            xKey="bucket"
-            loading={loading}
-          />
-        </GlassCard>
-      </motion.div>
-
-      {/* Membership Conversion Funnel */}
-      <motion.div variants={fadeUp}>
-        <GlassCard title="Membership Conversion Funnel" subtitle="From registration to active membership" icon={Layers}>
-          <FunnelChart title="" subtitle="" data={data?.membershipFunnel ?? []} loading={loading} />
-        </GlassCard>
-      </motion.div>
-
-      {/* Profile Status Over Time */}
-      <motion.div variants={fadeUp}>
-        <GlassCard title="Profile Status Over Time" subtitle="Daily breakdown by verification status" icon={Activity}>
-          <StackedBarCard
-            title=""
-            data={data?.profileStatusStack ?? []}
-            keys={STATUS_KEYS}
-            xKey="date"
-            loading={loading}
-            height={320}
-            stacked
-          />
-        </GlassCard>
-      </motion.div>
-
-      {/* Renewal Forecast */}
-      <motion.div variants={fadeUp}>
-        <GlassCard title="Renewal Forecast" subtitle="Expiring subscriptions by plan" icon={TrendingUp}>
+        <CardSection title={t('charts.upcomingRenewals')} subtitle={t('charts.upcomingRenewalsSub')} icon={TrendingUp}>
           <RenewalForecastChart title="" subtitle="" data={data?.renewalForecast ?? []} loading={loading} />
-        </GlassCard>
+        </CardSection>
+      </motion.div>
+
+      {/* Section 7: Verification Summary */}
+      <motion.div variants={fadeUp}>
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-bold text-dark-brown">{t('sections.verificationSummary')}</h2>
+          <div className="h-px flex-1 bg-gold/10" />
+        </div>
+        <MetricsGrid metrics={verificationMetrics} loading={loading} />
       </motion.div>
     </motion.div>
   );

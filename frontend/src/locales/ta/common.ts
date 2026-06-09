@@ -163,6 +163,7 @@ export const commonTa = {
     reject: "நிராகரி",
     update: "புதுப்பிக்கவும்",
     save: "சேமிக்கவும்",
+    saving: "சேமிக்கிறது...",
     saveChanges: "மாற்றங்களைச் சேமி",
     close: "மூடு",
     next: "தொடரவும்",

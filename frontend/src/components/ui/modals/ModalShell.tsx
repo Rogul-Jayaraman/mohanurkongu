@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
-import { scrollToTop } from '@/components/ui/layout/ScrollToTop';
+
 
 interface ModalShellProps {
     isOpen: boolean;
@@ -30,7 +30,6 @@ export const ModalShell: React.FC<ModalShellProps> = ({
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
-            scrollToTop();
         }
         return () => { document.body.style.overflow = 'unset'; };
     }, [isOpen]);

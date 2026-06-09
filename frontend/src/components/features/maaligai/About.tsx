@@ -15,7 +15,7 @@ export const AboutHero: React.FC<AboutHeroProps> = () => {
     const ls = (en: string, ta: string) => isTamil ? ta : en;
     const fontDecorative = 'font-decorative';
     const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
-    const h1 = isTamil ? 'text-3xl md:text-4xl' : 'text-5xl md:text-7xl';
+    const h1 = 'text-5xl md:text-7xl';
 
     return (
         <section className="relative h-[70vh] md:h-[85vh] flex items-center justify-center overflow-hidden bg-background-light">
@@ -49,7 +49,7 @@ export const AboutHero: React.FC<AboutHeroProps> = () => {
                 </div>
 
                 <div className="reveal-frame is-ready">
-                    <p className={`reveal-item delay-200 mt-2 drop-shadow-lg ${fontDecorative} text-gold-500 ${ls('text-3xl md:text-5xl', 'text-xl md:text-2xl')} font-medium`}>
+                        <p className={`reveal-item delay-200 mt-2 drop-shadow-lg ${fontDecorative} text-gold-500 text-3xl md:text-5xl font-medium`}>
                         {t('about.heroSubtitle')}
                     </p>
                 </div>
@@ -78,7 +78,7 @@ export const HeritageStory: React.FC<HeritageStoryProps> = () => {
     const ls = (en: string, ta: string) => isTamil ? ta : en;
     const fontDecorative = 'font-decorative';
     const fontSerif = isTamil ? 'font-tamil-serif' : 'font-heading';
-    const h2 = isTamil ? 'text-3xl md:text-4xl' : 'text-4xl md:text-5xl';
+    const h2 = 'text-4xl md:text-5xl';
 
     return (
         <section className="px-6 lg:px-20 section-spacing bg-ivory">
@@ -109,7 +109,7 @@ export const HeritageStory: React.FC<HeritageStoryProps> = () => {
                         <p className={`text-nav-gray leading-relaxed mb-4 text-base md:text-lg`}>
                             {t('about.heritageP2')}
                         </p>
-                        <p className={`text-rosewood mt-6 ${fontDecorative} ${ls('text-4xl', 'text-2xl')} font-medium`}>
+                        <p className={`text-rosewood mt-6 ${fontDecorative} text-4xl font-medium`}>
                             {t('about.heritageQuote')}
                         </p>
                     </div>

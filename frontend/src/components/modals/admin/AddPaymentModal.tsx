@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, BadgeCheck, Loader2 } from 'lucide-react';
+import { CreditCard, Loader2 } from 'lucide-react';
 import { ModalShell } from '@/components/ui/modals/ModalShell';
 import { Input } from '@/components/ui/forms/Input';
 import type { Booking, PaymentEntryType, PaymentMethodType } from '@/types/mandapam';
@@ -64,26 +64,26 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
             isOpen={isOpen}
             onClose={onClose}
             icon={<CreditCard size={24} className="text-rosewood" />}
-            title={isTamil ? 'கட்டணம் சேர்க்க' : (t('adminMandapam.bookings.updatePayment') || 'Add Payment')}
-            size="sm"
+            title={t('adminMandapam.bookings.updatePayment') || 'Add Payment'}
+            size="md"
             footer={
                 <div className="flex gap-3">
                     <button
                         onClick={onClose}
                         disabled={isSubmitting}
-                        className="flex-1 px-6 py-3 border border-gold/20 text-rosewood font-bold rounded-xl hover:bg-ivory transition-all text-sm disabled:opacity-30"
+                        className="flex-1 px-6 py-3 border border-gold/20 text-rosewood font-bold rounded-xl hover:bg-ivory transition-all text-sm active:scale-[0.97] disabled:opacity-30"
                     >
-                        {t('common.cancel') || (isTamil ? 'ரத்துசெய்' : 'Cancel')}
+                        {t('common.cancel') || 'Cancel'}
                     </button>
                     <button
                         onClick={() => onConfirm(booking, paymentType, amount, paymentMethod, referenceNo, notes)}
                         disabled={!isValid || isSubmitting}
-                        className="flex-1 px-6 py-3 bg-rosewood text-ivory font-bold rounded-xl hover:shadow-lg transition-all text-sm shadow-lg shadow-rosewood/20 active:scale-95 disabled:opacity-30 inline-flex items-center justify-center gap-2"
+                        className="flex-1 px-6 py-3 bg-gradient-to-r from-rosewood to-dark-rosewood text-ivory font-bold rounded-xl hover:shadow-xl transition-all text-sm shadow-lg shadow-rosewood/20 active:scale-[0.97] disabled:opacity-30 inline-flex items-center justify-center gap-2"
                     >
                         {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
                         {isSubmitting
-                            ? (t('common.saving') || (isTamil ? 'சேமிக்கிறது...' : 'Saving...'))
-                            : (isTamil ? 'சேமி' : (t('common.saveChanges') || 'Save Payment'))}
+                            ? (t('common.saving') || 'Saving...')
+                            : (t('common.saveChanges') || 'Save')}
                     </button>
                 </div>
             }
@@ -93,10 +93,10 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
                 <div className="bg-gradient-to-br from-gold/5 to-white rounded-2xl p-5 border border-gold/15">
                     <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-black text-rosewood/40 uppercase tracking-[0.15em] mb-1">
+                            <p className="text-[10px] font-bold text-rosewood/40 mb-1">
                                 {t('adminMandapam.bookings.eventName') || 'Event Name'}
                             </p>
-                            <p className="text-base font-black text-rosewood tracking-tight truncate">
+                            <p className="text-base font-black text-rosewood truncate">
                                 {isTamil ? booking.eventTitle.ta : booking.eventTitle.en}
                             </p>
                             <p className="text-xs font-bold text-rosewood/50 mt-1 truncate">
@@ -109,7 +109,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
                             </p>
                         </div>
                         <div className="text-right shrink-0">
-                            <p className="text-[10px] font-bold text-rosewood/40 uppercase mb-1">
+                            <p className="text-[10px] font-bold text-rosewood/40 mb-1">
                                 {t('adminMandapam.bookings.outstanding') || 'Due'}
                             </p>
                             <p className={`text-xl font-black ${outstanding <= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
@@ -117,27 +117,22 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
                             </p>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-gold/10">
-                        <div>
-                            <p className="text-[9px] font-bold text-rosewood/30 uppercase tracking-wider">
-                                {t('adminMandapam.bookings.totalCharges') || 'Total'}
-                            </p>
-                            <p className="text-sm font-black text-rosewood">{formatCurrency(charges)}</p>
+                    <div className="mt-4 pt-4 border-t border-gold/10">
+                        <div className="flex justify-between text-xs mb-1.5">
+                            <span className="font-bold text-rosewood/50">{t('adminMandapam.bookings.totalCharges') || 'Total'}: {formatCurrency(charges)}</span>
+                            <span className="font-bold text-emerald-700">{t('adminMandapam.bookings.paidToDate') || 'Paid'}: {formatCurrency(payments)}</span>
                         </div>
-                        <div>
-                            <p className="text-[9px] font-bold text-rosewood/30 uppercase tracking-wider">
-                                {t('adminMandapam.bookings.paidToDate') || 'Paid'}
-                            </p>
-                            <p className="text-sm font-black text-emerald-700">{formatCurrency(payments)}</p>
+                        <div className="h-2 bg-gold/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 rounded-full transition-all" style={{width: `${charges > 0 ? (payments / charges) * 100 : 0}%`}} />
                         </div>
                     </div>
                 </div>
 
                 {/* Payment Type */}
                 <div className="space-y-2.5">
-                    <label className="text-[10px] font-black text-rosewood/30 uppercase tracking-[0.2em] block ml-1">
-                        {isTamil ? 'கட்டண வகை' : (t('adminMandapam.bookings.paymentType') || 'Payment Type')}
-                    </label>
+                    <p className="text-[10px] font-bold text-rosewood/40 ml-1">
+                        {t('adminMandapam.bookings.paymentType') || 'Payment Type'}
+                    </p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {PAYMENT_TYPES.map(pt => (
                             <button
@@ -161,9 +156,9 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
 
                 {/* Payment Method */}
                 <div className="space-y-2.5">
-                    <label className="text-[10px] font-black text-rosewood/30 uppercase tracking-[0.2em] block ml-1">
-                        {isTamil ? 'கட்டண முறை' : (t('adminMandapam.bookings.paymentMethod') || 'Payment Method')}
-                    </label>
+                    <p className="text-[10px] font-bold text-rosewood/40 ml-1">
+                        {t('adminMandapam.bookings.paymentMethod') || 'Payment Method'}
+                    </p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {PAYMENT_METHODS.map(pm => (
                             <button
@@ -185,7 +180,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
                 {/* Amount + Reference + Notes */}
                 <div className="space-y-3">
                     <Input
-                        label={isTamil ? 'கட்டணத் தொகை' : (t('adminMandapam.bookings.advanceAmount') || 'Payment Amount')}
+                        label={t('adminMandapam.bookings.advanceAmount') || 'Payment Amount'}
                         name="amount"
                         type="text"
                         inputMode="decimal"
@@ -196,15 +191,30 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
                         autoFormat={true}
                     />
                     {exceedsDue && (
-                        <p className="text-[10px] font-bold text-rose-600 flex items-center gap-1 ml-2">
-                            <span className="material-symbols-outlined text-[14px]">error</span>
-                            {isTamil
-                                ? `தொகை நிலுவைத் ${formatCurrency(Math.max(0, outstanding))}ஐ தாண்டுகிறது`
-                                : `Amount exceeds due of ${formatCurrency(Math.max(0, outstanding))}`}
-                        </p>
+                        <div className="flex items-center gap-2 px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl">
+                            <span className="material-symbols-outlined text-rose-500 text-lg">error</span>
+                            <p className="text-xs font-bold text-rose-700">
+                                {isTamil
+                                    ? `தொகை நிலுவைத் ${formatCurrency(Math.max(0, outstanding))}ஐ தாண்டுகிறது`
+                                    : `Amount exceeds due of ${formatCurrency(Math.max(0, outstanding))}`}
+                            </p>
+                        </div>
+                    )}
+                    {numAmount > 0 && !exceedsDue && (
+                        <div className="px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] font-bold text-emerald-700">
+                                    {t('adminMandapam.bookings.confirmedPaymentAmount') || 'After Payment'}
+                                </p>
+                                <p className="text-xs font-medium text-emerald-600">
+                                    {formatCurrency(Math.max(0, outstanding - numAmount))} remaining
+                                </p>
+                            </div>
+                            <span className="text-lg font-black text-emerald-700">{formatCurrency(numAmount)}</span>
+                        </div>
                     )}
                     <Input
-                        label={(isTamil ? 'குறிப்பு எண் (விருப்பம்)' : (t('adminMandapam.bookings.referenceNo') || 'Reference No.') + ' (optional)')}
+                        label={t('adminMandapam.bookings.referenceNo') || 'Reference No. (optional)'}
                         name="referenceNo"
                         type="text"
                         value={referenceNo}
@@ -213,9 +223,9 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
                         icon="tag"
                     />
                     <div className="space-y-2">
-                        <label className="block text-[11px] font-bold text-rosewood tracking-tight ml-3">
-                            {(isTamil ? 'குறிப்புகள் (விருப்பம்)' : (t('adminMandapam.bookings.notes') || 'Notes') + ' (optional)')}
-                        </label>
+                        <p className="block text-[11px] font-bold text-rosewood ml-3">
+                            {t('adminMandapam.bookings.notes') || 'Notes (optional)'}
+                        </p>
                         <textarea
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
@@ -229,8 +239,8 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
                 {/* Payment History */}
                 {booking.paymentEntries.length > 0 && (
                     <div className="bg-ivory/50 rounded-xl border border-gold/10 p-4">
-                        <p className="text-[10px] font-black text-rosewood/40 uppercase tracking-wider mb-2">
-                            {isTamil ? 'கட்டண வரலாறு' : (t('adminMandapam.bookings.payments') || 'Payment History')}
+                        <p className="text-[10px] font-bold text-rosewood/40 mb-2">
+                            {t('adminMandapam.bookings.payments') || 'Payment History'}
                         </p>
                         <div className="space-y-1.5">
                             {booking.paymentEntries.map(p => (

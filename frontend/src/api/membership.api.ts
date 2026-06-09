@@ -93,7 +93,7 @@ export function getMySubscription(): Promise<{ subscription: SubscriptionInfo | 
 }
 
 export function getMyCapabilities(): Promise<{ capabilities: MembershipCapabilities }> {
-  return api.get('/membership/my-capabilities');
+  return api.get('/membership/capabilities');
 }
 
 export function getBillingOverview(): Promise<BillingOverview> {

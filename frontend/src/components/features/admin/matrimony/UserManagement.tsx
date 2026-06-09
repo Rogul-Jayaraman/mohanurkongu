@@ -1,253 +1,317 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
-import { Eye, Phone, Search, UserX, Users as UsersIcon, XCircle, Crown, UserMinus, UserCheck } from 'lucide-react';
-import { SearchBar } from '@/components/ui/SearchBar';
+import { Eye, Phone, Mail, Users as UsersIcon, UserX, Filter, ChevronDown } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { StatusBadge } from '@/components/ui/feedback/StatusBadge';
 import { DataTable, Column } from '@/components/ui/table/DataTable';
-import { fetchAdminAccountDetail } from '@/api/admin-accounts.api';
-import { ConfirmationModal } from '@/components/modals/admin/ConfirmationModal';
-import { RejectionModal } from '@/components/modals/admin/RejectionModal';
-import CancelSubscriptionModal from './CancelSubscriptionModal';
-import AssignPlanModal from './AssignPlanModal';
+import { AdminPageLayout } from '@/components/ui/layout/AdminPageLayout';
+import { ModalShell } from '@/components/ui/modals/ModalShell';
 import { useDateFormatter } from '@/hooks/useDateFormatter';
-import type { AdminAccount } from '@/types/admin-types';
-import { toast } from 'sonner';
-import { useAdminAccountsQuery, useSuspendAccountMutation, useRestoreAccountMutation, useAdminCancelSubscriptionMutation } from '@/queries/useAdminAccountQueries';
+import { useAdminAccountsQuery } from '@/queries/useAdminAccountQueries';
 
-// ═══════════════════════════════════════════════════════════
-// UserManagement (Main Orchestrator)
-// ═══════════════════════════════════════════════════════════
+const ACCOUNT_STATUS_TABS = [
+  { value: 'All', label: 'All', icon: UsersIcon, color: 'text-rosewood/50 border-transparent hover:border-gold/30 hover:text-rosewood/80', active: 'bg-rosewood-gradient text-ivory border-rosewood shadow-md shadow-rosewood/20' },
+  { value: 'ACTIVE', label: 'Active', icon: UsersIcon, color: 'text-emerald-600/70 border-transparent hover:border-emerald-300 hover:text-emerald-700', active: 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-300/30' },
+  { value: 'SUSPENDED', label: 'Suspended', icon: UsersIcon, color: 'text-amber-600/70 border-transparent hover:border-amber-300 hover:text-amber-700', active: 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-300/30' },
+];
+
+const PLAN_OPTIONS = [
+  { value: '', label: 'All Plans' },
+  { value: 'BRONZE', label: 'Bronze' },
+  { value: 'SILVER', label: 'Silver' },
+  { value: 'GOLD', label: 'Gold' },
+  { value: 'PLATINUM', label: 'Platinum' },
+];
+
+const VERIFIED_OPTIONS = [
+  { value: '', label: 'Any' },
+  { value: 'true', label: 'Yes' },
+  { value: 'false', label: 'No' },
+];
+
 const UserManagement: React.FC = () => {
     const navigate = useNavigate();
     const { t, language } = useLanguage();
     const { formatDate } = useDateFormatter();
     const isTamil = language === 'ta';
     const [currentPage, setCurrentPage] = React.useState(1);
-    const itemsPerPage = 8;
     const [searchQuery, setSearchQuery] = React.useState('');
+    const [statusFilter, setStatusFilter] = React.useState('All');
+    const [planFilter, setPlanFilter] = React.useState('');
+    const [dateFrom, setDateFrom] = React.useState('');
+    const [dateTo, setDateTo] = React.useState('');
+    const [emailVerified, setEmailVerified] = React.useState('');
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
-    const accountsQuery = useAdminAccountsQuery({ page: currentPage, search: searchQuery });
-    const data = accountsQuery.data || { accounts: [], meta: { total: 0, totalPages: 1, page: 1, limit: itemsPerPage } };
+    const params = useMemo(() => ({
+        page: currentPage,
+        search: searchQuery,
+    }), [currentPage, searchQuery]);
+
+    const accountsQuery = useAdminAccountsQuery(params);
+    const rawData: any = (accountsQuery.data as any) ?? { accounts: [], meta: { total: 0, totalPages: 1, page: 1, limit: 8 } };
     const isLoading = accountsQuery.isPending;
-    const cancelMut = useAdminCancelSubscriptionMutation();
-    const suspendMut = useSuspendAccountMutation();
-    const restoreMut = useRestoreAccountMutation();
 
-    const [cancelTarget, setCancelTarget] = React.useState<{ userId: string; planName: string; revertableName: string | null } | null>(null);
-    const [suspendTarget, setSuspendTarget] = React.useState<string | null>(null);
-    const [restoreTarget, setRestoreTarget] = React.useState<string | null>(null);
-    const [planTarget, setPlanTarget] = React.useState<{ id: string; planCode: string; plans: any[] } | null>(null);
-    const [planLoading, setPlanLoading] = React.useState(false);
+    const filteredAccounts = useMemo(() => {
+        let list = rawData?.accounts || [];
 
-    const handlePlanClick = async (userId: string) => {
-        setPlanLoading(true);
-        try {
-            const detail = await fetchAdminAccountDetail(userId);
-            setPlanTarget({ id: userId, planCode: detail.subscription?.snapshotPlanCode || 'BRONZE', plans: detail.availablePlans || [] });
-        } catch {
-            toast.error('Failed to load plan info');
-        } finally {
-            setPlanLoading(false);
+        if (statusFilter !== 'All') {
+            list = list.filter((a: any) => a.accountStatus === statusFilter);
         }
+
+        if (planFilter) {
+            list = list.filter((a: any) => a.plan === planFilter);
+        }
+
+        if (emailVerified) {
+            const wantVerified = emailVerified === 'true';
+            list = list.filter((a: any) => a.emailVerified === wantVerified);
+        }
+
+        if (dateFrom) {
+            const from = new Date(dateFrom);
+            list = list.filter((a: any) => new Date(a.joinedDate) >= from);
+        }
+
+        if (dateTo) {
+            const to = new Date(dateTo);
+            to.setHours(23, 59, 59, 999);
+            list = list.filter((a: any) => new Date(a.joinedDate) <= to);
+        }
+
+        return list;
+    }, [rawData, statusFilter, planFilter, emailVerified, dateFrom, dateTo]);
+
+    const handleClearFilters = () => {
+        setStatusFilter('All');
+        setPlanFilter('');
+        setDateFrom('');
+        setDateTo('');
+        setEmailVerified('');
+        setCurrentPage(1);
     };
 
-    const handleCancelClick = async (userId: string) => {
-        try {
-            const detail = await fetchAdminAccountDetail(userId);
-            setCancelTarget({
-                userId,
-                planName: detail.subscription?.snapshotPlanName || 'BRONZE',
-                revertableName: detail.revertableSubscription?.snapshotPlanName || null,
-            });
-        } catch {
-            toast.error(t('adminMatrimony.users.loadError') || 'Failed to load subscription info');
-        }
+    const handleSearchQuery = (v: string) => {
+        setSearchQuery(v);
+        setCurrentPage(1);
     };
 
-    const handleCancelConfirm = async (action: 'cancel' | 'revert') => {
-        if (!cancelTarget) return;
-        try {
-            await cancelMut.mutateAsync({ id: cancelTarget.userId, action });
-            toast.success(action === 'cancel'
-                ? (isTamil ? 'இலவச திட்டத்திற்கு மாற்றப்பட்டது' : 'Downgraded to BRONZE plan')
-                : (isTamil ? 'முந்தைய திட்டத்திற்கு மாற்றப்பட்டது' : 'Reverted to previous plan'));
-            setCancelTarget(null);
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || 'Failed to cancel subscription');
-        }
-    };
+    const hasActiveFilters = planFilter || dateFrom || dateTo || emailVerified;
 
-    const handleSuspend = async (reasonEn: string, reasonTa: string) => {
-        if (!suspendTarget) return;
-        try {
-            await suspendMut.mutateAsync({ id: suspendTarget, reasonEn, reasonTa });
-            setSuspendTarget(null);
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || 'Failed to suspend');
-        }
-    };
-
-    const handleRestore = async () => {
-        if (!restoreTarget) return;
-        try {
-            await restoreMut.mutateAsync(restoreTarget);
-            setRestoreTarget(null);
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || 'Failed to restore');
-        }
-    };
-
-    const columns: Column<AdminAccount>[] = [
+    const columns: Column<any>[] = [
         {
-            header: t('adminMatrimony.users.table.user') || 'User Profile',
+            header: 'User',
             render: (user) => (
                 <div>
-                    <div className="font-bold text-rosewood/80 text-sm">{isTamil ? [user.firstNameTa, user.lastNameTa].filter(Boolean).join(' ') : [user.firstNameEn, user.lastNameEn].filter(Boolean).join(' ')}</div>
-                    <div className="text-[10px] text-sage font-bold">{user.customId}</div>
+                    <div className="font-bold text-rosewood/80 text-sm">
+                        {isTamil
+                            ? [user.firstNameTa, user.lastNameTa].filter(Boolean).join(' ') ||
+                              [user.firstNameEn, user.lastNameEn].filter(Boolean).join(' ')
+                            : [user.firstNameEn, user.lastNameEn].filter(Boolean).join(' ')}
+                    </div>
+                    <div className="text-[10px] text-gold font-bold mt-0.5">{user.customId}</div>
                 </div>
             )
         },
         {
-            header: t('adminMatrimony.users.table.contact') || 'Contact',
+            header: 'Contact',
             render: (user) => (
-                <div className="flex items-center gap-2 text-xs text-slate-600">
-                    <Phone size={12} className="text-gold" />
-                    <span>{user.phone}</span>
+                <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                        <Phone size={11} className="text-gold shrink-0" />
+                        <span>{user.phone}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                        <Mail size={10} className="text-gold/60 shrink-0" />
+                        <span className="truncate max-w-[180px]">{user.email}</span>
+                    </div>
                 </div>
             )
         },
         {
-            header: t('adminMatrimony.users.table.profiles') || 'Profiles',
+            header: 'Profiles',
             render: (user) => (
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-ivory flex items-center justify-center border border-gold/10 text-rosewood"><UsersIcon size={14} /></div>
+                    <div className="w-8 h-8 rounded-lg bg-ivory flex items-center justify-center border border-gold/10 text-rosewood">
+                        <UsersIcon size={14} />
+                    </div>
                     <div>
                         <div className="text-xs font-bold text-rosewood">{user.profileCount}</div>
-                        <div className="text-[9px] text-slate-400 font-bold">{t('adminMatrimony.users.table.count') || 'Profiles'}</div>
+                        <div className="text-[9px] text-slate-400 font-bold">Profiles</div>
                     </div>
                 </div>
             )
         },
         {
-            header: t('adminMatrimony.users.table.joined') || 'Joined',
-            render: (user) => <div className="text-xs font-bold text-slate-600 tabular-nums">{formatDate(user.joinedDate)}</div>
+            header: 'Joined',
+            render: (user) => (
+                <div className="text-xs font-bold text-slate-500 tabular-nums">
+                    {formatDate(user.joinedDate)}
+                </div>
+            )
         },
         {
-            header: t('adminMatrimony.users.table.accStatus') || 'Account Status',
-            render: (user) => <StatusBadge status={user.accountStatus as any} minimal />
+            header: 'Account Status',
+            render: (user) => (
+                <StatusBadge status={(user.accountStatus || '').toLowerCase()} minimal />
+            )
         },
         {
-            header: t('adminMatrimony.common.actions') || 'Actions',
-            headerClassName: 'w-36 text-center',
+            header: 'Actions',
+            headerClassName: 'w-16 text-center',
             className: 'text-center',
-            render: (user) => {
-                const isSuspended = user.accountStatus === 'SUSPENDED';
-                return (
-                    <div className="flex items-center justify-center gap-1">
-                        <Tooltip content={t('adminMatrimony:accountDetail.viewDetails') || 'View Details'}>
-                            <button
-                                onClick={() => navigate(`/admin/matrimony/account/${user.id}`)}
-                                className="p-2 rounded-lg bg-gold/5 text-gold hover:bg-rosewood hover:text-white transition-all duration-300 shadow-sm border border-gold/10 hover:border-rosewood"
-                            >
-                                <Eye size={16} />
-                            </button>
-                        </Tooltip>
-                        {isSuspended ? (
-                            <>
-                                <Tooltip content={isTamil ? 'சந்தாவை ரத்துசெய்' : 'Cancel Subscription'}>
-                                    <button
-                                        onClick={() => handleCancelClick(user.id)}
-                                        className="p-2 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition-all duration-300 shadow-sm border border-red-200 hover:border-red-300"
-                                    >
-                                        <XCircle size={16} />
-                                    </button>
-                                </Tooltip>
-                                <Tooltip content={isTamil ? 'கணக்கை மீட்டெடுக்கவும்' : 'Restore Account'}>
-                                    <button
-                                        onClick={() => setRestoreTarget(user.id)}
-                                        className="p-2 rounded-lg bg-emerald-50 text-emerald-500 hover:bg-emerald-100 hover:text-emerald-700 transition-all duration-300 shadow-sm border border-emerald-200 hover:border-emerald-300"
-                                    >
-                                        <UserCheck size={16} />
-                                    </button>
-                                </Tooltip>
-                            </>
-                        ) : (
-                            <>
-                                <Tooltip content={isTamil ? 'திட்டத்தை மேம்படுத்து' : 'Upgrade Plan'}>
-                                    <button
-                                        onClick={() => handlePlanClick(user.id)}
-                                        disabled={planLoading}
-                                        className="p-2 rounded-lg bg-amber-50 text-amber-500 hover:bg-amber-100 hover:text-amber-700 disabled:opacity-50 transition-all duration-300 shadow-sm border border-amber-200 hover:border-amber-300"
-                                    >
-                                        <Crown size={16} />
-                                    </button>
-                                </Tooltip>
-                                <Tooltip content={isTamil ? 'கணக்கை இடைநிறுத்து' : 'Suspend Account'}>
-                                    <button
-                                        onClick={() => setSuspendTarget(user.id)}
-                                        className="p-2 rounded-lg bg-rosewood/5 text-rosewood/60 hover:bg-rosewood hover:text-white transition-all duration-300 shadow-sm border border-rosewood/10 hover:border-rosewood"
-                                    >
-                                        <UserMinus size={16} />
-                                    </button>
-                                </Tooltip>
-                            </>
-                        )}
-                    </div>
-                );
-            }
+            render: (user) => (
+                <div className="flex justify-center">
+                    <Tooltip content="View Details">
+                        <button
+                            onClick={() => navigate(`/admin/matrimony/account/${user.id}`)}
+                            className="p-2.5 rounded-xl bg-gold/5 text-gold hover:bg-rosewood hover:text-white transition-all duration-300 shadow-sm border border-gold/10 hover:border-rosewood"
+                        >
+                            <Eye size={18} strokeWidth={2.5} />
+                        </button>
+                    </Tooltip>
+                </div>
+            )
         }
     ];
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-[1500px] mx-auto">
-            <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                    <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} placeholder={t('common:search')} />
-                </div>
-            </div>
-            <DataTable columns={columns} data={data?.accounts || []} loading={isLoading} pagination={{ currentPage, totalPages: data?.meta?.totalPages || 1, totalItems: data?.meta?.total || 0, itemsPerPage, onPageChange: setCurrentPage }} emptyState={{ icon: UserX, title: t('adminMatrimony.users.noAccountsFound') }} />
-            <CancelSubscriptionModal
-                isOpen={!!cancelTarget}
-                onClose={() => setCancelTarget(null)}
-                onConfirm={handleCancelConfirm}
-                currentPlanName={cancelTarget?.planName || '—'}
-                revertablePlanName={cancelTarget?.revertableName}
-            />
-            <RejectionModal
-                isOpen={!!suspendTarget}
-                onClose={() => setSuspendTarget(null)}
-                onConfirm={handleSuspend}
-                title={isTamil ? 'கணக்கை இடைநிறுத்துவதற்கான காரணம்' : 'Suspension Reason'}
-                description={isTamil
-                    ? 'இது பயனர் கணக்கை முடக்கி, அவர்களின் அனைத்து சுயவிவரங்களையும் உலகளவில் மறைக்கும்'
-                    : 'This will deactivate the user account and hide all their profiles globally'}
-            />
-            <ConfirmationModal
-                isOpen={!!restoreTarget}
-                onClose={() => setRestoreTarget(null)}
-                onConfirm={handleRestore}
-                title={isTamil ? 'கணக்கை மீட்டெடுக்கவும்' : 'Restore Account'}
-                message={isTamil
-                    ? 'இந்தக் கணக்கை மீட்டெடுப்பது அதை மீண்டும் செயலில் உள்ள நிலைக்கு மாற்றும் மற்றும் அனைத்து சுயவிவரங்களையும் மீண்டும் தெரியும்படி செய்யும். தொடர வேண்டுமா?'
-                    : 'Restoring this account will reactivate it and make all profiles visible again. Continue?'}
-                variant="warning"
-                confirmText={isTamil ? 'ஆம், மீட்டெடுக்கவும்' : 'Yes, Restore'}
-            />
-            <AssignPlanModal
-                accountId={planTarget?.id || ''}
-                currentPlanCode={planTarget?.planCode || 'BRONZE'}
-                availablePlans={planTarget?.plans || []}
-                isOpen={!!planTarget}
-                onClose={() => setPlanTarget(null)}
-                onAssigned={() => {
-                    setPlanTarget(null);
-                    accountsQuery.refetch();
+        <AdminPageLayout
+            searchQuery={searchQuery}
+            onSearchChange={handleSearchQuery}
+            searchPlaceholder="Search by name, ID, phone or email..."
+            statusTabs={ACCOUNT_STATUS_TABS}
+            activeStatus={statusFilter}
+            onStatusChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={handleClearFilters}
+            filterButton={
+                <>
+                    <button
+                        onClick={() => setDrawerOpen(true)}
+                        className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl border text-xs font-bold transition-all active:scale-95 shrink-0 ${
+                            hasActiveFilters
+                                ? 'bg-rosewood-gradient text-ivory border-rosewood shadow-md shadow-rosewood/20'
+                                : 'bg-white/60 text-rosewood/60 border-gold/10 hover:border-gold/30 hover:text-rosewood/80'
+                        }`}
+                    >
+                        <Filter size={14} />
+                        Filters
+                        {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-white/80" />}
+                    </button>
+                    <ModalShell
+                        isOpen={drawerOpen}
+                        onClose={() => setDrawerOpen(false)}
+                        icon={<Filter size={24} className="text-rosewood" />}
+                        title="Filters"
+                        size="sm"
+                        footer={
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => { handleClearFilters(); setDrawerOpen(false); }}
+                                    className="flex-1 px-6 py-3 border border-gold/20 text-rosewood font-bold rounded-xl hover:bg-ivory transition-all text-sm active:scale-[0.97]"
+                                >
+                                    Clear All Filters
+                                </button>
+                                <button
+                                    onClick={() => setDrawerOpen(false)}
+                                    className="flex-1 px-6 py-3 bg-rosewood-gradient text-ivory font-bold rounded-xl hover:shadow-xl transition-all text-sm shadow-lg shadow-rosewood/20 active:scale-[0.97]"
+                                >
+                                    Apply Filters
+                                </button>
+                            </div>
+                        }
+                    >
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-bold text-rosewood/50 uppercase tracking-wider">
+                                    Membership Plan
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={planFilter}
+                                        onChange={(e) => { setPlanFilter(e.target.value); setCurrentPage(1); }}
+                                        className="w-full appearance-none px-4 py-2.5 bg-ivory/60 border border-gold/10 rounded-xl text-sm font-medium text-rosewood focus:outline-none focus:border-gold/40 focus:ring-2 focus:ring-gold/5 transition-all"
+                                    >
+                                        {PLAN_OPTIONS.map((o) => (
+                                            <option key={o.value} value={o.value}>{o.label}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-rosewood/30 pointer-events-none" />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-bold text-rosewood/50 uppercase tracking-wider">
+                                    Date Range (Joined)
+                                </label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="relative">
+                                        <input
+                                            type="date"
+                                            value={dateFrom}
+                                            onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }}
+                                            className="w-full px-3 py-2.5 bg-ivory/60 border border-gold/10 rounded-xl text-xs font-medium text-rosewood focus:outline-none focus:border-gold/40 focus:ring-2 focus:ring-gold/5 transition-all"
+                                        />
+                                    </div>
+                                    <div className="relative">
+                                        <input
+                                            type="date"
+                                            value={dateTo}
+                                            onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }}
+                                            className="w-full px-3 py-2.5 bg-ivory/60 border border-gold/10 rounded-xl text-xs font-medium text-rosewood focus:outline-none focus:border-gold/40 focus:ring-2 focus:ring-gold/5 transition-all"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex text-[10px] font-medium text-rosewood/30 justify-between px-1">
+                                    <span>From</span>
+                                    <span>To</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-bold text-rosewood/50 uppercase tracking-wider">
+                                    Email Verified
+                                </label>
+                                <div className="flex gap-2">
+                                    {VERIFIED_OPTIONS.map((opt) => (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => { setEmailVerified(opt.value); setCurrentPage(1); }}
+                                            className={`flex-1 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all active:scale-95 ${
+                                                emailVerified === opt.value
+                                                    ? 'bg-rosewood text-white border-rosewood shadow-md shadow-rosewood/20'
+                                                    : 'bg-ivory/60 text-rosewood/50 border-gold/10 hover:border-gold/30 hover:text-rosewood/80'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </ModalShell>
+                </>
+            }
+        >
+            <DataTable
+                columns={columns}
+                data={filteredAccounts}
+                loading={isLoading}
+                pagination={{
+                    currentPage,
+                    totalPages: rawData?.meta?.totalPages || 1,
+                    totalItems: rawData?.meta?.total || 0,
+                    itemsPerPage: 8,
+                    onPageChange: setCurrentPage,
+                }}
+                emptyState={{
+                    icon: UserX,
+                    title: 'No accounts found matching your search.',
                 }}
             />
-        </motion.div>
+        </AdminPageLayout>
     );
 };
 

@@ -36,7 +36,7 @@ export const SectionHeaderRedesigned: React.FC<{
         {icon}
       </div>
     )}
-    <h2 className={`font-serif text-rosewood font-black flex-1 ${isTamil ? "text-sm sm:text-base" : "text-lg sm:text-xl"}`}>
+    <h2 className="font-serif text-rosewood font-black flex-1 text-lg sm:text-xl">
       {title}
     </h2>
     {children}

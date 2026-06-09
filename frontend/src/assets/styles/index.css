@@ -1,5 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Catamaran:wght@400;700&family=Great+Vibes&family=Kavivanar&family=Namdhinggo:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&family=Mukta+Malar:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 @import "tailwindcss";
 
 @theme {
@@ -314,11 +313,6 @@ body {
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
 }
 
-/* Tamil text needs to be slightly smaller to match English visual weight */
-.is-tamil {
-  font-size: 0.8em;
-}
-
 /* Admin Tamil font-size reduction — scoped via .admin-layout class */
 html[lang="ta"] .admin-layout .text-4xl { font-size: 1.5rem; }
 html[lang="ta"] .admin-layout .text-3xl { font-size: 1.25rem; }
@@ -352,10 +346,131 @@ html[lang="ta"] .admin-layout .text-\[7px\] { font-size: 6px; }
   html[lang="ta"] .admin-layout .sm\:text-\[11px\] { font-size: 10px; }
 }
 
-/* Prevent Tamil from being too large on mobile */
-.text-ta-adjusted {
-  font-size: 0.7rem;
+/* Auth, User, Maaligai Tamil font-size reduction — scoped via respective layout classes */
+html[lang="ta"] .auth-layout .text-4xl { font-size: 1.5rem; }
+html[lang="ta"] .auth-layout .text-3xl { font-size: 1.25rem; }
+html[lang="ta"] .auth-layout .text-2xl { font-size: 1.125rem; }
+html[lang="ta"] .auth-layout .text-xl { font-size: 1rem; }
+html[lang="ta"] .auth-layout .text-lg { font-size: 0.875rem; }
+html[lang="ta"] .auth-layout .text-base { font-size: 0.875rem; }
+html[lang="ta"] .auth-layout .text-sm { font-size: 0.75rem; }
+html[lang="ta"] .auth-layout .text-xs { font-size: 0.6875rem; }
+html[lang="ta"] .auth-layout .text-\[14px\] { font-size: 12px; }
+html[lang="ta"] .auth-layout .text-\[13px\] { font-size: 12px; }
+html[lang="ta"] .auth-layout .text-\[12px\] { font-size: 11px; }
+html[lang="ta"] .auth-layout .text-\[11px\] { font-size: 10px; }
+html[lang="ta"] .auth-layout .text-\[10px\] { font-size: 9px; }
+html[lang="ta"] .auth-layout .text-\[9px\] { font-size: 8px; }
+html[lang="ta"] .auth-layout .text-\[8px\] { font-size: 7px; }
+html[lang="ta"] .auth-layout .text-\[7px\] { font-size: 6px; }
+
+@media (min-width: 640px) {
+  html[lang="ta"] .auth-layout .sm\:text-3xl { font-size: 1.25rem; }
+  html[lang="ta"] .auth-layout .sm\:text-2xl { font-size: 1.125rem; }
+  html[lang="ta"] .auth-layout .sm\:text-sm { font-size: 0.75rem; }
+  html[lang="ta"] .auth-layout .sm\:text-xs { font-size: 0.6875rem; }
 }
+
+@media (min-width: 768px) {
+  html[lang="ta"] .auth-layout .md\:text-3xl { font-size: 1.25rem; }
+  html[lang="ta"] .auth-layout .md\:text-2xl { font-size: 1.125rem; }
+  html[lang="ta"] .auth-layout .md\:text-xs { font-size: 0.6875rem; }
+  html[lang="ta"] .auth-layout .md\:text-\[10px\] { font-size: 9px; }
+}
+
+html[lang="ta"] .user-layout .text-4xl { font-size: 1.5rem; }
+html[lang="ta"] .user-layout .text-3xl { font-size: 1.25rem; }
+html[lang="ta"] .user-layout .text-2xl { font-size: 1.125rem; }
+html[lang="ta"] .user-layout .text-xl { font-size: 1rem; }
+html[lang="ta"] .user-layout .text-lg { font-size: 0.875rem; }
+html[lang="ta"] .user-layout .text-base { font-size: 0.875rem; }
+html[lang="ta"] .user-layout .text-sm { font-size: 0.75rem; }
+html[lang="ta"] .user-layout .text-xs { font-size: 0.6875rem; }
+html[lang="ta"] .user-layout .text-\[14px\] { font-size: 12px; }
+html[lang="ta"] .user-layout .text-\[13px\] { font-size: 12px; }
+html[lang="ta"] .user-layout .text-\[12px\] { font-size: 11px; }
+html[lang="ta"] .user-layout .text-\[11px\] { font-size: 10px; }
+html[lang="ta"] .user-layout .text-\[10px\] { font-size: 9px; }
+html[lang="ta"] .user-layout .text-\[9px\] { font-size: 8px; }
+html[lang="ta"] .user-layout .text-\[8px\] { font-size: 7px; }
+html[lang="ta"] .user-layout .text-\[7px\] { font-size: 6px; }
+
+@media (min-width: 640px) {
+  html[lang="ta"] .user-layout .sm\:text-3xl { font-size: 1.25rem; }
+  html[lang="ta"] .user-layout .sm\:text-2xl { font-size: 1.125rem; }
+  html[lang="ta"] .user-layout .sm\:text-sm { font-size: 0.75rem; }
+  html[lang="ta"] .user-layout .sm\:text-xs { font-size: 0.6875rem; }
+}
+
+@media (min-width: 768px) {
+  html[lang="ta"] .user-layout .md\:text-3xl { font-size: 1.25rem; }
+  html[lang="ta"] .user-layout .md\:text-2xl { font-size: 1.125rem; }
+  html[lang="ta"] .user-layout .md\:text-xs { font-size: 0.6875rem; }
+  html[lang="ta"] .user-layout .md\:text-\[10px\] { font-size: 9px; }
+}
+
+html[lang="ta"] .maaligai-layout .text-9xl { font-size: 5rem; }
+html[lang="ta"] .maaligai-layout .text-8xl { font-size: 4rem; }
+html[lang="ta"] .maaligai-layout .text-7xl { font-size: 3rem; }
+html[lang="ta"] .maaligai-layout .text-6xl { font-size: 2.5rem; }
+html[lang="ta"] .maaligai-layout .text-5xl { font-size: 2rem; }
+html[lang="ta"] .maaligai-layout .text-4xl { font-size: 1.5rem; }
+html[lang="ta"] .maaligai-layout .text-3xl { font-size: 1.25rem; }
+html[lang="ta"] .maaligai-layout .text-2xl { font-size: 1.125rem; }
+html[lang="ta"] .maaligai-layout .text-xl { font-size: 1rem; }
+html[lang="ta"] .maaligai-layout .text-lg { font-size: 0.875rem; }
+html[lang="ta"] .maaligai-layout .text-base { font-size: 0.875rem; }
+html[lang="ta"] .maaligai-layout .text-sm { font-size: 0.75rem; }
+html[lang="ta"] .maaligai-layout .text-xs { font-size: 0.6875rem; }
+html[lang="ta"] .maaligai-layout .text-\[18px\] { font-size: 16px; }
+html[lang="ta"] .maaligai-layout .text-\[15px\] { font-size: 13px; }
+html[lang="ta"] .maaligai-layout .text-\[14px\] { font-size: 12px; }
+html[lang="ta"] .maaligai-layout .text-\[13px\] { font-size: 12px; }
+html[lang="ta"] .maaligai-layout .text-\[12px\] { font-size: 11px; }
+html[lang="ta"] .maaligai-layout .text-\[11px\] { font-size: 10px; }
+html[lang="ta"] .maaligai-layout .text-\[10px\] { font-size: 9px; }
+html[lang="ta"] .maaligai-layout .text-\[9px\] { font-size: 8px; }
+html[lang="ta"] .maaligai-layout .text-\[8px\] { font-size: 7px; }
+html[lang="ta"] .maaligai-layout .text-\[7px\] { font-size: 6px; }
+
+@media (min-width: 640px) {
+  html[lang="ta"] .maaligai-layout .sm\:text-5xl { font-size: 2rem; }
+  html[lang="ta"] .maaligai-layout .sm\:text-3xl { font-size: 1.25rem; }
+  html[lang="ta"] .maaligai-layout .sm\:text-2xl { font-size: 1.125rem; }
+  html[lang="ta"] .maaligai-layout .sm\:text-sm { font-size: 0.75rem; }
+  html[lang="ta"] .maaligai-layout .sm\:text-xs { font-size: 0.6875rem; }
+}
+
+@media (min-width: 768px) {
+  html[lang="ta"] .maaligai-layout .md\:text-9xl { font-size: 5rem; }
+  html[lang="ta"] .maaligai-layout .md\:text-7xl { font-size: 3rem; }
+  html[lang="ta"] .maaligai-layout .md\:text-6xl { font-size: 2.5rem; }
+  html[lang="ta"] .maaligai-layout .md\:text-5xl { font-size: 2rem; }
+  html[lang="ta"] .maaligai-layout .md\:text-4xl { font-size: 1.5rem; }
+  html[lang="ta"] .maaligai-layout .md\:text-3xl { font-size: 1.25rem; }
+  html[lang="ta"] .maaligai-layout .md\:text-2xl { font-size: 1.125rem; }
+  html[lang="ta"] .maaligai-layout .md\:text-xl { font-size: 1rem; }
+  html[lang="ta"] .maaligai-layout .md\:text-lg { font-size: 0.875rem; }
+  html[lang="ta"] .maaligai-layout .md\:text-base { font-size: 0.875rem; }
+  html[lang="ta"] .maaligai-layout .md\:text-xs { font-size: 0.6875rem; }
+  html[lang="ta"] .maaligai-layout .md\:text-\[22px\] { font-size: 18px; }
+  html[lang="ta"] .maaligai-layout .md\:text-\[10px\] { font-size: 9px; }
+}
+
+@media (min-width: 1024px) {
+  html[lang="ta"] .maaligai-layout .lg\:text-8xl { font-size: 4rem; }
+  html[lang="ta"] .maaligai-layout .lg\:text-6xl { font-size: 2.5rem; }
+  html[lang="ta"] .maaligai-layout .lg\:text-5xl { font-size: 2rem; }
+  html[lang="ta"] .maaligai-layout .lg\:text-4xl { font-size: 1.5rem; }
+  html[lang="ta"] .maaligai-layout .lg\:text-3xl { font-size: 1.25rem; }
+  html[lang="ta"] .maaligai-layout .lg\:text-lg { font-size: 0.875rem; }
+}
+
+/* Filter portal (renders outside layout tree) */
+html[lang="ta"] .filter-portal .text-xl { font-size: 1rem; }
+html[lang="ta"] .filter-portal .text-xs { font-size: 0.6875rem; }
+html[lang="ta"] .filter-portal .text-\[10px\] { font-size: 9px; }
+html[lang="ta"] .filter-portal .text-\[9px\] { font-size: 8px; }
 
 /* Tamil Keyboard Specific */
 .tamil-keyboard-key {

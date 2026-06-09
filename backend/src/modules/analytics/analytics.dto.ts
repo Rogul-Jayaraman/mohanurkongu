@@ -1,3 +1,11 @@
+export interface VerificationStatsDTO {
+  pendingTotal: number;
+  pendingToday: number;
+  approvedToday: number;
+  rejectedToday: number;
+  avgReviewTimeHours: number;
+}
+
 export interface ManamaalaiAnalyticsDTO {
   overview: {
     activeProfiles: number;
@@ -29,4 +37,5 @@ export interface ManamaalaiAnalyticsDTO {
   membershipFunnel: { stage: string; count: number }[];
   membershipPlanDistribution: { plan: string; count: number; percentage: number }[];
   renewalForecast: { bucket: string; silver: number; gold: number; platinum: number }[];
+  verificationStats: VerificationStatsDTO;
 }

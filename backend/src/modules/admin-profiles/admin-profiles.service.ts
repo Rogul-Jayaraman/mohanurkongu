@@ -16,7 +16,7 @@ export class AdminProfilesService {
   async listProfiles(params: {
     page: number; limit: number; search?: string; status?: string;
     sortBy?: string; sortOrder?: string; communityId?: string; regNo?: string;
-    createdAtFrom?: string; createdAtTo?: string;
+    createdAtFrom?: string; createdAtTo?: string; gender?: string;
   }) {
     const page = Math.max(1, params.page);
     const limit = Math.min(100, Math.max(1, params.limit));
@@ -26,6 +26,7 @@ export class AdminProfilesService {
       sortBy: params.sortBy, sortOrder: params.sortOrder,
       communityId: params.communityId, regNo: params.regNo,
       createdAtFrom: params.createdAtFrom, createdAtTo: params.createdAtTo,
+      gender: params.gender,
     });
 
     const profiles = result.profiles.map((p: any) => {

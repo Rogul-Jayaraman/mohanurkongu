@@ -90,11 +90,11 @@ export const GalleryHero: React.FC<GalleryHeroProps> = () => {
 
             <div className="relative z-10 text-center px-6 max-w-4xl reveal-frame">
                 <div className="reveal-item">
-                    <h2 className={`${fontSerif} ${isTamil ? 'font-bold' : 'font-black'} mb-6 ${ls('leading-none', 'leading-[1.2]')} drop-shadow-2xl ${ls('text-6xl md:text-9xl text-white', 'text-3xl md:text-6xl text-white/90')}`}>
+                    <h2 className={`${fontSerif} ${isTamil ? 'font-bold' : 'font-black'} mb-6 ${ls('leading-none', 'leading-[1.2]')} drop-shadow-2xl ${isTamil ? 'text-white/90' : 'text-white'} text-6xl md:text-9xl`}>
                         {t.heroTitle}
                     </h2>
                     <VineDivider icon="spa" />
-                    <p className={`drop-shadow-lg text-primary ${ls('text-lg md:text-2xl font-heading font-light tracking-[0.4em] uppercase', 'text-base md:text-lg font-body')}`}>
+                    <p className={`drop-shadow-lg text-primary ${isTamil ? 'font-body' : 'font-heading font-light tracking-[0.4em] uppercase'} text-lg md:text-2xl`}>
                         {t.heroSubtitle}
                     </p>
                 </div>
@@ -138,10 +138,10 @@ export const GalleryGrid: React.FC<GalleryGridProps> = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center"
                 >
-                    <span className={`text-gold-accent block mb-4 ${fontDecorative} ${ls('text-4xl', 'text-2xl')}`}>
+                    <span className={`text-gold-accent block mb-4 ${fontDecorative} text-4xl`}>
                         {isTamil ? 'எங்கள் அழகிய தருணங்கள்' : 'Our Beautiful Moments'}
                     </span>
-                    <h2 className={`text-rosewood tracking-tight mb-8 ${fontSerif} ${isTamil ? 'font-bold' : 'font-bold'} ${ls('text-3xl md:text-5xl', 'text-2xl md:text-4xl')}`}>
+                    <h2 className={`text-rosewood tracking-tight mb-8 ${fontSerif} font-bold text-3xl md:text-5xl`}>
                         {isTamil ? 'ஒவ்வொரு உணர்வையும் பதிவு செய்தல்' : 'Capturing Every Emotion'}
                     </h2>
                 </motion.div>
@@ -166,7 +166,7 @@ export const GalleryCTA: React.FC<GalleryCTAProps> = () => {
     const body = isTamil ? 'font-body' : 'font-body';
     const heading = isTamil ? 'font-tamil-serif' : 'font-heading';
 
-    const h1Size = isTamil ? 'text-2xl sm:text-3xl md:text-4xl' : 'text-4xl sm:text-5xl md:text-6xl';
+    const h1Size = 'text-4xl sm:text-5xl md:text-6xl';
     const leading = isTamil ? 'leading-relaxed' : 'leading-tight';
 
     return (
@@ -217,7 +217,7 @@ export const Memories: React.FC<MemoriesProps> = () => {
                     <div className="absolute bottom-[-44px] left-[-34px] w-12 h-12 border-b-2 border-l-2 border-primary/40 rounded-bl-3xl"></div>
                     <div className="absolute bottom-[-44px] right-[-34px] w-12 h-12 border-b-2 border-r-2 border-primary/40 rounded-br-3xl"></div>
 
-                    <p className={`text-rosewood mb-4 ${decorative} ${ls('text-4xl', 'text-2xl')} ${italic}`}>
+                    <p className={`text-rosewood mb-4 ${decorative} text-4xl ${italic}`}>
                         {t.memoriesTitle}
                     </p>
 
@@ -583,7 +583,7 @@ export const ArchiveExplorer: React.FC<ArchiveExplorerProps> = ({
     const isTamil = lang === 'ta';
     const fontDisplay = isTamil ? 'font-body' : 'font-heading';
     const fontSerif = isTamil ? 'font-body' : 'font-heading';
-    const h3 = isTamil ? 'text-lg md:text-xl' : 'text-xl md:text-2xl';
+    const h3 = 'text-xl md:text-2xl';
 
     if (!isOpen) return null;
 

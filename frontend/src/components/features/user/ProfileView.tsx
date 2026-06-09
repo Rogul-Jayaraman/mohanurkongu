@@ -8,7 +8,7 @@ import { useMyCapabilitiesQuery } from '@/queries/useMembershipQueries';
 import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { ArrowLeft, Printer, FileText, Shield } from 'lucide-react';
 import { SectionDivider } from '@/components/features/matrimony/ProfileViewPrimitives';
-import PrintProfile, { JathagamPrintView } from './PrintProfile';
+import PrintProfile, { JathagamPrintView } from '@/components/features/admin/matrimony/PrintProfile';
 
 import QuickNav from './profile-sections/QuickNav';
 import ProfileHeaderSection from './profile-sections/ProfileHeaderSection';
@@ -333,20 +333,24 @@ const ProfileView: React.FC = () => {
         <SectionDivider />
 
         {/* Section 6: Contact */}
-        <AnimatedSection>
-          <div id="section-contact" className="scroll-mt-20">
-            {contactLocked ? (
-              <LockedSectionUpgrade
-                message="Upgrade to Platinum to view contact information"
-                messageTa="தொடர்பு தகவலைக் காண பிளாட்டினத்திற்கு மேம்படுத்தவும்"
-                isTamil={isTamil}
-              />
-            ) : (
-              <ContactSection profile={profile} isLoading={loading} />
-            )}
-          </div>
-        </AnimatedSection>
-        <SectionDivider />
+        {!isOwner && (
+          <>
+            <AnimatedSection>
+              <div id="section-contact" className="scroll-mt-20">
+                {contactLocked ? (
+                  <LockedSectionUpgrade
+                    message="Upgrade to Platinum to view contact information"
+                    messageTa="தொடர்பு தகவலைக் காண பிளாட்டினத்திற்கு மேம்படுத்தவும்"
+                    isTamil={isTamil}
+                  />
+                ) : (
+                  <ContactSection profile={profile} isLoading={loading} />
+                )}
+              </div>
+            </AnimatedSection>
+            <SectionDivider />
+          </>
+        )}
 
         {/* Section 7: Partner Preference */}
         <AnimatedSection>

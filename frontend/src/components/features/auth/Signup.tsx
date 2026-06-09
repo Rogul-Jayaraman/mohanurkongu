@@ -83,9 +83,7 @@ export const SignupHero: React.FC = () => {
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.8, duration: 0.6 }}
-                    className={`font-script text-gold font-semibold drop-shadow-sm tracking-wider ${
-                        language === 'ta' ? 'text-3xl' : 'text-4xl'
-                    }`}
+                    className="font-script text-gold font-semibold drop-shadow-sm tracking-wider text-4xl"
                 >
                     {t('signup.hero.tags')}
                 </motion.p>

@@ -40,6 +40,7 @@ export const adminMatrimonyEn = {
       rejected: "Rejected",
       active: "Active",
       inactive: "Inactive",
+      archived: "Archived",
       suspended: "Suspended",
       blocked: "Blocked",
       noRecords: "No records found",
@@ -70,6 +71,11 @@ export const adminMatrimonyEn = {
       confirmed: "Confirmed",
       completed: "Completed",
       cancelled: "Cancelled",
+      filters: "Filters",
+      asc: "Asc",
+      desc: "Desc",
+      clearFilters: "Clear All Filters",
+      apply: "Apply Filters",
     },
     plans: {
       title: "Membership Plans",
@@ -230,6 +236,12 @@ export const adminMatrimonyEn = {
         created: "Created On",
       },
       searchPlaceholder: "Search by Name or Reg No...",
+      gender: "Gender",
+      dateRange: "Date Range",
+      from: "From",
+      to: "To",
+      sortBy: "Sort By",
+      sortOrder: "Sort Order",
     },
     dashboard: {
       greeting: {

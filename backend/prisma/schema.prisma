@@ -280,17 +280,21 @@ model Account {
   translations  AccountTranslation[]
   credential    AccountCredential?
   roles         AccountRole[]
-  subscriptions Subscription[]
-  membershipUsage MembershipUsage?
-  profileOpens  ProfileOpen[]
-  statusHistory AccountStatusHistory[]
-  sessions      AccountSession[]
-  profiles      Profile[]
-  uploads       Upload[]
-  assignedVerifications VerificationQueue[] @relation("assignedAdmin")
+  subscriptions         Subscription[]          @relation("SubscriptionAccount")
+  adminAssignments      Subscription[]          @relation("SubscriptionAdmin")
+  membershipUsage       MembershipUsage?
+  profileOpens          ProfileOpen[]
+  statusHistory         AccountStatusHistory[]
+  sessions              AccountSession[]
+  profiles              Profile[]
+  uploads               Upload[]
+  assignedVerifications VerificationQueue[]      @relation("assignedAdmin")
   reviewedReviews       ProfileReview[]
   auditEvents           AdminAuditEvent[]
   shortlists            Shortlist[]
+  bookingCustomers      MandapamBooking[]       @relation("MandapamBookingCustomer")
+  bookingCreators       MandapamBooking[]       @relation("MandapamBookingCreator")
+  settlements           MandapamSettlement[]    @relation("MandapamSettlementAdmin")
 
   @@index([accountNo])
   @@index([currentState])
@@ -419,9 +423,9 @@ model Subscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  account       Account        @relation(fields: [accountId], references: [id])
+  account       Account        @relation("SubscriptionAccount", fields: [accountId], references: [id])
   plan          MembershipPlan @relation(fields: [planId], references: [id])
-  assignedAdmin Account?       @relation(fields: [assignedByAdminId], references: [id])
+  assignedAdmin Account?       @relation("SubscriptionAdmin", fields: [assignedByAdminId], references: [id])
 
   profileOpens ProfileOpen[]
   usage        MembershipUsage?
@@ -1116,8 +1120,8 @@ model MandapamBooking {
   bookingConfig Json          @db.JsonB
   notes         String?       @db.Text
   createdBy     String        @db.Uuid
-  customer      Account       @relation(fields: [customerId], references: [id])
-  creator       Account       @relation(fields: [createdBy], references: [id])
+  customer      Account       @relation("MandapamBookingCustomer", fields: [customerId], references: [id])
+  creator       Account       @relation("MandapamBookingCreator", fields: [createdBy], references: [id])
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -1289,7 +1293,7 @@ model MandapamSettlement {
   updatedAt     DateTime        @updatedAt
 
   booking MandapamBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  settledByAdmin Account?  @relation(fields: [settledBy], references: [id])
+  settledByAdmin Account?  @relation("MandapamSettlementAdmin", fields: [settledBy], references: [id])
 
   @@index([settledBy])
   @@map("mandapam_settlements")

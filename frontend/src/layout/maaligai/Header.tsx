@@ -60,7 +60,7 @@ export const Header: React.FC = () => {
     >
       <Link to="/" className="flex items-center gap-2 md:gap-3 z-50 group" onClick={() => closeAll()}>
         <img src={logo} alt="Logo" className="h-10 md:h-12 w-auto transition-transform duration-500 group-hover:scale-105" />
-        <h1 className={`${ls('font-heading text-base md:text-xl', 'font-tamil-serif text-sm md:text-lg')} font-bold text-rosewood tracking-tight truncate max-w-[180px] md:max-w-none`}>
+        <h1 className={`${isTamil ? 'font-tamil-serif' : 'font-heading'} text-base md:text-xl font-bold text-rosewood tracking-tight truncate max-w-[180px] md:max-w-none`}>
           {t('home.hero.title')}
         </h1>
       </Link>
@@ -121,7 +121,7 @@ export const Header: React.FC = () => {
                 <img src={logo} alt="Logo" className="h-14 w-auto mb-3 opacity-90" />
                 <div className="flex items-center gap-4 w-full justify-center">
                   <div className="h-[0.5px] flex-1 bg-linear-to-r from-transparent to-rosewood/40"></div>
-                  <p className={`${ls('font-heading text-base', 'font-tamil-serif text-sm')} text-rosewood font-bold tracking-tight`}>
+                  <p className={`${isTamil ? 'font-tamil-serif' : 'font-heading'} text-base text-rosewood font-bold tracking-tight`}>
                     {t('home.hero.title')}
                   </p>
                   <div className="h-[0.5px] flex-1 bg-linear-to-l from-transparent to-rosewood/40"></div>
@@ -142,7 +142,7 @@ export const Header: React.FC = () => {
                       <span className="material-symbols-outlined text-2xl!">{item.icon}</span>
                     </div>
                     <div className="flex flex-col items-start">
-                      <span className={`font-bold transition-all duration-300 ${ls('font-body text-base tracking-wide', 'font-tamil-body text-sm tracking-normal')} ${currentPage === item.id ? 'text-rosewood' : 'text-dark-brown/70'}`}>
+                      <span className={`font-bold transition-all duration-300 ${isTamil ? 'font-tamil-body tracking-normal' : 'font-body tracking-wide'} text-base ${currentPage === item.id ? 'text-rosewood' : 'text-dark-brown/70'}`}>
                         {item.label}
                       </span>
                       <div className={`h-[1.5px] transition-all duration-500 bg-linear-to-r from-transparent via-rosewood to-transparent mx-auto ${currentPage === item.id ? 'w-full' : 'w-0'}`}></div>
@@ -167,7 +167,7 @@ export const Header: React.FC = () => {
                   </button>
                 </div>
 
-                <p className={`${ls('font-cursive text-xl', 'font-tamil-body text-base')} text-rosewood opacity-60 text-center`}>
+                <p className={`${isTamil ? 'font-tamil-body' : 'font-cursive'} text-xl text-rosewood opacity-60 text-center`}>
                   {lang === 'en' ? 'Crafting timeless memories' : 'காலத்தால் அழியாத நினைவுகள்'}
                 </p>
               </div>

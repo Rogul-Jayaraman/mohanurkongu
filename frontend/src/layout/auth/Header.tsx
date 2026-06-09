@@ -31,14 +31,10 @@ export const AuthHeader: React.FC = () => {
                                 transition={{ duration: 0.2, ease: "easeOut" }}
                                 className="flex md:flex-row flex-col gap-1"
                             >
-                                <h1 className={`font-serif font-bold text-rosewood leading-none group-hover:text-dark-rosewood/80 transition-all whitespace-nowrap  ${
-                                    language === 'ta' ? 'text-sm lg:text-lg' : 'text-sm lg:text-lg'
-                                }`}>
+                                <h1 className="font-serif font-bold text-rosewood leading-none group-hover:text-dark-rosewood/80 transition-all whitespace-nowrap text-sm lg:text-lg">
                                     {t('brand')}
                                 </h1>
-                                <p className={`font-serif font-bold text-rosewood leading-none group-hover:text-dark-rosewood/80 transition-all whitespace-nowrap  ${
-                                    language === 'ta' ? 'text-sm lg:text-lg' : 'text-sm lg:text-lg'
-                                }`}>
+                                <p className="font-serif font-bold text-rosewood leading-none group-hover:text-dark-rosewood/80 transition-all whitespace-nowrap text-sm lg:text-lg">
                                     {t('tagline')}
                                 </p>
                             </motion.div>

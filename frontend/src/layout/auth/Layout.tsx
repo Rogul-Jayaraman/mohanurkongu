@@ -6,7 +6,7 @@ import { ScrollToTop } from '../../components/ui/layout/ScrollToTop';
 
 export const AuthLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return (
-        <div className="h-screen flex flex-col bg-ivory overflow-x-hidden overflow-y-auto selection:bg-gold/30 selection:text-rosewood">
+        <div className="h-screen flex flex-col bg-ivory overflow-x-hidden overflow-y-auto selection:bg-gold/30 selection:text-rosewood auth-layout">
             <ScrollToTop />
             <Header />
 

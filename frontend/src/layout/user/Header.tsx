@@ -71,9 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="material-symbols-outlined text-rosewood group-hover:text-ivory text-[22px] md:text-[20px] transition-all duration-500">
               logout
             </span>
-            <span className={`hidden md:inline font-serif font-black text-rosewood group-hover:text-ivory transition-colors duration-500 ${
-              language === "ta" ? "text-xs" : "text-sm"
-            }`}>
+            <span className="hidden md:inline font-serif font-black text-rosewood group-hover:text-ivory transition-colors duration-500 text-sm">
               {t("logout")}
             </span>
           </button>

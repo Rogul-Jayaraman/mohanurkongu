@@ -43,16 +43,12 @@ const SidebarLogoTitle: React.FC<SidebarLogoTitleProps> = ({
               className="flex flex-col gap-1"
             >
               <h1
-                className={`font-serif font-bold text-rosewood leading-none group-hover:text-dark-rosewood/80 transition-all whitespace-nowrap ${
-                  language === 'ta' ? 'text-xs lg:text-lg' : 'text-sm lg:text-lg'
-                }`}
+                className="font-serif font-bold text-rosewood leading-none group-hover:text-dark-rosewood/80 transition-all whitespace-nowrap text-sm lg:text-lg"
               >
                 {t(brandKey)}
               </h1>
               <p
-                className={`font-serif font-bold text-rosewood leading-none group-hover:text-dark-rosewood/80 transition-all whitespace-nowrap ${
-                  language === 'ta' ? 'text-xs lg:text-lg' : 'text-sm lg:text-lg'
-                }`}
+                className="font-serif font-bold text-rosewood leading-none group-hover:text-dark-rosewood/80 transition-all whitespace-nowrap text-sm lg:text-lg"
               >
                 {t(taglineKey)}
               </p>

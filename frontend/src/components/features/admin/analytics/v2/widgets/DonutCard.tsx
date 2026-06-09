@@ -33,7 +33,7 @@ export const DonutCard: React.FC<Props> = React.memo(({ title, subtitle, data, c
       <div className="bg-white border border-gold/20 rounded-xl shadow-sm">
         <div className="px-6 py-4 border-b border-gold/10">
           <h3 className="font-serif font-bold text-rosewood">{title}</h3>
-          {subtitle && <p className="text-[10px] font-black text-gold uppercase tracking-widest mt-0.5">{subtitle}</p>}
+          {subtitle && <p className="text-xs text-dark-brown/60 mt-0.5">{subtitle}</p>}
         </div>
         <div className="p-6"><EmptyState message="No distribution data" icon={PieIcon} variant="dashed" /></div>
       </div>
@@ -44,7 +44,7 @@ export const DonutCard: React.FC<Props> = React.memo(({ title, subtitle, data, c
     <div className="bg-white border border-gold/20 rounded-xl shadow-sm">
       <div className="px-6 py-4 border-b border-gold/10">
         <h3 className="font-serif font-bold text-rosewood">{title}</h3>
-        {subtitle && <p className="text-[10px] font-black text-gold uppercase tracking-widest mt-0.5">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-dark-brown/60 mt-0.5">{subtitle}</p>}
       </div>
       <div className="flex flex-col items-center p-5" style={{ height }}>
         <div className="relative" style={{ height: height - 60, width: '100%' }}>
@@ -63,7 +63,7 @@ export const DonutCard: React.FC<Props> = React.memo(({ title, subtitle, data, c
           {centerLabel && (
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <span className="text-2xl font-serif font-bold text-rosewood">{centerLabel}</span>
-              <span className="text-[9px] font-black text-gold uppercase tracking-widest">Total</span>
+              <span className="text-xs text-dark-brown/60">Total</span>
             </div>
           )}
         </div>
@@ -71,7 +71,7 @@ export const DonutCard: React.FC<Props> = React.memo(({ title, subtitle, data, c
           {pct.map((d, i) => (
             <div key={i} className="flex items-center gap-1.5">
               <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">{d.name} <span className="text-gold">({d.percent}%)</span></span>
+              <span className="text-xs font-medium text-slate-500">{d.name} <span className="text-gold font-semibold">({d.percent}%)</span></span>
             </div>
           ))}
         </div>

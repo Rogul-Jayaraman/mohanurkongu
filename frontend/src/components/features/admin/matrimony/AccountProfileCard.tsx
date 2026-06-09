@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, User as UserIcon } from 'lucide-react';
@@ -16,6 +16,7 @@ const AccountProfileCard: React.FC<AccountProfileCardProps> = ({ profile, shortl
   const navigate = useNavigate();
   const { t, language } = useLanguage();
   const isTamil = language === 'ta';
+  const [imgError, setImgError] = useState(false);
 
   const name = [profile.firstNameEn, profile.lastNameEn].filter(Boolean).join(' ');
 
@@ -28,10 +29,11 @@ const AccountProfileCard: React.FC<AccountProfileCardProps> = ({ profile, shortl
       onClick={() => navigate(`/admin/matrimony/profiles/${profile.id}`)}
     >
       <div className="aspect-[4/3] bg-ivory flex items-center justify-center overflow-hidden">
-        {profile.photo?.url ? (
+        {profile.photo?.url && !imgError ? (
           <img
             src={profile.photo.url}
             alt={name}
+            onError={() => setImgError(true)}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (

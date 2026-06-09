@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Users, CheckCircle, CalendarDays,
     CalendarPlus, Package,
-    CalendarClock, User, AlertCircle, ShieldCheck
+    CalendarClock, User, AlertCircle, ShieldCheck, CalendarX
 } from 'lucide-react';
 import { StatCard } from '@/components/ui/cards/StatCard';
 import { ActionCard } from '@/components/ui/cards/ActionCard';
@@ -18,6 +18,35 @@ import { AdminProfileCardSkeleton } from '@/components/features/admin/matrimony/
 import { useQuery } from '@tanstack/react-query';
 import { fetchAdminStats } from '@/api/admin-dashboard.api';
 import { useVerificationQueueQuery } from '@/queries/useProfileQueries';
+
+// ═══════════════════════════════════════════════════════════
+// Types
+// ═══════════════════════════════════════════════════════════
+interface TodaysEvent {
+    eventId: string;
+    eventTitleTa: string;
+    eventTitleEn: string;
+    session: string;
+    nameTa: string;
+    nameEn: string;
+    phone: string;
+    paymentStatus: string;
+    bookingNo: string;
+}
+
+interface DashboardStats {
+    stats: {
+        totalUsers: number;
+        totalProfiles: number;
+        activeProfiles: number;
+        totalBookings: number;
+        totalRevenue: number;
+        newUsers: number;
+        pendingVerifications: number;
+        bookingsToday: number;
+    };
+    todaysEvents: TodaysEvent[];
+}
 
 // ═══════════════════════════════════════════════════════════
 // AdminWelcomeHeader
@@ -52,7 +81,7 @@ const AdminWelcomeHeader: React.FC = () => {
 // ═══════════════════════════════════════════════════════════
 // GlobalKPIs
 // ═══════════════════════════════════════════════════════════
-const GlobalKPIs: React.FC<{ stats: any; isLoading: boolean }> = ({ stats, isLoading }) => {
+const GlobalKPIs: React.FC<{ stats: DashboardStats['stats'] | undefined; isLoading: boolean }> = ({ stats, isLoading }) => {
     const { t } = useLanguage();
 
     const kpis = [
@@ -71,42 +100,34 @@ const GlobalKPIs: React.FC<{ stats: any; isLoading: boolean }> = ({ stats, isLoa
 };
 
 // ═══════════════════════════════════════════════════════════
-// TodaysBookings
+// TodaysSchedule
 // ═══════════════════════════════════════════════════════════
-interface MandapamEvent {
-    eventId: string;
-    eventTitleTa: string;
-    eventTitleEn: string;
-    session: string;
-    nameTa: string;
-    nameEn: string;
-    phone: string;
-    paymentStatus: string;
-}
-
-const TodaysBookings: React.FC<{ recentBookings: MandapamEvent[]; isLoading: boolean }> = ({ recentBookings, isLoading }) => {
+const TodaysSchedule: React.FC<{ events: TodaysEvent[]; isLoading: boolean }> = ({ events, isLoading }) => {
     const { language, t } = useLanguage();
     const isTamil = language === 'ta';
 
     const sessionLabels: Record<string, string> = {
-        'MORNING': t('adminMandapam.bookings.morning'),
-        'EVENING': t('adminMandapam.bookings.evening'),
-        'FULL_DAY': t('adminMandapam.bookings.fullDay')
+        'MORNING': isTamil ? 'காலை' : 'Morning',
+        'EVENING': isTamil ? 'மாலை' : 'Evening',
+        'FULL_DAY': isTamil ? 'முழு நாள்' : 'Full Day'
     };
     const statusLabels: Record<string, string> = {
         'FULLY_PAID': t('adminMandapam.bookings.fullyPaid'),
         'ADVANCE': t('adminMandapam.bookings.advance'),
         'NOT_PAID': t('adminMandapam.bookings.notPaid')
     };
+    const statusColors: Record<string, string> = {
+        'FULLY_PAID': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        'ADVANCE': 'bg-amber-50 text-amber-700 border-amber-200',
+        'NOT_PAID': 'bg-red-50 text-red-700 border-red-200'
+    };
 
-    const eventsToDisplay = recentBookings || [];
-
-    return (
-        <div className="w-full space-y-6">
-            <SectionHeader title={t('adminMatrimony.dashboard.todaysSchedule')} icon={CalendarClock} />
-            <div className="space-y-4">
-                {isLoading ? (
-                    [1, 2, 3].map((_, i) => (
+    if (isLoading) {
+        return (
+            <div className="w-full space-y-6">
+                <SectionHeader title={t('adminMatrimony.dashboard.todaysSchedule')} icon={CalendarClock} />
+                <div className="space-y-4">
+                    {[1, 2, 3].map((_, i) => (
                         <div key={i} className="bg-white rounded-xl border border-gold/10 overflow-hidden shadow-sm flex flex-col md:flex-row animate-pulse h-32">
                             <div className="md:w-32 bg-slate-50 shrink-0 border-b md:border-b-0 md:border-r border-gold/15" />
                             <div className="grow p-6 space-y-4">
@@ -115,40 +136,58 @@ const TodaysBookings: React.FC<{ recentBookings: MandapamEvent[]; isLoading: boo
                             </div>
                             <div className="md:w-48 p-6 bg-slate-50/30 flex items-center justify-center" />
                         </div>
-                    ))
-                ) : eventsToDisplay.length > 0 ? (
-                    eventsToDisplay.map((event, i) => (
-                        <motion.div key={event.eventId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-                            <ContentCard noPadding className="flex flex-col md:flex-row">
-                                <div className="md:w-32 bg-ivory flex flex-col items-center justify-center p-4 shrink-0 border-b md:border-b-0 md:border-r border-gold/15">
-                                    <span className="px-2 py-0.5 bg-[#788a7b]/10 text-[#4a5a4d] text-[10px] font-bold rounded-md mb-2">{event.eventId}</span>
-                                    <span className="text-sm font-serif font-bold text-rosewood uppercase tracking-tight text-center">{sessionLabels[event.session] || event.session}</span>
-                                </div>
-                                <div className="grow p-6 flex flex-col justify-center border-b md:border-b-0 md:border-r border-gold/10">
-                                    <h4 className="text-xl font-serif font-black text-rosewood leading-tight mb-2">{isTamil ? event.eventTitleTa : event.eventTitleEn}</h4>
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-1.5 px-2 py-1 bg-white border border-gold/5 rounded-md shadow-xs">
-                                            <User size={12} className="text-gold" />
-                                            <span className="text-[11px] font-bold text-slate-700">{isTamil ? event.nameTa : event.nameEn}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 px-2 py-1 bg-white border border-gold/5 rounded-md shadow-xs">
-                                            <span className="text-[10px] font-black text-gold/40 uppercase">Tel</span>
-                                            <span className="text-[11px] font-bold text-slate-700 tabular-nums">{event.phone}</span>
-                                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (events.length === 0) {
+        return (
+            <div className="w-full space-y-6">
+                <SectionHeader title={t('adminMatrimony.dashboard.todaysSchedule')} icon={CalendarClock} />
+                <EmptyState
+                    message={t('adminMatrimony.dashboard.noEventsToday')}
+                    description={isTamil ? 'இன்று எந்த நிகழ்வுகளும் திட்டமிடப்படவில்லை.' : 'No events are scheduled for today.'}
+                    icon={CalendarX}
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full space-y-6">
+            <SectionHeader title={t('adminMatrimony.dashboard.todaysSchedule')} icon={CalendarClock} />
+            <div className="space-y-4">
+                {events.map((event, i) => (
+                    <motion.div key={event.eventId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
+                        <ContentCard noPadding className="flex flex-col md:flex-row">
+                            <div className="md:w-32 bg-ivory flex flex-col items-center justify-center p-4 shrink-0 border-b md:border-b-0 md:border-r border-gold/15">
+                                <span className="px-2 py-0.5 bg-[#788a7b]/10 text-[#4a5a4d] text-[10px] font-bold rounded-md mb-2">{event.bookingNo}</span>
+                                <span className="text-sm font-serif font-bold text-rosewood uppercase tracking-tight text-center">{sessionLabels[event.session] || event.session}</span>
+                            </div>
+                            <div className="grow p-6 flex flex-col justify-center border-b md:border-b-0 md:border-r border-gold/10">
+                                <h4 className="text-xl font-serif font-black text-rosewood leading-tight mb-2">{isTamil ? event.eventTitleTa : event.eventTitleEn}</h4>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-white border border-gold/5 rounded-md shadow-xs">
+                                        <User size={12} className="text-gold" />
+                                        <span className="text-[11px] font-bold text-slate-700">{isTamil ? event.nameTa : event.nameEn}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-white border border-gold/5 rounded-md shadow-xs">
+                                        <span className="text-[10px] font-black text-gold/40 uppercase">Tel</span>
+                                        <span className="text-[11px] font-bold text-slate-700 tabular-nums">{event.phone}</span>
                                     </div>
                                 </div>
-                                <div className="md:w-48 p-6 flex flex-col justify-center items-center md:items-end bg-white/40">
-                                    <span className="text-[11px] font-black text-rosewood mb-2 leading-none uppercase tracking-widest">{t('adminMandapam.bookings.paymentStatus')}</span>
-                                    <div className="px-3 py-1 bg-[#788a7b]/10 border border-[#788a7b]/20 rounded-lg">
-                                        <span className="text-xs font-black text-[#5a584a] tracking-widest uppercase">{statusLabels[event.paymentStatus] || event.paymentStatus}</span>
-                                    </div>
+                            </div>
+                            <div className="md:w-48 p-6 flex flex-col justify-center items-center md:items-end bg-white/40">
+                                <span className="text-[11px] font-black text-rosewood mb-2 leading-none uppercase tracking-widest">{t('adminMandapam.bookings.paymentStatus')}</span>
+                                <div className={`px-3 py-1 rounded-lg border ${statusColors[event.paymentStatus] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                    <span className="text-xs font-black tracking-widest uppercase">{statusLabels[event.paymentStatus] || event.paymentStatus}</span>
                                 </div>
-                            </ContentCard>
-                        </motion.div>
-                    ))
-                ) : (
-                    <EmptyState message={t('adminMatrimony.dashboard.noEventsToday')} />
-                )}
+                            </div>
+                        </ContentCard>
+                    </motion.div>
+                ))}
             </div>
         </div>
     );
@@ -218,7 +257,8 @@ const AdminDashboard: React.FC = () => {
         queryFn: fetchAdminStats,
         staleTime: 30_000,
     });
-    const statsData = statsQuery.data ?? { stats: { totalUsers: 0, totalProfiles: 0, totalBookings: 0, totalRevenue: 0, newUsers: 0, pendingVerifications: 0 }, recentBookings: [] };
+
+    const statsData: DashboardStats | undefined = statsQuery.data as any;
     const loading = statsQuery.isPending;
     const isError = statsQuery.isError;
 
@@ -237,7 +277,7 @@ const AdminDashboard: React.FC = () => {
         <div className="max-w-[1400px] mx-auto space-y-12 animate-fadeIn">
             <AdminWelcomeHeader />
             <section><GlobalKPIs stats={statsData?.stats} isLoading={loading} /></section>
-            <section><TodaysBookings recentBookings={statsData?.recentBookings || []} isLoading={loading} /></section>
+            <section><TodaysSchedule events={statsData?.todaysEvents || []} isLoading={loading} /></section>
             <section><VerificationQueuePreview /></section>
             <section className="space-y-6">
                 <div className="flex items-center gap-4">
