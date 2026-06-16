@@ -30,7 +30,7 @@ async function consumeOneToken(tx: any, tokenId: string, newBookingId: string): 
   });
 
   await tx.mandapamTokenConsumption.create({
-    data: { bookingId: newBookingId, tokens: 1, state: 'CONSUMED' },
+    data: { bookingId: newBookingId, tokenNumber: tokenId, tokens: 1, state: 'CONSUMED' },
   });
 }
 

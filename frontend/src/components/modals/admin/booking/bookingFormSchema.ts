@@ -64,6 +64,17 @@ export const bookingFormSchema = z
   )
   .refine(
     (data) => {
+      if (data.bookingType !== 'HOURLY' || !data.selectedDates?.[0] || !data.startTime) return true;
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
+      if (data.selectedDates[0] !== today) return true;
+      const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      return data.startTime > currentHHMM;
+    },
+    { message: 'Start time must be in the future', path: ['startTime'] },
+  )
+  .refine(
+    (data) => {
       if (data.bookingType !== 'HOURLY' && data.bookingMethod === 'TOKEN_BOOKING') {
         if (!data.tokenNumber) return false;
         const num = parseInt(data.tokenNumber.replace(/^MK/, ''), 10);

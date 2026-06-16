@@ -1,12 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, CreditCard, CheckCircle2, XCircle, MoreVertical, Clock, User, Phone, Hash, CalendarDays, DollarSign } from 'lucide-react';
+import React from 'react';
+import { Eye, XCircle } from 'lucide-react';
 import { DataTable } from '@/components/ui/table/DataTable';
 import type { Column } from '@/components/ui/table/DataTable';
-import type { Booking, BookingStatus } from '@/types/mandapam';
-import { formatCurrency } from '@/utils/format';
-import { getBookingStatusStyle, getBookingPaymentStatus } from '@/constants/admin/statusColors';
+import type { Booking } from '@/types/mandapam';
+import { getBookingStatusStyle } from '@/constants/admin/statusColors';
+import { useDateFormatter } from '@/hooks/useDateFormatter';
 
 interface BookingsTableProps {
   t: any;
@@ -21,142 +19,58 @@ interface BookingsTableProps {
   itemsPerPage: number;
   onPageChange: (page: number) => void;
   onViewDetails: (b: Booking) => void;
-  onModifyPayment: (b: Booking) => void;
-  onComplete: (b: Booking) => void;
-  onCancel: (b: Booking) => void;
 }
 
-const getPaymentStatusStyle = (booking: Booking) => getBookingPaymentStatus(booking);
-
-const ACTION_VISIBILITY: Record<BookingStatus, { view: boolean; payment: boolean; complete: boolean; cancel: boolean }> = {
-  CONFIRMED: { view: true, payment: true, complete: false, cancel: true },
-  EVENT_IN_PROGRESS: { view: true, payment: true, complete: false, cancel: true },
-  EVENT_COMPLETED: { view: true, payment: true, complete: true, cancel: true },
-  SETTLEMENT_PENDING: { view: true, payment: true, complete: true, cancel: true },
-  COMPLETED: { view: true, payment: false, complete: false, cancel: false },
-  CANCELLED: { view: true, payment: false, complete: false, cancel: false },
+const STATUS_LABEL: Record<string, { en: string; ta: string }> = {
+  CONFIRMED: { en: 'Confirmed', ta: 'உறுதிப்படுத்தப்பட்டது' },
+  IN_PROGRESS: { en: 'Event In Progress', ta: 'நிகழ்வு நடைபெறுகிறது' },
+  SETTLEMENT_PENDING: { en: 'Settlement Pending', ta: 'தீர்வு நிலுவை' },
+  COMPLETED: { en: 'Completed', ta: 'முடிக்கப்பட்டது' },
+  CANCELLED: { en: 'Cancelled', ta: 'ரத்து செய்யப்பட்டது' },
 };
 
-const ActionDropdown: React.FC<{
-  booking: Booking;
-  onViewDetails: (b: Booking) => void;
-  onModifyPayment: (b: Booking) => void;
-  onComplete: (b: Booking) => void;
-  onCancel: (b: Booking) => void;
-}> = ({ booking, onViewDetails, onModifyPayment, onComplete, onCancel }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const [pos, setPos] = useState({ top: 0, right: 0 });
-
-  useEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
-        const dropdown = document.getElementById(`dropdown-${booking.id}`);
-        if (dropdown && !dropdown.contains(e.target as Node)) setIsOpen(false);
-        if (!dropdown) setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [booking.id]);
-
-  const visibility = ACTION_VISIBILITY[booking.status] || ACTION_VISIBILITY.CONFIRMED;
-
-  const items: { icon: any; label: string; action: (b: Booking) => void; color: string; visible: boolean }[] = [
-    { icon: Eye, label: 'View Details', action: onViewDetails, color: 'text-rosewood hover:bg-rosewood/5', visible: visibility.view },
-    { icon: CreditCard, label: 'Add Payment', action: onModifyPayment, color: 'text-blue-600 hover:bg-blue-50', visible: visibility.payment },
-    { icon: CheckCircle2, label: 'Complete', action: onComplete, color: 'text-emerald-600 hover:bg-emerald-50', visible: visibility.complete },
-    { icon: XCircle, label: 'Cancel & Refund', action: onCancel, color: 'text-rose-600 hover:bg-rose-50', visible: visibility.cancel },
-  ];
-
-  const visibleItems = items.filter(i => i.visible);
-  if (visibleItems.length === 0) return null;
-
-  return (
-    <div className="relative inline-flex">
-      <button
-        ref={buttonRef}
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-9 h-9 flex items-center justify-center rounded-xl border border-transparent hover:border-gold/20 hover:bg-ivory/80 text-rosewood/40 hover:text-rosewood transition-all active:scale-90"
-      >
-        <MoreVertical size={16} />
-      </button>
-      {isOpen && createPortal(
-        <>
-          <div className="fixed inset-0 z-50" onClick={() => setIsOpen(false)} />
-          <motion.div
-            id={`dropdown-${booking.id}`}
-            initial={{ opacity: 0, scale: 0.95, y: -5 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -5 }}
-            transition={{ duration: 0.12 }}
-            style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 50 }}
-            className="min-w-[190px] bg-white border border-gold/10 rounded-xl shadow-xl py-1.5 overflow-hidden"
-          >
-            {visibleItems.map((item, i) => (
-              <button
-                key={i}
-                onClick={() => { setIsOpen(false); item.action(booking); }}
-                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold transition-all ${item.color}`}
-              >
-                <item.icon size={14} />
-                {item.label}
-              </button>
-            ))}
-          </motion.div>
-        </>,
-        document.body
-      )}
-    </div>
-  );
+const getStatusLabel = (status: string, language: string): string => {
+  const label = STATUS_LABEL[status];
+  return label ? (language === 'ta' ? label.ta : label.en) : status.replace(/_/g, ' ');
 };
 
 export const BookingsTable: React.FC<BookingsTableProps> = ({
   t, language, bookings, loading, error, onRetry,
   currentPage, totalPages, totalItems, itemsPerPage, onPageChange,
-  onViewDetails, onModifyPayment, onComplete, onCancel,
+  onViewDetails,
 }) => {
+  const { formatDate } = useDateFormatter();
+
+  const formatDateRange = (startDate: string, endDate: string) => {
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    if (!endDate || isNaN(e.getTime()) || s.toDateString() === e.toDateString()) {
+      return formatDate(startDate, { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    const sameMonthYear = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
+    const sameYear = s.getFullYear() === e.getFullYear();
+    if (sameMonthYear) return `${s.getDate()} - ${formatDate(endDate, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    if (sameYear) return `${formatDate(startDate, { day: 'numeric', month: 'short' })} - ${formatDate(endDate, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    return `${formatDate(startDate, { day: 'numeric', month: 'short', year: 'numeric' })} - ${formatDate(endDate, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  };
+
   const columns: Column<Booking>[] = [
     {
-      header: 'Booking',
-      width: '160px',
-      className: 'font-medium',
+      header: 'Booking No',
+      width: '100px',
       render: (b) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rosewood/10 to-rosewood/5 border border-gold/10 flex items-center justify-center shrink-0">
-            <Hash size={16} className="text-rosewood/60" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[13px] font-bold text-rosewood leading-tight truncate">{b.bookingNo}</p>
-            <p className="text-[10px] font-medium text-rosewood/40 mt-0.5">{b.packageCode}</p>
-          </div>
-        </div>
+        <p className="text-[13px] font-bold text-rosewood leading-tight">{b.bookingNo}</p>
       ),
     },
     {
       header: 'Customer',
       width: '180px',
       render: (b) => (
-        <div className="flex items-start gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rosewood/15 to-rosewood/5 border border-gold/10 flex items-center justify-center shrink-0 mt-0.5">
-            <User size={13} className="text-rosewood/50" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[13px] font-bold text-rosewood/80 leading-tight truncate">
-              {language === 'ta' ? b.customerName.ta : b.customerName.en}
-            </p>
-            <p className="text-[11px] text-rosewood/40 mt-0.5 flex items-center gap-1">
-              <Phone size={10} />
-              {b.customerPhone}
-            </p>
-          </div>
+        <div className="min-w-0">
+          <p className="text-[13px] font-bold text-rosewood/80 leading-tight truncate">
+            {language === 'ta' ? b.customerName.ta : b.customerName.en}
+          </p>
+          <p className="text-[11px] text-rosewood/40 mt-0.5">{b.customerPhone}</p>
         </div>
       ),
     },
@@ -164,65 +78,36 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
       header: 'Event',
       width: '160px',
       render: (b) => (
-        <div className="min-w-0">
-          <p className="text-[13px] font-bold text-rosewood/80 truncate leading-tight">
-            {language === 'ta' ? b.eventTitle.ta : b.eventTitle.en}
-          </p>
-          <p className="text-[10px] font-medium text-rosewood/40 mt-0.5 uppercase tracking-wider">
-            {b.eventType.replace(/_/g, ' ')}
-          </p>
-        </div>
+        <p className="text-[13px] font-bold text-rosewood/80 truncate leading-tight">
+          {language === 'ta' ? b.eventTitle.ta : b.eventTitle.en}
+        </p>
       ),
     },
     {
       header: 'Schedule',
-      width: '160px',
+      width: '140px',
       render: (b) => (
         <div className="min-w-0">
-          <p className="text-[12px] font-semibold text-rosewood/70 font-mono flex items-center gap-1">
-            <CalendarDays size={11} className="text-rosewood/40 shrink-0" />
-            {new Date(b.bookingConfig.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+          <p className="text-[12px] font-semibold text-rosewood/70 leading-tight">
+            {formatDateRange(b.bookingConfig.startDate, b.bookingConfig.endDate)}
           </p>
           {b.bookingConfig.startTime && (
-            <p className="text-[10px] text-rosewood/40 mt-0.5 flex items-center gap-1">
-              <Clock size={9} />
+            <p className="text-[11px] text-rosewood/40 mt-0.5">
               {b.bookingConfig.startTime}{b.bookingConfig.endTime ? ` - ${b.bookingConfig.endTime}` : ''}
             </p>
           )}
-          <p className="text-[9px] font-bold text-rosewood/30 mt-0.5 uppercase tracking-wider">
-            {b.bookingType === 'HOURLY' ? 'Hourly' : b.bookingType === 'ONE_DAY' ? '1 Day' : '2 Day'}
-          </p>
         </div>
       ),
     },
     {
       header: 'Status',
-      width: '120px',
+      width: '140px',
       render: (b) => {
         const s = getBookingStatusStyle(b.status);
         return (
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-wider ${s.bg} ${s.text} ${s.border}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${s.text.replace('text-', 'bg-').replace('-700', '-500')}`} />
-            {b.status === 'SETTLEMENT_PENDING' ? 'Settlement' : b.status.replace(/_/g, ' ')}
+          <span className={`text-xs font-bold ${s.text}`}>
+            {getStatusLabel(b.status, language)}
           </span>
-        );
-      },
-    },
-    {
-      header: 'Balance',
-      width: '120px',
-      render: (b) => {
-        const ps = getPaymentStatusStyle(b);
-        return (
-          <div className="min-w-0">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${ps.bg} ${ps.color}`}>
-              <DollarSign size={10} />
-              {ps.label}
-            </span>
-            <p className={`text-[12px] font-bold mt-1 font-mono ${ps.outstanding > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-              {formatCurrency(ps.outstanding)}
-            </p>
-          </div>
         );
       },
     },
@@ -231,13 +116,13 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
       width: '60px',
       className: 'text-right',
       render: (b) => (
-        <ActionDropdown
-          booking={b}
-          onViewDetails={onViewDetails}
-          onModifyPayment={onModifyPayment}
-          onComplete={onComplete}
-          onCancel={onCancel}
-        />
+        <button
+          onClick={() => onViewDetails(b)}
+          className="w-9 h-9 flex items-center justify-center rounded-xl border border-transparent hover:border-gold/20 hover:bg-ivory/80 text-rosewood/40 hover:text-rosewood transition-all active:scale-90"
+          title={t('adminMandapam.bookings.viewDetails') || 'View Details'}
+        >
+          <Eye size={16} />
+        </button>
       ),
     },
   ];
@@ -257,17 +142,15 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <DataTable
-        columns={columns}
-        data={bookings}
-        loading={loading}
-        pagination={{ currentPage, totalPages, totalItems, itemsPerPage, onPageChange }}
-        emptyState={{
-          title: t('adminMandapam.bookings.noBookings') || 'No bookings found',
-          description: t('adminMandapam.bookings.noBookingsDesc') || 'No matching bookings found. Try adjusting your search or filters.',
-        }}
-      />
-    </motion.div>
+    <DataTable
+      columns={columns}
+      data={bookings}
+      loading={loading}
+      pagination={{ currentPage, totalPages, totalItems, itemsPerPage, onPageChange }}
+      emptyState={{
+        title: t('adminMandapam.bookings.noBookings') || 'No bookings found',
+        description: t('adminMandapam.bookings.noBookingsDesc') || 'No matching bookings found. Try adjusting your search or filters.',
+      }}
+    />
   );
 };

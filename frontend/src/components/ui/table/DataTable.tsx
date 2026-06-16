@@ -61,10 +61,10 @@ export function DataTable<T>({
     const EmptyIcon = emptyState?.icon || SearchX;
 
     const SkeletonRow = () => (
-        <tr className="animate-pulse">
+        <tr>
             {columns.map((_, idx) => (
                 <td key={idx} className="py-4 px-5">
-                    <div className={`h-4 rounded-md ${idx === 0 ? 'w-3/4' : 'w-full'} bg-gold/10`} />
+                    <div className={`h-4 skeleton rounded-md! ${idx === 0 ? 'w-3/4' : 'w-full'}`} />
                 </td>
             ))}
         </tr>

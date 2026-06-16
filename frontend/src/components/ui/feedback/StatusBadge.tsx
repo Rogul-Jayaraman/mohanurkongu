@@ -56,9 +56,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className, min
         completed: t('adminMatrimony.common.completed') || 'Completed',
         cancelled: t('adminMatrimony.common.cancelled') || 'Cancelled',
         upcoming: t('adminMandapam.bookings.upcoming') || 'Upcoming',
-        event_in_progress: t('adminMandapam.bookings.eventInProgress') || 'Event in Progress',
-        event_completed: t('adminMandapam.bookings.eventCompleted') || 'Event Completed',
-        settlement_pending: t('adminMandapam.bookings.settlementPending') || 'Settlement Pending',
+        event_in_progress: t('adminMandapam.bookings.statusEventInProgress') || 'Event in Progress',
+        event_completed: t('adminMandapam.bookings.statusCompleted') || 'Completed',
+        settlement_pending: t('adminMandapam.bookings.statusSettlementPending') || 'Settlement Pending',
     };
 
     const statusStr = typeof status === 'string' ? status : String(status || '');

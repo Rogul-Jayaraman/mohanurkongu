@@ -33,6 +33,7 @@ import { AnimatedSection } from '@/components/ui/AnimatedSection';
 import { scrollToTop } from '@/components/ui/layout/ScrollToTop';
 import { formatFullName } from '@/utils/formatName';
 import { UserPlanCard } from '@/components/features/user/UserPlanCard';
+import MyAccountSkeleton from '@/components/features/user/skeletons/MyAccountSkeleton';
 
 
 // ═══════════════════════════════════════════════════════════
@@ -960,6 +961,12 @@ const MyAccount: React.FC = () => {
             setBillingError(true);
         }
     }, [activeTab, billingQuery.data, billingQuery.error]);
+
+    const isInitiallyLoading = billingQuery.isPending && !billingQuery.data;
+
+    if (isInitiallyLoading && activeTab !== 'details') {
+        return <MyAccountSkeleton />;
+    }
 
     return (
         <div className="flex flex-col min-h-full">

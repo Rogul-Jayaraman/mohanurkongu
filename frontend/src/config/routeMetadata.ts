@@ -41,6 +41,7 @@ const wildcardRoutes: { prefix: string; meta: RouteMeta }[] = [
   { prefix: '/manamaalai/view-profile', meta: { ns: 'common', key: 'profileView.meta' } },
   { prefix: '/admin/matrimony/profiles', meta: { ns: 'adminLayout', key: 'meta.profile_details' } },
   { prefix: '/admin/matrimony/account', meta: { ns: 'adminLayout', key: 'meta.account_detail' } },
+  { prefix: '/admin/mandapam/bookings', meta: { ns: 'adminLayout', key: 'meta.booking_detail' } },
 ];
 
 export function matchRoute(pathname: string): RouteMeta {

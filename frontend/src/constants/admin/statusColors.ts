@@ -1,7 +1,6 @@
 export const BOOKING_STATUS_STYLE: Record<string, { bg: string; text: string; border: string }> = {
   CONFIRMED: { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200' },
-  EVENT_IN_PROGRESS: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-  EVENT_COMPLETED: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
+  IN_PROGRESS: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
   SETTLEMENT_PENDING: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
   COMPLETED: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
   CANCELLED: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },

@@ -99,7 +99,7 @@ export interface PublicAddon {
 
 // ── Booking Types ──
 
-export type BookingStatus = 'CONFIRMED' | 'EVENT_IN_PROGRESS' | 'EVENT_COMPLETED' | 'SETTLEMENT_PENDING' | 'COMPLETED' | 'CANCELLED';
+export type BookingStatus = 'CONFIRMED' | 'IN_PROGRESS' | 'SETTLEMENT_PENDING' | 'COMPLETED' | 'CANCELLED';
 export type BookingType = 'HOURLY' | 'ONE_DAY' | 'TWO_DAY';
 export type EventType = 'MARRIAGE' | 'RECEPTION' | 'ENGAGEMENT' | 'BIRTHDAY' | 'BABY_SHOWER' | 'EAR_PIERCING' | 'PUBERTY_FUNCTION' | 'OTHER';
 export type BookingMethod = 'NORMAL_BOOKING' | 'TOKEN_BOOKING';
@@ -158,7 +158,6 @@ export interface PaymentEntry {
   paymentType: PaymentEntryType;
   paymentMethod: PaymentMethodType;
   amount: number;
-  referenceNo: string | null;
   receivedAt: string;
   createdAt: string;
 }
@@ -180,6 +179,13 @@ export interface TokenConsumption {
   state: string;
   consumedAt: string;
   reversedAt: string | null;
+}
+
+export interface MandapamToken {
+  id: string;
+  tokenId: string;
+  status: string;
+  bookingId: string | null;
 }
 
 export interface Settlement {
@@ -236,6 +242,7 @@ export interface Booking {
   paymentEntries: PaymentEntry[];
   refundEntries: RefundEntry[];
   tokenEntries: TokenConsumption[];
+  tokens: MandapamToken[];
   settlement: Settlement | null;
   timeline: BookingTimelineEntry[];
   _outstanding?: number;

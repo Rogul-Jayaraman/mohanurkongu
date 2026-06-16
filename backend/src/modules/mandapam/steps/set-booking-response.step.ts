@@ -15,6 +15,7 @@ export async function setBookingResponse(ctx: MandapamPipelineContext): Promise<
       paymentEntries: { orderBy: { createdAt: 'desc' } },
       refundEntries: { orderBy: { createdAt: 'desc' } },
       tokenEntries: true,
+      tokens: true,
       settlement: true,
       timeline: { orderBy: { createdAt: 'asc' } },
       invoice: { include: { lines: true } },

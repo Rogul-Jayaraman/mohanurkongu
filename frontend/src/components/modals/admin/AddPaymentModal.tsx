@@ -7,9 +7,9 @@ import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/utils/format';
 
 const PAYMENT_TYPES: { value: PaymentEntryType; label: string; labelTa: string; desc: string; descTa: string }[] = [
-  { value: 'ADVANCE', label: 'Advance', labelTa: 'முன்பணம்', desc: 'Partial upfront payment', descTa: 'பகுதி முன்பணம்' },
-  { value: 'INSTALLMENT', label: 'Installment', labelTa: 'தவணை', desc: 'Mid-way payment', descTa: 'இடைநிலை கட்டணம்' },
-  { value: 'FINAL_PAYMENT', label: 'Final Payment', labelTa: 'இறுதி கட்டணம்', desc: 'Settle remaining balance', descTa: 'மீதியை செலுத்துக' },
+  { value: 'ADVANCE', label: 'Deposit', labelTa: 'முன்பணம்', desc: 'Partial upfront payment', descTa: 'பகுதி முன்பணம்' },
+  { value: 'INSTALLMENT', label: 'Partial Payment', labelTa: 'தவணை', desc: 'Mid-way payment', descTa: 'இடைநிலை கட்டணம்' },
+  { value: 'FINAL_PAYMENT', label: 'Balance Payment', labelTa: 'மீதி கட்டணம்', desc: 'Pay remaining balance', descTa: 'மீதியை செலுத்துக' },
 ];
 
 const PAYMENT_METHODS: { value: PaymentMethodType; label: string; labelTa: string; icon: string }[] = [
@@ -26,7 +26,7 @@ interface AddPaymentModalProps {
     onClose: () => void;
     t: any;
     isSubmitting: boolean;
-    onConfirm: (booking: Booking, paymentType: string, amount: string, paymentMethod: string, referenceNo: string, notes: string) => void;
+    onConfirm: (booking: Booking, paymentType: string, amount: string, paymentMethod: string, notes: string) => void;
 }
 
 export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, booking, onClose, t, isSubmitting, onConfirm }) => {
@@ -35,7 +35,6 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
     const [paymentType, setPaymentType] = useState<PaymentEntryType>('ADVANCE');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('CASH');
     const [amount, setAmount] = useState('');
-    const [referenceNo, setReferenceNo] = useState('');
     const [notes, setNotes] = useState('');
 
     useEffect(() => {
@@ -43,7 +42,6 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
             setAmount('');
             setPaymentType('ADVANCE');
             setPaymentMethod('CASH');
-            setReferenceNo('');
             setNotes('');
         }
     }, [booking]);
@@ -76,7 +74,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
                         {t('common.cancel') || 'Cancel'}
                     </button>
                     <button
-                        onClick={() => onConfirm(booking, paymentType, amount, paymentMethod, referenceNo, notes)}
+                        onClick={() => onConfirm(booking, paymentType, amount, paymentMethod, notes)}
                         disabled={!isValid || isSubmitting}
                         className="flex-1 px-6 py-3 bg-gradient-to-r from-rosewood to-dark-rosewood text-ivory font-bold rounded-xl hover:shadow-xl transition-all text-sm shadow-lg shadow-rosewood/20 active:scale-[0.97] disabled:opacity-30 inline-flex items-center justify-center gap-2"
                     >
@@ -196,7 +194,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
                             <p className="text-xs font-bold text-rose-700">
                                 {isTamil
                                     ? `தொகை நிலுவைத் ${formatCurrency(Math.max(0, outstanding))}ஐ தாண்டுகிறது`
-                                    : `Amount exceeds due of ${formatCurrency(Math.max(0, outstanding))}`}
+                                    : `Amount exceeds remaining of ${formatCurrency(Math.max(0, outstanding))}`}
                             </p>
                         </div>
                     )}
@@ -206,22 +204,13 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
                                 <p className="text-[10px] font-bold text-emerald-700">
                                     {t('adminMandapam.bookings.confirmedPaymentAmount') || 'After Payment'}
                                 </p>
-                                <p className="text-xs font-medium text-emerald-600">
-                                    {formatCurrency(Math.max(0, outstanding - numAmount))} remaining
-                                </p>
+                                    <p className="text-xs font-medium text-emerald-600">
+                                        {formatCurrency(Math.max(0, outstanding - numAmount))} left to pay
+                                    </p>
                             </div>
                             <span className="text-lg font-black text-emerald-700">{formatCurrency(numAmount)}</span>
                         </div>
                     )}
-                    <Input
-                        label={t('adminMandapam.bookings.referenceNo') || 'Reference No. (optional)'}
-                        name="referenceNo"
-                        type="text"
-                        value={referenceNo}
-                        onChange={(e) => setReferenceNo(e.target.value)}
-                        placeholder={isTamil ? 'எ.கா., காசோலை #1234' : 'e.g., Cheque #1234'}
-                        icon="tag"
-                    />
                     <div className="space-y-2">
                         <p className="block text-[11px] font-bold text-rosewood ml-3">
                             {t('adminMandapam.bookings.notes') || 'Notes (optional)'}
@@ -248,7 +237,6 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
                                     <span className="font-bold text-rosewood/60 flex items-center gap-1.5">
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                                         {p.paymentType.replace(/_/g, ' ')} · {p.paymentMethod}
-                                        {p.referenceNo && <span className="text-rosewood/30">· {p.referenceNo}</span>}
                                     </span>
                                     <span className="font-black text-emerald-700">{formatCurrency(p.amount)}</span>
                                 </div>

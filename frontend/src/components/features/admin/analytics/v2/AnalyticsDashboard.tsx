@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { useAnalyticsData, SectionKey } from './hooks/useAnalyticsData';
 import { ManamaalaiSection } from './sections/ManamaalaiSection';
 import { MandapamSection } from './sections/MandapamSection';
-import { Spinner } from '@/components/ui/feedback/Spinner';
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 import { AlertCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import CentralToggleButton from '@/components/ui/forms/CentralToggleButton';
+import AnalyticsSkeleton from '@/components/features/admin/skeletons/AnalyticsSkeleton';
 
 const SECTION_COMPONENTS: Record<SectionKey, React.FC<{ data: any; loading: boolean }>> = {
   manamaalai: ManamaalaiSection,
@@ -100,12 +100,8 @@ export const AnalyticsDashboard: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex items-center justify-center py-32"
           >
-            <div className="flex flex-col items-center gap-4">
-              <Spinner size="lg" color="gold" />
-              <p className="text-sm text-dark-brown/60">{t('page.loading', { section: activeSection })}</p>
-            </div>
+            <AnalyticsSkeleton />
           </motion.div>
         ) : (
           <motion.div

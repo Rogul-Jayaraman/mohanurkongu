@@ -3,26 +3,18 @@ import { useLanguage } from '@/context/LanguageContext';
 import { AdminPageLayout } from '@/components/ui/layout/AdminPageLayout';
 import { ModalShell } from '@/components/ui/modals/ModalShell';
 import { BookingsTable } from '@/components/features/admin/mandapam/bookings/BookingsTable';
-import { AddPaymentModal } from '@/modals/admin/AddPaymentModal';
-import { CompleteBookingModal } from '@/modals/admin/CompleteBookingModal';
-import { CancelRefundModal } from '@/modals/admin/CancelRefundModal';
-import { ViewBookingModal } from '@/modals/admin/ViewBookingModal';
+import { useNavigate } from 'react-router-dom';
 import { useBookingList } from '@/queries/useMandapamQueries';
-import { useBookingWrite } from '@/queries/useMandapamMutations';
-import type { Booking } from '@/types/mandapam';
 import { Loader2, Filter, ChevronDown } from 'lucide-react';
 import { BOOKING_STATUS_FILTER_TABS } from '@/constants/booking';
 
-type ActiveModal = 'view' | 'payment' | 'complete' | 'cancel' | null;
-
 const BookingManagement: React.FC = () => {
   const { t, language } = useLanguage();
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -41,77 +33,11 @@ const BookingManagement: React.FC = () => {
   }, [currentPage, statusFilter, searchQuery, dateFrom, dateTo, packageCode, paymentStatus]);
 
   const { data, isLoading, isFetching, error, refetch } = useBookingList(filters);
-  const bookingWrite = useBookingWrite();
 
   const bookings = data?.bookings ?? [];
   const totalItems = data?.meta?.total ?? 0;
 
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
-
-
-  const openModal = (modal: ActiveModal, booking: Booking) => {
-    setSelectedBooking(booking);
-    setActiveModal(modal);
-  };
-
-  const closeModal = () => {
-    setActiveModal(null);
-    setSelectedBooking(null);
-  };
-
-  const handleConfirmPayment = async (booking: Booking, paymentType: string, amount: string, paymentMethod: string, referenceNo: string, notes: string) => {
-    const numAmount = Number(amount.replace?.(/,/g, '') ?? amount);
-    await bookingWrite.mutateAsync({
-      bookingId: booking.id,
-      action: {
-        type: 'add-payment',
-        paymentType: paymentType as 'ADVANCE' | 'INSTALLMENT' | 'FINAL_PAYMENT',
-        paymentMethod: paymentMethod as 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE',
-        amount: numAmount,
-        referenceNo: referenceNo || undefined,
-        notes: notes || undefined,
-      },
-    });
-    closeModal();
-  };
-
-  const handleConfirmCancel = async (booking: Booking, refundType: string, refundAmount: string, refundMethod: string, reason: string) => {
-    if (refundType !== 'NO_REFUND' && refundAmount) {
-      const numAmount = Number(refundAmount.replace?.(/,/g, '') ?? refundAmount);
-      await bookingWrite.mutateAsync({
-        bookingId: booking.id,
-        action: { type: 'add-refund', refundType: refundType as 'PARTIAL_REFUND' | 'FULL_REFUND', refundMethod: refundMethod as 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE', amount: numAmount, reason },
-      });
-    }
-    await bookingWrite.mutateAsync({
-      bookingId: booking.id,
-      action: { type: 'update-status', status: 'CANCELLED', notes: reason },
-    });
-    closeModal();
-  };
-
-  const handleConfirmComplete = async (booking: Booking, mode: string, amount: string, paymentMethod: string) => {
-    if (mode === 'fully_settled' && amount) {
-      const numAmount = Number(amount.replace?.(/,/g, '') ?? amount);
-      if (numAmount > 0) {
-        await bookingWrite.mutateAsync({
-          bookingId: booking.id,
-          action: { type: 'add-payment', paymentType: 'FINAL_PAYMENT', paymentMethod: paymentMethod as 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE', amount: numAmount },
-        });
-      }
-      await bookingWrite.mutateAsync({
-        bookingId: booking.id,
-        action: { type: 'update-status', status: 'COMPLETED' },
-      });
-    } else if (mode === 'discount') {
-      const numAmount = amount ? Number(amount.replace?.(/,/g, '') ?? amount) : undefined;
-      await bookingWrite.mutateAsync({
-        bookingId: booking.id,
-        action: { type: 'settlement', action: 'complete', finalAmount: numAmount },
-      });
-    }
-    closeModal();
-  };
 
   const handleClearFilters = () => {
     setDateFrom('');
@@ -266,45 +192,10 @@ const BookingManagement: React.FC = () => {
             totalItems={totalItems}
             itemsPerPage={itemsPerPage}
             onPageChange={setCurrentPage}
-            onViewDetails={(b) => openModal('view', b)}
-            onModifyPayment={(b) => openModal('payment', b)}
-            onComplete={(b) => openModal('complete', b)}
-            onCancel={(b) => openModal('cancel', b)}
+            onViewDetails={(b) => navigate(`/admin/mandapam/bookings/${b.id}`)}
           />
         </div>
       </AdminPageLayout>
-
-      {/* Modals */}
-      <AddPaymentModal
-        isOpen={activeModal === 'payment'}
-        booking={selectedBooking}
-        onClose={closeModal}
-        t={t}
-        isSubmitting={bookingWrite.isPending}
-        onConfirm={handleConfirmPayment}
-      />
-      <CompleteBookingModal
-        isOpen={activeModal === 'complete'}
-        booking={selectedBooking}
-        onClose={closeModal}
-        t={t}
-        isSubmitting={bookingWrite.isPending}
-        onConfirm={handleConfirmComplete}
-      />
-      <CancelRefundModal
-        isOpen={activeModal === 'cancel'}
-        booking={selectedBooking}
-        onClose={closeModal}
-        t={t}
-        isSubmitting={bookingWrite.isPending}
-        onConfirm={handleConfirmCancel}
-      />
-      <ViewBookingModal
-        isOpen={activeModal === 'view'}
-        booking={selectedBooking}
-        onClose={closeModal}
-        t={t}
-      />
     </>
   );
 };

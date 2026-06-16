@@ -2,13 +2,14 @@ import React, { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ToggleLeft, ToggleRight, RotateCcw } from 'lucide-react';
+import { ToggleLeft, ToggleRight } from 'lucide-react';
 import { AdminMembershipCard } from './AdminMembershipCard';
 import { EditPlanModal } from './EditPlanModal';
 import { adminListPlans, adminGetSetting, adminUpdateSetting } from '@/api/admin-membership.api';
 import type { MembershipPlan } from '@/api/membership.api';
 import { queryKeys } from '@/queries/queryKeys';
 import { showErrorToast } from '@/queries/mutationUtils';
+import MembershipSkeleton from '@/components/features/admin/matrimony/skeletons/MembershipSkeleton';
 
 const MembershipManagement: React.FC = () => {
   const { t } = useTranslation();
@@ -48,11 +49,7 @@ const MembershipManagement: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <RotateCcw size={24} className="animate-spin text-slate-400" />
-      </div>
-    );
+    return <MembershipSkeleton />;
   }
 
   return (

@@ -1,4 +1,5 @@
 import type { AnalyticsRepository } from './analytics.repository.js';
+import { BookingStatus } from '@prisma/client';
 import type { AnalyticsCache } from './analytics.cache.js';
 import type { ManamaalaiAnalyticsDTO } from './analytics.dto.js';
 import { logger } from '../../common/utils/logger.js';
@@ -230,7 +231,7 @@ export class AnalyticsService {
       'getMandapamAnalytics',
     );
 
-    const activeBookings = bookings.find(b => b.status === 'CONFIRMED' || b.status === 'SETTLEMENT_PENDING')?.count ?? 0;
+    const activeBookings = bookings.find(b => b.status === BookingStatus.CONFIRMED || b.status === BookingStatus.SETTLEMENT_PENDING)?.count ?? 0;
     const totalRevenue = ledgers.reduce((s, l) => s + Number(l.amount), 0);
     const totalCalDays = calendar.length;
     const bookedDays = calendar.filter(c => c.status === 'FULLY_BOOKED').length;
@@ -275,11 +276,11 @@ export class AnalyticsService {
       bookingTrend.push({ month, bookings: bookingMonthlyMap.get(month) ?? 0, revenue });
     }
 
-    const confirmed = bookings.find(b => b.status === 'CONFIRMED')?.count ?? 0;
-    const eventInProgress = bookings.find(b => b.status === 'EVENT_IN_PROGRESS')?.count ?? 0;
-    const settlementPending = bookings.find(b => b.status === 'SETTLEMENT_PENDING')?.count ?? 0;
-    const completed = bookings.find(b => b.status === 'COMPLETED')?.count ?? 0;
-    const cancelled = bookings.find(b => b.status === 'CANCELLED')?.count ?? 0;
+    const confirmed = bookings.find(b => b.status === BookingStatus.CONFIRMED)?.count ?? 0;
+    const eventInProgress = bookings.find(b => b.status === BookingStatus.IN_PROGRESS)?.count ?? 0;
+    const settlementPending = bookings.find(b => b.status === BookingStatus.SETTLEMENT_PENDING)?.count ?? 0;
+    const completed = bookings.find(b => b.status === BookingStatus.COMPLETED)?.count ?? 0;
+    const cancelled = bookings.find(b => b.status === BookingStatus.CANCELLED)?.count ?? 0;
 
     const addonMap = new Map<string, { count: number; revenue: number }>();
     for (const a of addons) {

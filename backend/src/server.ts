@@ -11,6 +11,7 @@ import { archiveVerifications } from './jobs/archive-verification.job.js';
 import { purgeVerifications } from './jobs/purge-verification.job.js';
 import { runSessionExpiry } from './jobs/expire-session.job.js';
 import { expireRegistrationSessions, expireResetSessions } from './jobs/expire-registration.job.js';
+import { BookingAutoTransitionService } from './modules/mandapam/services/booking-auto-transition.service.js';
 import { authConfig } from './config/auth.config.js';
 
 async function bootstrap() {
@@ -61,6 +62,9 @@ async function bootstrap() {
     60_000,
   );
 
+  const bookingAutoTransition = new BookingAutoTransitionService();
+  bookingAutoTransition.start();
+
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Shutdown signal received');
 
@@ -71,6 +75,8 @@ async function bootstrap() {
       clearInterval(sessionInterval);
       clearInterval(regExpireInterval);
       clearInterval(membershipExpireInterval);
+
+      bookingAutoTransition.stop();
 
       logger.info('Shutting down workers...');
       await Promise.allSettled([

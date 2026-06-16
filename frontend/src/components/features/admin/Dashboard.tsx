@@ -18,6 +18,7 @@ import { AdminProfileCardSkeleton } from '@/components/features/admin/matrimony/
 import { useQuery } from '@tanstack/react-query';
 import { fetchAdminStats } from '@/api/admin-dashboard.api';
 import { useVerificationQueueQuery } from '@/queries/useProfileQueries';
+import AdminDashboardSkeleton from '@/components/features/admin/skeletons/AdminDashboardSkeleton';
 
 // ═══════════════════════════════════════════════════════════
 // Types
@@ -261,6 +262,10 @@ const AdminDashboard: React.FC = () => {
     const statsData: DashboardStats | undefined = statsQuery.data as any;
     const loading = statsQuery.isPending;
     const isError = statsQuery.isError;
+
+    if (loading && !statsQuery.data) {
+        return <AdminDashboardSkeleton />;
+    }
 
     if (isError && !statsQuery.data) {
         return (

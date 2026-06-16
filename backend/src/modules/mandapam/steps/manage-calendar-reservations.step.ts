@@ -94,7 +94,7 @@ async function manageCalendarReservationsWithPrisma(ctx: MandapamPipelineContext
 
     await tx.mandapamCalendarEntry.updateMany({
       where: { bookingId },
-      data: { status: 'AVAILABLE', bookingId: null },
+      data: { status: 'AVAILABLE', bookingId: null, startTime: null, endTime: null },
     });
   }
 

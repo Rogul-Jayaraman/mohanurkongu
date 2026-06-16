@@ -23,6 +23,7 @@ export interface CreateBookingDto {
   bookingMethod: BookingMethod;
   bookingConfig: BookingConfig;
   tokenNumber?: string;
+  tokenNumber2?: string;
   advanceAmount?: number;
   paymentMethod?: string;
   addonIds?: string[];
@@ -36,14 +37,13 @@ export interface CreateBookingDto {
 }
 
 export interface UpdateBookingStatusDto {
-  status: 'CONFIRMED' | 'EVENT_IN_PROGRESS' | 'EVENT_COMPLETED' | 'SETTLEMENT_PENDING' | 'COMPLETED' | 'CANCELLED';
+  status: 'CONFIRMED' | 'IN_PROGRESS' | 'SETTLEMENT_PENDING' | 'COMPLETED' | 'CANCELLED';
 }
 
 export interface AddPaymentDto {
   paymentType: 'ADVANCE' | 'INSTALLMENT' | 'FINAL_PAYMENT';
   paymentMethod: 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE';
   amount: number;
-  referenceNo?: string;
 }
 
 export interface AddRefundDto {
@@ -168,10 +168,9 @@ export const PACKAGE_METADATA: Record<string, { bookingType: string; durationTyp
 };
 
 export const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
-  CONFIRMED: ['EVENT_IN_PROGRESS', 'CANCELLED'],
-  EVENT_IN_PROGRESS: ['EVENT_COMPLETED', 'CANCELLED'],
-  EVENT_COMPLETED: ['SETTLEMENT_PENDING'],
-  SETTLEMENT_PENDING: ['COMPLETED', 'CANCELLED'],
+  CONFIRMED: ['IN_PROGRESS', 'CANCELLED'],
+  IN_PROGRESS: ['SETTLEMENT_PENDING'],
+  SETTLEMENT_PENDING: ['COMPLETED'],
   COMPLETED: [],
   CANCELLED: [],
 };

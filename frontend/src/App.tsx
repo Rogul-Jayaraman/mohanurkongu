@@ -48,6 +48,7 @@ const AccountDetail = React.lazy(() => import('@/pages/admin/matrimony/AccountDe
 const HallAvailability = React.lazy(() => import('@/pages/admin/mandapam/Availability'));
 const Packages = React.lazy(() => import('@/pages/admin/mandapam/Packages'));
 const Bookings = React.lazy(() => import('@/pages/admin/mandapam/Bookings'));
+const BookingDetail = React.lazy(() => import('@/pages/admin/mandapam/BookingDetail'));
 
 import { AuthProvider } from './hooks/useAuth';
 import { LanguageProvider } from './context/LanguageContext';
@@ -140,6 +141,7 @@ const router = createBrowserRouter([
               { path: "admin/mandapam/packages", element: <Packages /> },
               { path: "admin/mandapam/availability", element: <HallAvailability /> },
               { path: "admin/mandapam/bookings", element: <Bookings /> },
+              { path: "admin/mandapam/bookings/:id", element: <BookingDetail /> },
               { path: "admin/mandapam/new-booking", element: <NewBooking /> },
               { path: "admin/settings", element: <SystemSettings /> },
             ],

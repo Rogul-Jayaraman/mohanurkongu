@@ -26,6 +26,7 @@ export const AdminLayout: React.FC = () => {
     if (path.includes("/admin/mandapam/packages")) return "adminLayout.nav.packages";
     if (path.includes("/admin/mandapam/availability"))
       return "adminLayout.nav.hallAvailability";
+    if (path.includes("/admin/mandapam/bookings/")) return "adminLayout.nav.booking_detail";
     if (path.includes("/admin/mandapam/bookings")) return "adminLayout.nav.bookings";
     if (path.includes("/admin/mandapam/new-booking")) return "adminLayout.nav.createBooking";
     if (path.includes("/admin/settings")) return "adminLayout.nav.settings";

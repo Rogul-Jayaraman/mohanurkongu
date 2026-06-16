@@ -29,6 +29,22 @@ const InfoRow: React.FC<{ label: string; value: string | React.ReactNode; classN
     </div>
 );
 
+const BOOKING_STATUS_LABELS: Record<string, { en: string; ta: string }> = {
+  PENDING: { en: 'Pending', ta: 'நிலுவை' },
+  CONFIRMED: { en: 'Confirmed', ta: 'உறுதிப்படுத்தப்பட்டது' },
+  IN_PROGRESS: { en: 'Event In Progress', ta: 'நிகழ்வு நடைபெறுகிறது' },
+  SETTLEMENT_PENDING: { en: 'Settlement Pending', ta: 'தீர்வு நிலுவை' },
+  COMPLETED: { en: 'Completed', ta: 'முடிக்கப்பட்டது' },
+  CANCELLED: { en: 'Cancelled', ta: 'ரத்து செய்யப்பட்டது' },
+};
+
+const getStatusLabel = (status: string, t: any, language?: string): string => {
+  const label = BOOKING_STATUS_LABELS[status];
+  if (label) return language === 'ta' ? label.ta : label.en;
+  const key = 'status' + status.toLowerCase().replace(/_([a-z])/g, (_, l) => l.toUpperCase()).replace(/_/g, '');
+  return t(`adminMandapam.bookings.${key}`) || status.replace(/_/g, ' ');
+};
+
 export const ViewBookingModal: React.FC<ViewBookingModalProps> = ({ isOpen, booking, onClose, t }) => {
     const { language } = useLanguage();
     const isTamil = language === 'ta';
@@ -86,7 +102,7 @@ export const ViewBookingModal: React.FC<ViewBookingModalProps> = ({ isOpen, book
                         </div>
                     </div>
                     <span className={`px-4 py-1.5 text-[10px] font-bold rounded-full shadow-sm ring-1 ring-white/20 shrink-0 ${getBookingStatusColor(booking.status)}`}>
-                        {booking.status.replace(/_/g, ' ')}
+                        {getStatusLabel(booking.status, t, language)}
                     </span>
                 </div>
 
@@ -136,16 +152,18 @@ export const ViewBookingModal: React.FC<ViewBookingModalProps> = ({ isOpen, book
                     <InfoRow
                         label={t('adminMandapam.bookings.eventType') || 'Event Type'}
                         value={(() => {
-                            const et = booking.eventType?.replace(/_/g, ' ');
-                            if (isTamil) {
-                                const map: Record<string, string> = {
-                                    'MARRIAGE': 'திருமணம்', 'RECEPTION': 'வரவேற்பு', 'ENGAGEMENT': 'நிச்சயதார்த்தம்',
-                                    'BIRTHDAY': 'பிறந்தநாள்', 'BABY SHOWER': 'பேபி ஷவர்', 'EAR PIERCING': 'காது குத்தல்',
-                                    'PUBERTY FUNCTION': 'பூப்புநிகழ்வு', 'OTHER': 'மற்றவை'
-                                };
-                                return map[booking.eventType] || et;
-                            }
-                            return et;
+                            const labels: Record<string, { en: string; ta: string }> = {
+                                MARRIAGE: { en: 'Marriage', ta: 'திருமணம்' },
+                                RECEPTION: { en: 'Reception', ta: 'வரவேற்பு' },
+                                ENGAGEMENT: { en: 'Engagement', ta: 'நிச்சயதார்த்தம்' },
+                                BIRTHDAY: { en: 'Birthday', ta: 'பிறந்தநாள்' },
+                                BABY_SHOWER: { en: 'Baby Shower', ta: 'பேபி ஷவர்' },
+                                EAR_PIERCING: { en: 'Ear Piercing', ta: 'காது குத்தல்' },
+                                PUBERTY_FUNCTION: { en: 'Puberty Function', ta: 'பூப்புநிகழ்வு' },
+                                OTHER: { en: 'Other', ta: 'மற்றவை' },
+                            };
+                            const label = labels[booking.eventType];
+                            return label ? (isTamil ? label.ta : label.en) : booking.eventType.replace(/_/g, ' ');
                         })()}
                     />
                     {booking.bookingConfig.startTime && (
@@ -215,7 +233,7 @@ export const ViewBookingModal: React.FC<ViewBookingModalProps> = ({ isOpen, book
                     <div className="flex items-center justify-between mb-4">
                         <SectionLabel icon={<CreditCard size={12} />} label={t('adminMandapam.bookings.paymentStatus') || 'Payment Lifecycle'} />
                         <span className={`px-3 py-1 text-[10px] font-bold rounded-full shadow-sm ring-1 ring-white/20 ${getPaymentStatusColor(paymentStatus)}`}>
-                            {paymentStatus.replace(/_/g, ' ')}
+                            {paymentStatus === 'not_paid' ? (t('adminMandapam.bookings.notPaid') || 'Not Paid') : paymentStatus === 'advance' ? (t('adminMandapam.bookings.advance') || 'Advance') : (t('adminMandapam.bookings.fullyPaid') || 'Fully Paid')}
                         </span>
                     </div>
 
@@ -239,7 +257,7 @@ export const ViewBookingModal: React.FC<ViewBookingModalProps> = ({ isOpen, book
                                     <div key={p.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-1 text-xs p-2.5 bg-white/60 rounded-lg border border-gold/5">
                                         <span className="font-bold text-rosewood/60 flex items-center gap-1.5">
                                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                                            {p.paymentType.replace(/_/g, ' ')} · {p.paymentMethod} {p.referenceNo && `· ${p.referenceNo}`}
+                                            {p.paymentType === 'ADVANCE' ? (t('adminMandapam.bookings.advanceAmount') || 'Advance') : p.paymentType === 'FINAL_PAYMENT' ? (t('adminMandapam.bookings.finalPayment') || 'Final') : p.paymentType.replace(/_/g, ' ')} · {p.paymentMethod}
                                         </span>
                                         <span className="font-black text-emerald-700">{formatCurrency(p.amount)}</span>
                                     </div>
@@ -256,7 +274,7 @@ export const ViewBookingModal: React.FC<ViewBookingModalProps> = ({ isOpen, book
                                     <div key={r.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-1 text-xs p-2.5 bg-white/60 rounded-lg border border-gold/5">
                                         <span className="font-bold text-rosewood/60 flex items-center gap-1.5">
                                             <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
-                                            {r.refundType.replace(/_/g, ' ')} · {r.refundMethod} {r.reason && `· ${r.reason}`}
+                                            {r.refundType === 'FULL_REFUND' ? (t('adminMandapam.bookings.fullRefund') || 'Full Refund') : r.refundType === 'PARTIAL_REFUND' ? (t('adminMandapam.bookings.partialRefund') || 'Partial') : String(r.refundType).replace(/_/g, ' ')} · {r.refundMethod} {r.reason && `· ${r.reason}`}
                                         </span>
                                         <span className="font-black text-rose-700">-{formatCurrency(r.amount)}</span>
                                     </div>

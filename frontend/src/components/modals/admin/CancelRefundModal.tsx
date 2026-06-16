@@ -7,7 +7,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { formatCurrency } from '@/utils/format';
 
 const REFUND_OPTIONS: { value: string; label: string; labelTa: string; desc: string; descTa: string; icon: string }[] = [
-  { value: 'NO_REFUND', label: 'No Refund', labelTa: 'பணம் திரும்ப இல்லை', desc: 'Forfeit all payments', descTa: 'அனைத்து கட்டணங்களையும் இழக்க', icon: 'block' },
+  { value: 'NO_REFUND', label: 'No Refund', labelTa: 'பணம் திரும்ப இல்லை', desc: 'Keep all payments', descTa: 'அனைத்து கட்டணங்களையும் வைத்திருக்க', icon: 'block' },
   { value: 'PARTIAL_REFUND', label: 'Partial Refund', labelTa: 'பகுதி பணத்திரும்பம்', desc: 'Refund a portion', descTa: 'ஒரு பகுதியை திருப்ப', icon: 'money_off' },
   { value: 'FULL_REFUND', label: 'Full Refund', labelTa: 'முழு பணத்திரும்பம்', desc: 'Refund entire amount', descTa: 'முழு தொகையையும் திருப்ப', icon: 'currency_rupee' },
 ];
@@ -109,7 +109,7 @@ export const CancelRefundModal: React.FC<CancelRefundModalProps> = ({ isOpen, bo
                         </div>
                         <div className="text-right shrink-0">
                             <p className="text-[10px] font-bold text-rosewood/40 mb-1">
-                                {t('adminMandapam.bookings.netPaid') || 'Net Paid'}
+                                {t('adminMandapam.bookings.netPaid') || 'Amount Paid'}
                             </p>
                             <p className="text-xl font-black text-rose-700">{formatCurrency(netPaid)}</p>
                         </div>
@@ -134,7 +134,7 @@ export const CancelRefundModal: React.FC<CancelRefundModalProps> = ({ isOpen, bo
                 {/* Refund Options */}
                 <div className="space-y-2.5">
                     <p className="text-[10px] font-bold text-rosewood/40 ml-1">
-                        {t('adminMandapam.bookings.refundStatus') || 'Refund Disposition'}
+                        {t('adminMandapam.bookings.refundStatus') || 'Refund Option'}
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         {REFUND_OPTIONS.map(ro => (
@@ -214,8 +214,8 @@ export const CancelRefundModal: React.FC<CancelRefundModalProps> = ({ isOpen, bo
                                         <p className="text-[10px] font-bold text-rose-600 flex items-center gap-1 mt-1 ml-2">
                                             <span className="material-symbols-outlined text-[14px]">error</span>
                                             {isTamil
-                                                ? `நிகர செலுத்தம் ${formatCurrency(netPaid)}ஐ தாண்ட முடியாது`
-                                                : `Cannot exceed net paid of ${formatCurrency(netPaid)}`}
+                                            ? `செலுத்தப்பட்ட தொகை ${formatCurrency(netPaid)}ஐ தாண்ட முடியாது`
+                                            : `Cannot exceed amount paid of ${formatCurrency(netPaid)}`}
                                         </p>
                                     )}
                                 </div>

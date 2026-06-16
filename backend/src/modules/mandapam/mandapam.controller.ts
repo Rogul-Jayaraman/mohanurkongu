@@ -8,6 +8,7 @@ import { buildPackagesListTag, buildPackageTag, MandapamCacheTtls } from './cach
 import { bookingCreatePipeline } from './pipelines/booking-create.pipeline.js';
 import { bookingStatusPipeline } from './pipelines/booking-status.pipeline.js';
 import { bookingSettlementPipeline } from './pipelines/booking-settlement.pipeline.js';
+import { bookingChargePipeline } from './pipelines/booking-charge.pipeline.js';
 import { financialTransactionPipeline } from './pipelines/financial-transaction.pipeline.js';
 import { bookingAddonPipeline } from './pipelines/booking-addon.pipeline.js';
 import { bookingListPipeline } from './pipelines/booking-list.pipeline.js';
@@ -20,7 +21,7 @@ import { catalogEntityPipeline } from './pipelines/catalog-entity.pipeline.js';
 import {
   createBookingSchema, updateBookingStatusSchema, addPaymentSchema,
   addRefundSchema, addAddonSchema, blockDatesSchema, unblockDatesSchema,
-  settlementActionSchema, bookingFiltersSchema, validateTokenSchema,
+  settlementActionSchema, addChargesSchema, bookingFiltersSchema, validateTokenSchema,
 } from './dto/mandapam.validation.js';
 
 export class MandapamController {
@@ -94,6 +95,25 @@ export class MandapamController {
     try {
       const dto = addAddonSchema.parse(req.body);
       const result = await bookingAddonPipeline(req.params.id as string, 'ATTACH', dto, req.account?.sub, this.cacheManager);
+      sendSuccess(res, result);
+    } catch (err) { next(err); }
+  };
+
+  addCharge = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const dto = addChargesSchema.parse(req.body);
+      const performedBy = req.account?.sub;
+      if (!performedBy) throw new AppError(401, ErrorCodes.AUTH_UNAUTHORIZED, 'Unauthorized');
+      const result = await bookingChargePipeline(req.params.id as string, dto, 'ADD_CHARGE', performedBy, this.cacheManager);
+      sendSuccess(res, result);
+    } catch (err) { next(err); }
+  };
+
+  removeCharge = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const performedBy = req.account?.sub;
+      if (!performedBy) throw new AppError(401, ErrorCodes.AUTH_UNAUTHORIZED, 'Unauthorized');
+      const result = await bookingChargePipeline(req.params.id as string, { chargeId: req.params.chargeId as string }, 'REMOVE_CHARGE', performedBy, this.cacheManager);
       sendSuccess(res, result);
     } catch (err) { next(err); }
   };

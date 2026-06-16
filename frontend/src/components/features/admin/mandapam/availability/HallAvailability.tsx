@@ -2,8 +2,9 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../../../../../context/LanguageContext';
 import { ActionPanel } from '@/components/features/admin/mandapam/ActionPanel';
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAdminCalendar } from '@/queries/useMandapamQueries';
+import AvailabilitySkeleton from '@/components/features/admin/mandapam/skeletons/AvailabilitySkeleton';
 import {
     getTamilDateInfo,
     CALENDAR_THEME,
@@ -70,6 +71,13 @@ const HallAvailability: React.FC = () => {
 
             const idx = prev.indexOf(day);
             if (idx !== -1) return prev.filter(d => d !== day);
+
+            const isTodaySelected = prev.includes(todayDate.getDate()) &&
+                todayDate.getMonth() === month &&
+                todayDate.getFullYear() === year;
+
+            if (isTodaySelected) return [day];
+
             if (prev.length >= 2) return [prev[1], day];
             return [...prev, day];
         });
@@ -114,16 +122,7 @@ const HallAvailability: React.FC = () => {
         : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     if (isLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 bg-linear-to-br from-rosewood/5 via-ivory to-rosewood/5 rounded-2xl border border-gold/10 p-8">
-                <div className="w-12 h-12 rounded-2xl bg-rosewood/10 flex items-center justify-center">
-                    <Loader2 className="w-6 h-6 text-rosewood animate-spin" />
-                </div>
-                <p className="text-rosewood/60 font-black text-xs uppercase tracking-[0.2em]">
-                    {isTamil ? 'கிடைக்கும் நாட்கள் ஏற்றுகிறது...' : 'Loading availability...'}
-                </p>
-            </div>
-        );
+        return <AvailabilitySkeleton />;
     }
 
     return (

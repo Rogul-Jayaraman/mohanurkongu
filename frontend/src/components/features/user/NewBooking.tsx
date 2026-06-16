@@ -42,6 +42,7 @@ const NewBooking: React.FC = () => {
   const [selectedDates, setSelectedDates] = useState<string[]>(locationState?.dates || []);
   const [existingEntries] = useState<CalendarEntryInfo[]>(locationState?.existingEntries || []);
   const [currentStep, setCurrentStep] = useState(0);
+  const [timeConflict, setTimeConflict] = useState(false);
   const createBooking = useCreateBooking();
   const isSubmitting = createBooking.isPending;
   const [date1, setDate1] = useState(locationState?.dates?.[0] || '');
@@ -111,6 +112,15 @@ const NewBooking: React.FC = () => {
         if (conflict) {
           toast.error(isTamil ? 'தேர்ந்தெடுக்கப்பட்ட நேரம் ஏற்கனவே முன்பதிவு செய்யப்பட்டுள்ளது' : 'Selected time conflicts with an existing booking');
           return;
+        }
+        const selectedDate = selectedDates[0];
+        const today = new Date().toISOString().split('T')[0];
+        if (selectedDate === today) {
+          const nowHHMM = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
+          if (st <= nowHHMM) {
+            toast.error(isTamil ? 'தொடக்க நேரம் எதிர்காலத்தில் இருக்க வேண்டும்' : 'Start time must be in the future');
+            return;
+          }
         }
         setCurrentStep(1);
         return;
@@ -298,7 +308,7 @@ const NewBooking: React.FC = () => {
                 </div>
                 {bookingType === 'HOURLY' && (
                   <div className="border-t border-gold-soft/20 pt-6">
-                    <TimeConfigurationSection form={form as any} packageInfo={packageInfo} existingEntries={existingEntries} />
+                    <TimeConfigurationSection form={form as any} packageInfo={packageInfo} existingEntries={existingEntries} selectedDate={selectedDates[0]} onConflictChange={setTimeConflict} />
                   </div>
                 )}
                 {bookingType !== 'HOURLY' && (
@@ -636,8 +646,12 @@ const NewBooking: React.FC = () => {
                 )}
               </button>
             ) : (
-              <button onClick={handleNext}
-                className="flex items-center justify-center gap-1.5 px-6 py-3 bg-rosewood text-white font-bold rounded-xl shadow-lg shadow-rosewood/20 text-xs hover:bg-rosewood-dark transition-all active:scale-[0.98]">
+              <button onClick={handleNext} disabled={currentStep === 0 && timeConflict}
+                className={`flex items-center justify-center gap-1.5 px-6 py-3 text-white font-bold rounded-xl shadow-lg text-xs transition-all active:scale-[0.98] ${
+                  currentStep === 0 && timeConflict
+                    ? 'bg-rosewood/40 cursor-not-allowed'
+                    : 'bg-rosewood hover:bg-rosewood-dark shadow-rosewood/20'
+                }`}>
                 <span className="hidden sm:inline">{isTamil ? 'அடுத்து' : 'Next'}</span>
                 <span className="material-symbols-outlined text-base">chevron_right</span>
               </button>

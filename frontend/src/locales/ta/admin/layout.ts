@@ -16,6 +16,10 @@ export const adminLayoutTa = {
         title: "கணக்கு விவரங்கள் - மோகனூர் கொங்கு நிர்வாகம்",
         desc: "கணக்கு விவரங்களை காண மற்றும் உறுப்பினர் திட்டத்தை மாற்ற",
       },
+      booking_detail: {
+        title: "முன்பதிவு விவரங்கள் - மோகனூர் கொங்கு நிர்வாகம்",
+        desc: "முன்பதிவு விவரங்களை காண மற்றும் மேலாண்மை",
+      },
     },
     nav: {
       dashboard: "டாஷ்போர்டு",
@@ -29,6 +33,7 @@ export const adminLayoutTa = {
       packages: "பேக்கேஜ்கள்",
       hallAvailability: "மண்டப இருப்பு",
       bookings: "முன்பதிவுகள்",
+      booking_detail: "முன்பதிவு விவரங்கள்",
       createBooking: "புதிய முன்பதிவு",
       settings: "அமைப்புகள்",
       profile_details: "சுயவிவர விவரங்கள்",

@@ -9,6 +9,8 @@ interface TimeConfigurationSectionProps {
   form: UseFormReturn<BookingFormData>;
   packageInfo: PackageInfo | null;
   existingEntries: CalendarEntryInfo[];
+  selectedDate?: string;
+  onConflictChange?: (hasConflict: boolean) => void;
 }
 
 const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
@@ -155,7 +157,7 @@ function TimeSegment({ value, options, onChange, label, disabled }: TimeSegmentP
   );
 }
 
-export const TimeConfigurationSection: React.FC<TimeConfigurationSectionProps> = ({ form, packageInfo, existingEntries }) => {
+export const TimeConfigurationSection: React.FC<TimeConfigurationSectionProps> = ({ form, packageInfo, existingEntries, selectedDate, onConflictChange }) => {
   const { language } = useLanguage();
   const isTamil = language === 'ta';
   const startTime = form.watch('startTime');
@@ -177,6 +179,21 @@ export const TimeConfigurationSection: React.FC<TimeConfigurationSectionProps> =
     if (!startTime || !endTime || bookedSlots.length === 0) return false;
     return bookedSlots.some((slot) => startTime < slot.endTime && endTime > slot.startTime);
   }, [startTime, endTime, bookedSlots]);
+
+  const isPastTime = useMemo(() => {
+    if (!startTime || !selectedDate) return false;
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    if (selectedDate !== today) return false;
+    const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    return startTime <= currentHHMM;
+  }, [startTime, selectedDate]);
+
+  const isTimeInvalid = hasConflict || isPastTime;
+
+  useEffect(() => {
+    onConflictChange?.(isTimeInvalid);
+  }, [isTimeInvalid, onConflictChange]);
 
   const parsedStart = useMemo(() => (startTime ? parseTime(startTime) : null), [startTime]);
   const parsedEnd = useMemo(() => (endTime ? parseTime(endTime) : null), [endTime]);
@@ -245,7 +262,7 @@ export const TimeConfigurationSection: React.FC<TimeConfigurationSectionProps> =
             {isTamil ? 'தொடக்க நேரம்' : 'Start Time'}
           </label>
           <div className={`flex items-stretch border-2 rounded-xl bg-white transition-all ${
-            errors.startTime ? 'border-red-400' : 'border-rosewood/10 hover:border-rosewood/30 focus-within:border-gold focus-within:ring-1 focus-within:ring-gold'
+            isTimeInvalid ? 'border-red-400 bg-red-50' : errors.startTime ? 'border-red-400' : 'border-rosewood/10 hover:border-rosewood/30 focus-within:border-gold focus-within:ring-1 focus-within:ring-gold'
           }`}>
             <div className="flex-1 flex items-stretch min-w-0 h-[48px]">
               <div className="flex-1 min-w-[60px] max-w-[80px] sm:max-w-[100px]">
@@ -288,7 +305,7 @@ export const TimeConfigurationSection: React.FC<TimeConfigurationSectionProps> =
             {isTamil ? 'முடிவு நேரம்' : 'End Time'}
           </label>
           <div className={`flex items-stretch border-2 rounded-xl bg-white transition-all ${
-            errors.endTime ? 'border-red-400' : 'border-rosewood/10 hover:border-rosewood/30 focus-within:border-gold focus-within:ring-1 focus-within:ring-gold'
+            isTimeInvalid ? 'border-red-400 bg-red-50' : errors.endTime ? 'border-red-400' : 'border-rosewood/10 hover:border-rosewood/30 focus-within:border-gold focus-within:ring-1 focus-within:ring-gold'
           }`}>
             <div className="flex-1 flex items-stretch min-w-0 h-[48px]">
               <div className="flex-1 min-w-[60px] max-w-[80px] sm:max-w-[100px]">
@@ -312,6 +329,25 @@ export const TimeConfigurationSection: React.FC<TimeConfigurationSectionProps> =
         </div>
       </div>
 
+      {/* Conflict / past-time warning — always visible when invalid */}
+      {isTimeInvalid && (
+        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+          <AlertTriangle size={14} className="text-red-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[11px] font-bold text-red-700">
+              {isPastTime
+                ? (isTamil ? 'தொடக்க நேரம் ஏற்கனவே கடந்துவிட்டது — எதிர்கால நேரத்தைத் தேர்ந்தெடுக்கவும்' : 'Start time has already passed — select a future time')
+                : (isTamil ? 'தேர்ந்தெடுக்கப்பட்ட நேரம் ஏற்கனவே முன்பதிவு செய்யப்பட்ட நேரத்துடன் முரண்படுகிறது' : 'Selected time conflicts with an existing booking')}
+            </p>
+            {isPastTime && (
+              <p className="text-[10px] text-red-500/70 mt-1 font-medium">
+                {isTamil ? 'தயவுசெய்து வேறு நேரத்தைத் தேர்ந்தெடுக்கவும்' : 'Please choose a different time'}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Booked slots */}
       {bookedSlots.length > 0 && (
         <div className="pt-3 border-t border-rosewood/5">
@@ -334,16 +370,6 @@ export const TimeConfigurationSection: React.FC<TimeConfigurationSectionProps> =
               );
             })}
           </div>
-          {hasConflict && (
-            <div className="mt-3 flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
-              <AlertTriangle size={14} className="text-red-500 shrink-0" />
-              <p className="text-[11px] font-bold text-red-700">
-                {isTamil
-                  ? 'தேர்ந்தெடுக்கப்பட்ட நேரம் ஏற்கனவே முன்பதிவு செய்யப்பட்ட நேரத்துடன் முரண்படுகிறது'
-                  : 'Selected time conflicts with an existing booking'}
-              </p>
-            </div>
-          )}
         </div>
       )}
     </div>

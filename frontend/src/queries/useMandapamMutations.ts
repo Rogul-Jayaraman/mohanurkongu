@@ -31,7 +31,7 @@ export function useCreateBooking() {
     mutationFn: (input: CreateBookingInput) => createBookingPipeline(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.mandapam.bookings() });
-      qc.invalidateQueries({ queryKey: queryKeys.mandapam.calendar() });
+      qc.invalidateQueries({ queryKey: ['mandapam', 'calendar'] });
       toast.success('Booking created successfully');
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -47,6 +47,7 @@ export function useBookingWrite() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.mandapam.bookings() });
       qc.invalidateQueries({ queryKey: queryKeys.mandapam.booking(vars.bookingId) });
+      qc.invalidateQueries({ queryKey: ['mandapam', 'calendar'] });
       toast.success('Booking updated');
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -61,7 +62,7 @@ export function useBlockDates() {
     mutationFn: (input: Parameters<typeof blockDatesPipeline>[0]) =>
       blockDatesPipeline(input),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.mandapam.calendar() });
+      qc.invalidateQueries({ queryKey: ['mandapam', 'calendar'] });
       toast.success('Dates blocked');
     },
     onError: (err) => toast.error(getErrorMessage(err)),
@@ -74,7 +75,7 @@ export function useUnblockDates() {
     mutationFn: (input: Parameters<typeof unblockDatesPipeline>[0]) =>
       unblockDatesPipeline(input),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.mandapam.calendar() });
+      qc.invalidateQueries({ queryKey: ['mandapam', 'calendar'] });
       toast.success('Dates unblocked');
     },
     onError: (err) => toast.error(getErrorMessage(err)),

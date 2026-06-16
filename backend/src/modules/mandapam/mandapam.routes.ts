@@ -37,6 +37,8 @@ export function createMandapamRoutes(controller: MandapamController): Router {
   router.post('/admin/mandapam/bookings/:id/refunds', requireSession, requireRole('ADMIN'), controller.addRefund);
   router.post('/admin/mandapam/bookings/:id/addons', requireSession, requireRole('ADMIN'), controller.addAddon);
   router.delete('/admin/mandapam/bookings/:id/addons/:snapshotId', requireSession, requireRole('ADMIN'), controller.removeAddon);
+  router.post('/admin/mandapam/bookings/:id/charges', requireSession, requireRole('ADMIN'), controller.addCharge);
+  router.delete('/admin/mandapam/bookings/:id/charges/:chargeId', requireSession, requireRole('ADMIN'), controller.removeCharge);
   router.post('/admin/mandapam/bookings/:id/settlement', requireSession, requireRole('ADMIN'), controller.settlementAction);
   router.post('/admin/mandapam/bookings/validate-token', requireSession, requireRole('ADMIN'), controller.validateToken);
 

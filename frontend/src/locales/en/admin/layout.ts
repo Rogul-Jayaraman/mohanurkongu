@@ -16,6 +16,10 @@ export const adminLayoutEn = {
         title: "Account Detail - Mohanur Kongu Admin",
         desc: "View account details and manage membership",
       },
+      booking_detail: {
+        title: "Booking Detail - Mohanur Kongu Admin",
+        desc: "View booking details and manage",
+      },
     },
     nav: {
       dashboard: "Dashboard",
@@ -29,6 +33,7 @@ export const adminLayoutEn = {
       packages: "Packages",
       hallAvailability: "Hall Availability",
       bookings: "Bookings",
+      booking_detail: "Booking Detail",
       createBooking: "Create Booking",
       settings: "Settings",
       profile_details: "Profile Details",

@@ -13,7 +13,7 @@ interface BookingsFilterProps {
 const STATUS_ICONS: Record<string, React.ReactNode> = {
   All: <CircleDot size={14} />,
   CONFIRMED: <CalendarCheck size={14} />,
-  EVENT_IN_PROGRESS: <Clock size={14} />,
+  IN_PROGRESS: <Clock size={14} />,
   SETTLEMENT_PENDING: <AlertTriangle size={14} />,
   COMPLETED: <ClipboardCheck size={14} />,
   CANCELLED: <Ban size={14} />,

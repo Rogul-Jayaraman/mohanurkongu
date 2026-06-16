@@ -91,6 +91,9 @@ const ActionPanelComponent: React.FC<ActionPanelProps> = ({ t, language, selecte
     const fullyBookedCount = selectedDates.filter(d => getDateStatus(d) === 'FULLY_BOOKED').length;
     const blockedCount = selectedDates.filter(d => getDateStatus(d) === 'BLOCKED').length;
     const bookedCount = partiallyBookedCount + fullyBookedCount;
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const hasToday = selectedDates.some(d => d.getTime() === todayDate.getTime());
 
     const blockedEntries = useMemo(() => {
         return selectedDates
@@ -408,7 +411,7 @@ const ActionPanelComponent: React.FC<ActionPanelProps> = ({ t, language, selecte
                                             getBookingStatusStyle(b.status).bg + ' ' + getBookingStatusStyle(b.status).text + ' ' + getBookingStatusStyle(b.status).border
                                         }`}>
                                             <span className={`w-1 h-1 rounded-full ${getBookingStatusStyle(b.status).text.replace('text-', 'bg-').replace('-700', '-500')}`} />
-                                            {b.status}
+                                            {b.status === 'CONFIRMED' ? (isTamil ? 'உறுதிப்படுத்தப்பட்டது' : 'Confirmed') : b.status === 'IN_PROGRESS' ? (isTamil ? 'நிகழ்வு நடைபெறுகிறது' : 'Event In Progress') : b.status === 'SETTLEMENT_PENDING' ? (isTamil ? 'தீர்வு நிலுவை' : 'Settlement Pending') : b.status === 'COMPLETED' ? (isTamil ? 'முடிக்கப்பட்டது' : 'Completed') : b.status === 'CANCELLED' ? (isTamil ? 'ரத்து செய்யப்பட்டது' : 'Cancelled') : b.status}
                                         </span>
                                     </div>
                                 </div>
@@ -469,7 +472,7 @@ const ActionPanelComponent: React.FC<ActionPanelProps> = ({ t, language, selecte
                                     <Clock size={14} />
                                     {isTamil ? 'நேர அடிப்படை முன்பதிவு' : 'Hourly Booking'}
                                 </button>
-                                {availableCount === 1 && (
+                                {availableCount === 1 && !hasToday && (
                                     <button
                                         onClick={handleOpenSingleDayBooking}
                                         className="px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 bg-ivory-gold-gradient hover:ring-2 hover:ring-gold/30 active:scale-[0.98]"
@@ -480,7 +483,7 @@ const ActionPanelComponent: React.FC<ActionPanelProps> = ({ t, language, selecte
                                 )}
                             </>
                         )}
-                        {selectedDates.length === 2 && availableCount === 2 && (
+                        {selectedDates.length === 2 && availableCount === 2 && !hasToday && (
                             <button
                                 onClick={handleOpenTwoDayBooking}
                                 className="px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-2 bg-ivory-gold-gradient hover:scale-[1.02] active:scale-[0.98]"

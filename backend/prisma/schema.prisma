@@ -65,8 +65,7 @@ enum PaymentMethod {
 
 enum BookingStatus {
   CONFIRMED
-  EVENT_IN_PROGRESS
-  EVENT_COMPLETED
+  IN_PROGRESS
   SETTLEMENT_PENDING
   COMPLETED
   CANCELLED
@@ -292,7 +291,7 @@ model Account {
   reviewedReviews       ProfileReview[]
   auditEvents           AdminAuditEvent[]
   shortlists            Shortlist[]
-  bookingCustomers      MandapamBooking[]       @relation("MandapamBookingCustomer")
+
   bookingCreators       MandapamBooking[]       @relation("MandapamBookingCreator")
   settlements           MandapamSettlement[]    @relation("MandapamSettlementAdmin")
 
@@ -1106,7 +1105,6 @@ model AdminAuditEvent {
 model MandapamBooking {
   id            String        @id @default(uuid()) @db.Uuid
   bookingNo     String        @unique @db.VarChar(20)
-  customerId    String        @db.Uuid
   customerName  Json          @db.JsonB
   customerPhone String        @db.VarChar(20)
   customerEmail String?       @db.VarChar(255)
@@ -1118,9 +1116,10 @@ model MandapamBooking {
   eventType     EventType     @default(OTHER)
   packageCode   String        @db.VarChar(50)
   bookingConfig Json          @db.JsonB
+  tokenNumber   String?       @db.VarChar(20)
+  tokenNumber2  String?       @db.VarChar(20)
   notes         String?       @db.Text
   createdBy     String        @db.Uuid
-  customer      Account       @relation("MandapamBookingCustomer", fields: [customerId], references: [id])
   creator       Account       @relation("MandapamBookingCreator", fields: [createdBy], references: [id])
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -1141,7 +1140,6 @@ model MandapamBooking {
   @@index([status])
   @@index([packageCode])
   @@index([createdAt])
-  @@index([customerId])
   @@index([createdBy])
   @@index([status, createdAt])
   @@map("mandapam_bookings")
@@ -1223,7 +1221,6 @@ model MandapamPaymentLedger {
   paymentType   PaymentEntryType
   paymentMethod PaymentMethod
   amount        Decimal         @db.Decimal(12, 2)
-  referenceNo   String?         @db.VarChar(100)
   receivedAt    DateTime        @default(now())
   createdAt     DateTime        @default(now())
 
@@ -1252,6 +1249,7 @@ model MandapamRefundLedger {
 model MandapamTokenConsumption {
   id          String      @id @default(uuid()) @db.Uuid
   bookingId   String      @db.Uuid
+  tokenNumber String?     @db.VarChar(20)
   tokens      Int
   state       TokenState  @default(CONSUMED)
   consumedAt  DateTime    @default(now())

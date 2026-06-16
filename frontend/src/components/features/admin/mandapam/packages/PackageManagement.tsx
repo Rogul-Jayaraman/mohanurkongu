@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, AlertCircle, Plus } from 'lucide-react';
+import { AlertCircle, Plus } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAdminPackages, useFacilities, useAddons } from '@/queries/useMandapamQueries';
 import { useUpdatePackage, useDeletePackageFunction, useUpdateFacility, useDeleteFacility, useUpdateAddon, useDeleteAddon } from '@/queries/useMandapamMutations';
@@ -10,6 +10,7 @@ import { FacilityGrid } from '@/components/features/admin/mandapam/facilities/Fa
 import { FacilityModal } from '@/components/features/admin/mandapam/facilities/FacilityModal';
 import { AddonGrid } from '@/components/features/admin/mandapam/addons/AddonGrid';
 import { AddonModal } from '@/components/features/admin/mandapam/addons/AddonModal';
+import PackagesSkeleton from '@/components/features/admin/mandapam/skeletons/PackagesSkeleton';
 import type { MandapamPackage, MandapamFacility, MandapamAddon } from '@/types/mandapam';
 
 const PackageManagement: React.FC = () => {
@@ -101,16 +102,7 @@ const PackageManagement: React.FC = () => {
     };
 
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-8 h-8 text-rosewood animate-spin" />
-                    <p className="text-sm text-rosewood/50 font-medium">
-                        {t('adminMandapam.packages.loading')}
-                    </p>
-                </div>
-            </div>
-        );
+        return <PackagesSkeleton />;
     }
 
     if (error) {

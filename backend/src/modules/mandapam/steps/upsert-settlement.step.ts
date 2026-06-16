@@ -45,7 +45,8 @@ async function upsertSettlementWithPrisma(ctx: MandapamPipelineContext, action: 
     }
 
     if (dto.finalAmount != null) {
-      const charges = (ctx.booking?.ledgerEntries || []).reduce((s: number, e: any) => s + Number(e.amount), 0);
+      const allLedgers = await tx.mandapamFinancialLedger.findMany({ where: { bookingId } });
+      const charges = allLedgers.reduce((s: number, e: any) => s + Number(e.amount), 0);
       const payments = (ctx.booking?.paymentEntries || []).reduce((s: number, e: any) => s + Number(e.amount), 0);
       const refunds = (ctx.booking?.refundEntries || []).reduce((s: number, e: any) => s + Number(e.amount), 0);
       const currentOutstanding = charges - payments + refunds;
@@ -63,9 +64,19 @@ async function upsertSettlementWithPrisma(ctx: MandapamPipelineContext, action: 
       }
     }
 
-    const damageCharges = dto.charges?.filter((c: any) => c.type === 'damage') || [];
-    const penaltyCharges = dto.charges?.filter((c: any) => c.type === 'penalty') || [];
-    const extraCharges = dto.charges?.filter((c: any) => c.type === 'extra') || [];
+    const allChargeLedgers = await tx.mandapamFinancialLedger.findMany({
+      where: { bookingId, source: { in: ['DAMAGE', 'PENALTY', 'SERVICE'] } },
+    });
+
+    const damageCharges = allChargeLedgers.filter((e: any) => e.source === 'DAMAGE').map((e: any) => ({
+      type: 'damage', description: e.description, amount: Number(e.amount),
+    }));
+    const penaltyCharges = allChargeLedgers.filter((e: any) => e.source === 'PENALTY').map((e: any) => ({
+      type: 'penalty', description: e.description, amount: Number(e.amount),
+    }));
+    const extraCharges = allChargeLedgers.filter((e: any) => e.source === 'SERVICE').map((e: any) => ({
+      type: 'extra', description: e.description, amount: Number(e.amount),
+    }));
 
     await tx.mandapamSettlement.update({
       where: { bookingId },

@@ -166,7 +166,6 @@ export interface AddPaymentDto {
   paymentType: 'ADVANCE' | 'INSTALLMENT' | 'FINAL_PAYMENT';
   paymentMethod: 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CARD' | 'CHEQUE';
   amount: number;
-  referenceNo?: string;
   receivedAt?: string;
   notes?: string;
 }
@@ -185,9 +184,15 @@ export interface AddAddonDto {
   units?: number;
 }
 
+export interface AddChargeDto {
+  type: 'damage' | 'penalty' | 'extra';
+  description: { en: string; ta: string };
+  amount: number;
+}
+
 export interface SettlementActionDto {
   action: 'start' | 'complete';
-  charges?: { type: 'damage' | 'penalty' | 'extra'; description: { en: string; ta: string }; amount: number }[];
+  charges?: AddChargeDto[];
   finalAmount?: number;
   notes?: string;
 }
@@ -231,6 +236,14 @@ export function adminAddAddon(id: string, dto: AddAddonDto): Promise<{ booking: 
 
 export function adminRemoveAddon(bookingId: string, snapshotId: string): Promise<{ booking: Booking }> {
   return api.delete(`/admin/mandapam/bookings/${bookingId}/addons/${snapshotId}`);
+}
+
+export function adminAddCharge(id: string, dto: AddChargeDto): Promise<{ booking: Booking }> {
+  return api.post(`/admin/mandapam/bookings/${id}/charges`, dto);
+}
+
+export function adminRemoveCharge(bookingId: string, chargeId: string): Promise<{ booking: Booking }> {
+  return api.delete(`/admin/mandapam/bookings/${bookingId}/charges/${chargeId}`);
 }
 
 export function adminSettlementAction(id: string, dto: SettlementActionDto): Promise<{ booking: Booking }> {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import PageLoader from '@/components/ui/feedback/PageLoader';
 
 interface ProtectedRouteProps {
     children?: React.ReactNode;
@@ -20,16 +21,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const location = useLocation();
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-ivory">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-rosewood/10 border-t-rosewood rounded-full animate-spin" />
-                    <p className="text-rosewood font-black text-xs uppercase tracking-widest animate-pulse">
-                        Authenticating...
-                    </p>
-                </div>
-            </div>
-        );
+        return <PageLoader />;
     }
 
     if (!isAuthenticated) {

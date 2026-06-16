@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DateTime } from 'luxon';
 
 const localizedTextSchema = z.object({
   en: z.string().min(1, 'English text required'),
@@ -34,6 +35,7 @@ export const createBookingSchema = z.object({
   addonQuantities: z.record(z.number()).optional().default({}),
   addons: z.array(addonSelectionSchema).optional().default([]),
   tokenNumber: z.string().optional(),
+  tokenNumber2: z.string().optional(),
   advanceAmount: z.number().nonnegative().optional(),
   paymentMethod: z.enum(['CASH', 'UPI', 'BANK_TRANSFER', 'CARD', 'CHEQUE']).optional(),
 }).refine(
@@ -52,17 +54,28 @@ export const createBookingSchema = z.object({
     return true;
   },
   { message: 'End time must be after start time', path: ['bookingConfig.endTime'] },
+).refine(
+  (data) => {
+    if (data.bookingType !== 'HOURLY' || !data.bookingConfig.startDate || !data.bookingConfig.startTime) return true;
+    const now = DateTime.now().setZone('Asia/Kolkata');
+    const today = now.toISODate() ?? '';
+    if (data.bookingConfig.startDate < today) return false;
+    if (data.bookingConfig.startDate === today) {
+      return data.bookingConfig.startTime > now.toFormat('HH:mm');
+    }
+    return true;
+  },
+  { message: 'Start time must be in the future for same-day bookings', path: ['bookingConfig.startTime'] },
 );
 
 export const updateBookingStatusSchema = z.object({
-  status: z.enum(['CONFIRMED', 'EVENT_IN_PROGRESS', 'EVENT_COMPLETED', 'SETTLEMENT_PENDING', 'COMPLETED', 'CANCELLED']),
+  status: z.enum(['CONFIRMED', 'IN_PROGRESS', 'SETTLEMENT_PENDING', 'COMPLETED', 'CANCELLED']),
 });
 
 export const addPaymentSchema = z.object({
   paymentType: z.enum(['ADVANCE', 'INSTALLMENT', 'FINAL_PAYMENT']),
   paymentMethod: z.enum(['CASH', 'UPI', 'BANK_TRANSFER', 'CARD', 'CHEQUE']),
   amount: z.number().positive(),
-  referenceNo: z.string().max(100).optional(),
 });
 
 export const addRefundSchema = z.object({
@@ -96,7 +109,7 @@ export const addChargesSchema = z.object({
 
 export const settlementActionSchema = z.object({
   action: z.enum(['start', 'complete']),
-  finalAmount: z.number().positive().optional(),
+  finalAmount: z.number().nonnegative().optional(),
   charges: z.array(addChargesSchema).optional(),
   notes: z.string().optional(),
 });

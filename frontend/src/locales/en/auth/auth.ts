@@ -4,7 +4,7 @@ export const authEn = {
         title: "Login - Mohanur Kongu Manamaalai",
         desc: "Sign in to your matrimony account",
       },
-      title: "Welcome Back",
+      title: "Welcome",
       subtitle: "Connecting Hearts, Honoring Heritage",
       identifier: "Email or Phone",
       identifierPlaceholder: "Enter your email or phone number",
