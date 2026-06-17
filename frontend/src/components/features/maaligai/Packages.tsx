@@ -5,7 +5,7 @@ import { Loader2, AlertCircle, CheckCircle2, ChevronDown, ChevronUp } from 'luci
 import { useLanguage } from '@/context/LanguageContext';
 import { packages as enPackages } from '@/locales/en/maaligai/packages';
 import { packages as taPackages } from '@/locales/ta/maaligai/packages';
-import { usePublicPackages, usePublicFacilities, usePublicAddons } from '@/queries/useMandapamQueries';
+import { usePublicCatalog } from '@/queries/useMandapamQueries';
 import OrnamentalDivider from '@/components/ui/OrnamentalDivider';
 import DiamondDivider from '@/components/ui/DiamondDivider';
 import type { PublicPackage, PublicFacility, PublicAddon } from '@/types/mandapam';
@@ -52,17 +52,15 @@ export const PackagesHero: React.FC<PackagesHeroProps> = () => {
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const { data: pkgData, isLoading: loadingPkgs, error: pkgError, refetch: refetchPkgs } = usePublicPackages(langCode);
-  const { data: facData, isLoading: loadingFacs } = usePublicFacilities(langCode);
-  const { data: addonData, isLoading: loadingAddons } = usePublicAddons(langCode);
+  const { data: catalog, isLoading, error: catError, refetch: refetchCatalog } = usePublicCatalog(langCode);
 
-  const packages = (pkgData?.packages as PublicPackage[]) ?? [];
-  const facilities = (facData as any)?.facilities as PublicFacility[] ?? [];
-  const addons = (addonData as any)?.addons as PublicAddon[] ?? [];
-  const loading = loadingPkgs || loadingFacs || loadingAddons;
-  const error = pkgError ? (pkgError as Error).message : null;
+  const packages = (catalog?.packages as PublicPackage[]) ?? [];
+  const facilities = (catalog?.facilities as PublicFacility[]) ?? [];
+  const addons = (catalog?.addons as PublicAddon[]) ?? [];
+  const loading = isLoading;
+  const error = catError ? (catError as Error).message : null;
 
-  const fetchAll = () => { refetchPkgs(); };
+  const fetchAll = () => { refetchCatalog(); };
 
   const toggleExpand = (code: string) => {
     setExpanded(prev => {

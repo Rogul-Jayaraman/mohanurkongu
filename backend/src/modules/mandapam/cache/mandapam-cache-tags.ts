@@ -6,6 +6,8 @@ export const MandapamCacheTtls = {
   CATALOG: 1800,
   PACKAGES: 1800,
   PUBLIC_PACKAGES: 1800,
+  ADMIN_PACKAGES: 1800,
+  PUBLIC_CATALOG: 1800,
 } as const;
 
 export function buildCalendarTag(from: string, to: string): string {
@@ -42,4 +44,16 @@ export function buildCalendarInvalidationTag(): string {
 
 export function buildPublicCalendarTag(from: string, to: string): string {
   return `mandapam:public-calendar:${from}:${to}`;
+}
+
+export function buildAdminPackagesListTag(): string {
+  return 'mandapam:admin:packages:all';
+}
+
+export function buildAdminPackageTag(code: string): string {
+  return `mandapam:admin:package:${code}`;
+}
+
+export function buildPublicCatalogTag(language: string): string {
+  return `mandapam:public:catalog:${language}`;
 }

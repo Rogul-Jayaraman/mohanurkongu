@@ -4,7 +4,7 @@ import { AppError } from '../../common/errors/AppError.js';
 import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
 import { prisma } from '../../database/prisma.js';
 import type { CacheManager } from '../../common/cache/CacheManager.js';
-import { buildPackagesListTag, buildPackageTag, MandapamCacheTtls } from './cache/mandapam-cache-tags.js';
+import { buildPackagesListTag, buildPackageTag, buildAdminPackagesListTag, buildPublicCatalogTag, MandapamCacheTtls } from './cache/mandapam-cache-tags.js';
 import { bookingCreatePipeline } from './pipelines/booking-create.pipeline.js';
 import { bookingStatusPipeline } from './pipelines/booking-status.pipeline.js';
 import { bookingSettlementPipeline } from './pipelines/booking-settlement.pipeline.js';
@@ -38,7 +38,7 @@ export class MandapamController {
           total: result.total,
           page: result.page,
           limit: result.limit,
-          totalPages: Math.ceil(result.total / result.limit),
+          totalPages: result.totalPages,
         },
       });
     } catch (err) { next(err); }
@@ -177,6 +177,76 @@ export class MandapamController {
     } catch (err) { next(err); }
   };
 
+  // ── Public Catalog ──
+
+  getPublicCatalog = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const language = (req.query.language as string) || 'EN';
+      const tag = buildPublicCatalogTag(language);
+
+      if (this.cacheManager) {
+        const cached = await this.cacheManager.get(tag);
+        if (cached) { sendSuccess(res, { data: cached }); return; }
+      }
+
+      const [packages, facilities, addons] = await Promise.all([
+        prisma.mandapamPackage.findMany({
+          where: { status: true },
+          include: {
+            translations: { where: { language: language as any } },
+            functions: {
+              where: { status: true },
+              include: { translations: { where: { language: language as any } } },
+              orderBy: { createdAt: 'asc' },
+            },
+            pricings: { where: { isActive: true }, orderBy: { createdAt: 'desc' }, take: 1 },
+          },
+          orderBy: { createdAt: 'asc' },
+        }),
+        prisma.mandapamFacility.findMany({
+          where: { status: true },
+          include: { translations: { where: { language: language as any } } },
+          orderBy: { createdAt: 'asc' },
+        }),
+        prisma.mandapamAddonService.findMany({
+          where: { status: true },
+          include: { translations: { where: { language: language as any } } },
+          orderBy: { createdAt: 'asc' },
+        }),
+      ]);
+
+      const mappedPackages = packages.map((p: any) => ({
+        code: p.code,
+        bookingType: p.bookingType,
+        durationType: p.durationType,
+        durationValue: p.durationValue,
+        displayName: p.translations?.[0]?.displayName ?? p.code,
+        functions: p.functions.map((f: any) => ({ name: f.translations?.[0]?.name ?? '' })),
+        pricing: p.pricings?.[0] ? { amount: Number(p.pricings[0].amount), currencyCode: p.pricings[0].currencyCode, pricingType: p.pricings[0].pricingType } : null,
+      }));
+
+      const mappedFacilities = facilities.map((f: any) => ({
+        iconName: f.iconName,
+        name: f.translations?.[0]?.name ?? '',
+      }));
+
+      const mappedAddons = addons.map((a: any) => ({
+        iconName: a.iconName,
+        pricingType: a.pricingType,
+        supportsQuantity: a.supportsQuantity,
+        name: a.translations?.[0]?.name ?? '',
+      }));
+
+      const data = { packages: mappedPackages, facilities: mappedFacilities, addons: mappedAddons };
+
+      if (this.cacheManager) {
+        await this.cacheManager.setByTags([tag], data, { defaultTtl: MandapamCacheTtls.PUBLIC_CATALOG });
+      }
+
+      sendSuccess(res, { data });
+    } catch (err) { next(err); }
+  };
+
   // ── Public Calendar ──
 
   getPublicCalendar = async (req: Request, res: Response, next: NextFunction) => {
@@ -193,24 +263,71 @@ export class MandapamController {
   adminGetAllPackages = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const bookingType = req.query.bookingType as string | undefined;
-      const where = bookingType ? { bookingType: bookingType as any } : {};
+      const tag = buildAdminPackagesListTag();
+
+      if (this.cacheManager) {
+        const cached = await this.cacheManager.get(tag);
+        if (cached) {
+          let result = cached as any[];
+          if (bookingType) result = result.filter((p: any) => p.bookingType === bookingType);
+          sendSuccess(res, { packages: result });
+          return;
+        }
+      }
+
       const packages = await prisma.mandapamPackage.findMany({
-        where,
-        include: { translations: true, functions: { include: { translations: true }, orderBy: { createdAt: 'asc' } }, pricings: true },
+        where: bookingType ? { bookingType: bookingType as any } : {},
+        select: {
+          id: true, code: true, bookingType: true, durationType: true,
+          durationValue: true, tokenCount: true, status: true,
+          translations: { select: { language: true, displayName: true } },
+          functions: {
+            select: { id: true, status: true, translations: { select: { language: true, name: true } } },
+            orderBy: { createdAt: 'asc' },
+          },
+          pricings: {
+            select: { id: true, pricingType: true, amount: true, currencyCode: true, isActive: true, effectiveFrom: true, effectiveTo: true },
+            orderBy: { effectiveFrom: { sort: 'desc', nulls: 'last' } },
+          },
+        },
         orderBy: { createdAt: 'asc' },
       });
+
+      if (this.cacheManager) {
+        await this.cacheManager.setByTags([tag], packages, { defaultTtl: MandapamCacheTtls.ADMIN_PACKAGES });
+      }
+
       sendSuccess(res, { packages });
     } catch (err) { next(err); }
   };
 
   adminGetPackageById = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const tag = buildAdminPackagesListTag();
+      if (this.cacheManager) {
+        const cached = await this.cacheManager.get(tag);
+        if (cached) {
+          const found = (cached as any[]).find(p => p.id === req.params.id);
+          if (found) { sendSuccess(res, { package: found }); return; }
+        }
+      }
+
       const pkg = await prisma.mandapamPackage.findUnique({
         where: { id: req.params.id as string },
-        include: {
-          translations: true,
-          functions: { include: { translations: true }, orderBy: { createdAt: 'asc' } },
-          pricings: { where: { isActive: true }, orderBy: { createdAt: 'desc' }, take: 1 },
+        select: {
+          id: true, code: true, bookingType: true, durationType: true,
+          durationValue: true, tokenCount: true, status: true,
+          translations: { select: { language: true, displayName: true } },
+          functions: {
+            select: { id: true, status: true, translations: { select: { language: true, name: true } } },
+            orderBy: { createdAt: 'asc' },
+          },
+          pricings: {
+            select: { id: true, pricingType: true, amount: true, currencyCode: true, isActive: true, effectiveFrom: true, effectiveTo: true },
+            where: { isActive: true },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
         },
       });
       if (!pkg) throw new AppError(404, ErrorCodes.MANDAPAM_PACKAGE_NOT_FOUND, 'Package not found');
@@ -227,7 +344,7 @@ export class MandapamController {
 
   adminDeleteFunction = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await packageDeleteFunctionPipeline(req.params.functionId as string);
+      const result = await packageDeleteFunctionPipeline(req.params.functionId as string, this.cacheManager);
       sendSuccess(res, result);
     } catch (err) { next(err); }
   };
@@ -306,19 +423,20 @@ export class MandapamController {
 
       const packages = await prisma.mandapamPackage.findMany({
         where: { status: true },
-        include: {
-          translations: { where: { language: language as any } },
+        select: {
+          code: true, bookingType: true, durationType: true, durationValue: true,
+          translations: { where: { language: language as any }, select: { language: true, displayName: true } },
           functions: {
             where: { status: true },
-            include: { translations: { where: { language: language as any } } },
+            select: { translations: { where: { language: language as any }, select: { language: true, name: true } } },
             orderBy: { createdAt: 'asc' },
           },
-          pricings: { where: { isActive: true }, orderBy: { createdAt: 'desc' }, take: 1 },
+          pricings: { where: { isActive: true }, select: { pricingType: true, amount: true, currencyCode: true }, orderBy: { createdAt: 'desc' }, take: 1 },
         },
         orderBy: { createdAt: 'asc' },
       });
 
-      const mapped = (packages as any[]).map((p: any) => ({
+      const mapped = packages.map((p: any) => ({
         code: p.code,
         bookingType: p.bookingType,
         durationType: p.durationType,
@@ -349,14 +467,15 @@ export class MandapamController {
 
       const pkg = await prisma.mandapamPackage.findUnique({
         where: { code },
-        include: {
-          translations: { where: { language: language as any } },
+        select: {
+          code: true, bookingType: true, durationType: true, durationValue: true, status: true,
+          translations: { where: { language: language as any }, select: { language: true, displayName: true } },
           functions: {
             where: { status: true },
-            include: { translations: { where: { language: language as any } } },
+            select: { translations: { where: { language: language as any }, select: { language: true, name: true } } },
             orderBy: { createdAt: 'asc' },
           },
-          pricings: { where: { isActive: true }, orderBy: { createdAt: 'desc' }, take: 1 },
+          pricings: { where: { isActive: true }, select: { pricingType: true, amount: true, currencyCode: true }, orderBy: { createdAt: 'desc' }, take: 1 },
         },
       });
 
@@ -367,9 +486,9 @@ export class MandapamController {
         bookingType: pkg.bookingType,
         durationType: pkg.durationType,
         durationValue: pkg.durationValue,
-        displayName: (pkg as any).translations?.[0]?.displayName ?? pkg.code,
-        functions: (pkg as any).functions.map((f: any) => ({ name: f.translations?.[0]?.name ?? '' })),
-        pricing: (pkg as any).pricings?.[0] ? { amount: Number((pkg as any).pricings[0].amount), currencyCode: (pkg as any).pricings[0].currencyCode, pricingType: (pkg as any).pricings[0].pricingType } : null,
+        displayName: pkg.translations?.[0]?.displayName ?? pkg.code,
+        functions: pkg.functions.map((f: any) => ({ name: f.translations?.[0]?.name ?? '' })),
+        pricing: pkg.pricings?.[0] ? { amount: Number(pkg.pricings[0].amount), currencyCode: pkg.pricings[0].currencyCode, pricingType: pkg.pricings[0].pricingType } : null,
       };
 
       if (this.cacheManager) {
@@ -379,6 +498,8 @@ export class MandapamController {
       sendSuccess(res, { package: mapped });
     } catch (err) { next(err); }
   };
+
+    
 
   getPublicFacilities = async (req: Request, res: Response, next: NextFunction) => {
     try {

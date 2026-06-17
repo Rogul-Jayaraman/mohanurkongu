@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { AppError } from './errors';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
@@ -14,16 +15,17 @@ publicApi.interceptors.response.use(
     const body = response.data;
     if (body?.success === true) return body.data;
     if (body?.success === false) {
-      throw Object.assign(new Error(body.error?.message || 'Request failed'), {
-        code: body.error?.code || 'UNKNOWN_ERROR',
-        status: response.status,
-      });
+      throw new AppError(
+        response.status,
+        body.error?.code || 'UNKNOWN_ERROR',
+        body.error?.message || 'Request failed',
+      );
     }
     return body;
   },
   (error) => {
     if (error.code === 'ECONNABORTED') {
-      throw new Error('Request timed out');
+      throw new AppError(0, 'NETWORK_ERROR', 'Request timed out');
     }
     throw error;
   },

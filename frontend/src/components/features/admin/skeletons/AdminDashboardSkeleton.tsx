@@ -1,0 +1,80 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { SkeletonBlock, SkeletonCard, SkeletonStatCard, SkeletonAvatar } from '@/components/ui/feedback/PageSkeleton';
+
+const AdminDashboardSkeleton: React.FC = () => (
+    <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="max-w-[1400px] mx-auto space-y-12"
+    >
+        <div className="flex flex-col gap-0.5">
+            <SkeletonBlock className="h-3 w-32 rounded-full!" />
+            <div className="flex flex-col md:flex-row md:justify-between gap-x-6">
+                <SkeletonBlock className="h-8 w-72 rounded-lg!" />
+                <SkeletonBlock className="h-4 w-36 rounded-lg!" />
+            </div>
+        </div>
+
+        <section>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                    <SkeletonStatCard key={i} />
+                ))}
+            </div>
+        </section>
+
+        <section className="space-y-6">
+            <div className="flex items-center gap-3">
+                <SkeletonBlock className="size-5 rounded-md!" />
+                <SkeletonBlock className="h-5 w-40" />
+                <div className="flex-1" />
+                <SkeletonBlock className="h-4 w-20" />
+            </div>
+            <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                    <div key={i} className="bg-white rounded-xl border border-gold/5 overflow-hidden shadow-sm flex flex-col md:flex-row h-28">
+                        <div className="md:w-32 skeleton bg-gold-500/5 shrink-0 border-b md:border-b-0 md:border-r border-gold/10" />
+                        <div className="grow p-5 space-y-3">
+                            <SkeletonBlock className="h-5 w-1/2" />
+                            <div className="flex gap-3">
+                                <SkeletonBlock className="h-4 w-24" />
+                                <SkeletonBlock className="h-4 w-28" />
+                            </div>
+                        </div>
+                        <div className="md:w-44 p-5 flex items-center justify-center">
+                            <SkeletonBlock className="h-4 w-20" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </section>
+
+        <section className="space-y-6">
+            <div className="flex items-center gap-3">
+                <SkeletonBlock className="size-5 rounded-md!" />
+                <SkeletonBlock className="h-5 w-40" />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                    <SkeletonCard key={i} className="h-32" />
+                ))}
+            </div>
+        </section>
+
+        <section className="space-y-6">
+            <div className="flex items-center gap-4">
+                <SkeletonBlock className="h-3 w-24 rounded-full!" />
+                <div className="h-px flex-1 bg-gold/5" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                    <SkeletonCard key={i} className="h-28" />
+                ))}
+            </div>
+        </section>
+    </motion.div>
+);
+
+export default AdminDashboardSkeleton;

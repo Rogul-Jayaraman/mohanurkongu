@@ -1,0 +1,8 @@
+import React from 'react';
+import BookingDetailView from '@/components/features/admin/mandapam/bookings/BookingDetailView';
+
+const BookingDetailPage: React.FC = () => {
+    return <BookingDetailView />;
+};
+
+export default BookingDetailPage;

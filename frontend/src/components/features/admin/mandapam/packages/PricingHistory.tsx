@@ -21,8 +21,8 @@ export const PricingHistory: React.FC<PricingHistoryProps> = ({ packages }) => {
 
     const sortedPricings = (pkg: MandapamPackage) =>
         [...pkg.pricings].sort((a, b) => {
-            const aTime = a.effectiveFrom ? new Date(a.effectiveFrom).getTime() : new Date(pkg.createdAt).getTime();
-            const bTime = b.effectiveFrom ? new Date(b.effectiveFrom).getTime() : new Date(pkg.createdAt).getTime();
+            const aTime = a.effectiveFrom ? new Date(a.effectiveFrom).getTime() : 0;
+            const bTime = b.effectiveFrom ? new Date(b.effectiveFrom).getTime() : 0;
             return aTime - bTime;
         });
 

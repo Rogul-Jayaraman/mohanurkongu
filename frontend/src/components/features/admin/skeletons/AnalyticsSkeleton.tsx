@@ -1,0 +1,39 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { SkeletonBlock, SkeletonStatCard, SkeletonChart } from '@/components/ui/feedback/PageSkeleton';
+
+const AnalyticsSkeleton: React.FC = () => (
+    <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="w-full space-y-6 max-w-7xl mx-auto pb-12"
+    >
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="space-y-2">
+                <SkeletonBlock className="h-8 w-56 rounded-lg!" />
+                <SkeletonBlock className="h-4 w-40" />
+            </div>
+            <div className="flex gap-2">
+                <SkeletonBlock className="h-10 w-32 rounded-full!" />
+                <SkeletonBlock className="h-10 w-32 rounded-full!" />
+            </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+                <SkeletonStatCard key={i} />
+            ))}
+        </div>
+
+        <SkeletonChart className="h-64" />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+                <SkeletonChart key={i} className="h-48" />
+            ))}
+        </div>
+    </motion.div>
+);
+
+export default AnalyticsSkeleton;

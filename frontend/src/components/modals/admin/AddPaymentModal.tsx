@@ -49,10 +49,10 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({ isOpen, bookin
     if (!booking) return null;
 
     const isToken = booking.bookingMethod === 'TOKEN_BOOKING';
-    const charges = (booking.ledgerEntries || []).reduce((s, e) => s + Number(e.amount), 0);
-    const payments = (booking.paymentEntries || []).reduce((s, e) => s + Number(e.amount), 0);
-    const refunds = (booking.refundEntries || []).reduce((s, e) => s + Number(e.amount), 0);
-    const outstanding = charges - payments + refunds;
+    const charges = booking.totalCharges ?? (booking.ledgerEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+    const payments = booking.totalPayments ?? (booking.paymentEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+    const refunds = booking.totalRefunds ?? (booking.refundEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+    const outstanding = booking.outstandingAmount ?? (charges - payments + refunds);
     const numAmount = amount ? Number(amount.replace(/,/g, '')) : 0;
     const exceedsDue = numAmount > Math.max(0, outstanding);
     const isValid = numAmount > 0 && !exceedsDue;

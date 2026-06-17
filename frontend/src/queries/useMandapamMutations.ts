@@ -44,13 +44,49 @@ export function useBookingWrite() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: BookingWriteInput) => bookingWritePipeline(input),
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: queryKeys.mandapam.booking(vars.bookingId) });
+      const prev = qc.getQueryData(queryKeys.mandapam.booking(vars.bookingId));
+
+      qc.setQueryData(queryKeys.mandapam.booking(vars.bookingId), (old: any) => {
+        if (!old?.booking) return old;
+        const action = vars.action;
+        let status = old.booking.status;
+        let outstandingAmount = old.booking.outstandingAmount ?? 0;
+
+        if (action.type === 'update-status') {
+          status = action.status;
+          if (action.status === 'CANCELLED') outstandingAmount = 0;
+        } else if (action.type === 'add-payment') {
+          const amount = Number(action.amount || 0);
+          outstandingAmount = Math.max(0, outstandingAmount - amount);
+          if (outstandingAmount === 0) status = 'COMPLETED';
+        } else if (action.type === 'add-refund') {
+          outstandingAmount += Number(action.amount || 0);
+        } else if (action.type === 'add-charge') {
+          outstandingAmount += Number(action.amount || 0);
+        } else if (action.type === 'settlement') {
+          if (action.action === 'start') status = 'SETTLEMENT_PENDING';
+          if (action.action === 'complete') { status = 'COMPLETED'; outstandingAmount = 0; }
+        } else if (action.type === 'add-addon') {
+          outstandingAmount += Number(action.amount || 0);
+        }
+
+        return { ...old, booking: { ...old.booking, status, outstandingAmount } };
+      });
+
+      return { prev };
+    },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.mandapam.bookings() });
       qc.invalidateQueries({ queryKey: queryKeys.mandapam.booking(vars.bookingId) });
       qc.invalidateQueries({ queryKey: ['mandapam', 'calendar'] });
       toast.success('Booking updated');
     },
-    onError: (err) => toast.error(getErrorMessage(err)),
+    onError: (err, vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(queryKeys.mandapam.booking(vars.bookingId), ctx.prev);
+      toast.error(getErrorMessage(err));
+    },
   });
 }
 

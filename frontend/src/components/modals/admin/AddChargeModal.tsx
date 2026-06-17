@@ -1,0 +1,147 @@
+import React, { useState } from 'react';
+import { Gavel, Loader2, AlertTriangle } from 'lucide-react';
+import { ModalShell } from '@/components/ui/modals/ModalShell';
+import { useLanguage } from '@/context/LanguageContext';
+import { useBookingWrite } from '@/queries/useMandapamMutations';
+import { Input } from '@/components/ui/forms/Input';
+import FormToggle from '@/components/ui/forms/FormToggle';
+import TranslatableInput from '@/components/ui/forms/TranslatableInput';
+
+interface AddChargeModalProps {
+    isOpen: boolean;
+    bookingId: string | undefined;
+    onClose: () => void;
+    t: any;
+}
+
+const CHARGE_OPTIONS = [
+    { value: 'extra', label: { en: 'Extra Charge', ta: 'கூடுதல்' } },
+    { value: 'damage', label: { en: 'Damage', ta: 'சேதம்' } },
+    { value: 'penalty', label: { en: 'Penalty', ta: 'அபராதம்' } },
+];
+
+export const AddChargeModal: React.FC<AddChargeModalProps> = ({ isOpen, bookingId, onClose, t }) => {
+    const { language } = useLanguage();
+    const isTamil = language === 'ta';
+    const bookingWrite = useBookingWrite();
+
+    const [chargeType, setChargeType] = useState<'damage' | 'penalty' | 'extra'>('extra');
+    const [description, setDescription] = useState({ en: '', ta: '' });
+    const [amount, setAmount] = useState('');
+    const [error, setError] = useState<string | null>(null);
+
+    const reset = () => {
+        setChargeType('extra');
+        setDescription({ en: '', ta: '' });
+        setAmount('');
+        setError(null);
+    };
+
+    const handleSave = async () => {
+        if (!bookingId) return;
+
+        if (!description.en.trim() && !description.ta.trim()) {
+            setError(isTamil ? 'விளக்கம் தேவை' : 'Description is required');
+            return;
+        }
+        const numAmount = Number(amount.replace(/,/g, ''));
+        if (!numAmount || numAmount <= 0) {
+            setError(isTamil ? 'செல்லுபடியாகும் தொகையை உள்ளிடவும்' : 'Enter a valid amount');
+            return;
+        }
+
+        setError(null);
+        try {
+            await bookingWrite.mutateAsync({
+                bookingId,
+                action: {
+                    type: 'add-charge',
+                    chargeType,
+                    description: {
+                        en: description.en.trim() || description.ta.trim(),
+                        ta: description.ta.trim() || description.en.trim(),
+                    },
+                    amount: numAmount,
+                },
+            });
+            reset();
+            onClose();
+        } catch {
+            setError(isTamil ? 'கட்டணத்தைச் சேர்க்க முடியவில்லை' : 'Failed to add charge');
+        }
+    };
+
+    const label = (en: string, ta: string) => (isTamil ? ta : en);
+
+    return (
+        <ModalShell
+            isOpen={isOpen}
+            onClose={() => { reset(); onClose(); }}
+            icon={<div className="p-2 bg-amber-50 rounded-xl"><Gavel size={20} className="text-amber-700" /></div>}
+            title={isTamil ? 'கூடுதல் கட்டணம் சேர்' : (t('adminMandapam.bookings.additionalCharges') || 'Add Charge')}
+            size="sm"
+            footer={
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => { reset(); onClose(); }}
+                        disabled={bookingWrite.isPending}
+                        className="flex-1 px-6 py-3 border border-gold/20 text-rosewood font-bold rounded-xl hover:bg-ivory transition-all text-sm disabled:opacity-30"
+                    >
+                        {t('common.cancel') || (isTamil ? 'ரத்துசெய்' : 'Cancel')}
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={bookingWrite.isPending}
+                        className="flex-1 px-6 py-3 bg-amber-700 text-ivory font-bold rounded-xl hover:shadow-lg transition-all text-sm shadow-lg shadow-amber-700/20 active:scale-95 disabled:opacity-30 inline-flex items-center justify-center gap-2"
+                    >
+                        {bookingWrite.isPending ? <Loader2 size={16} className="animate-spin" /> : <Gavel size={16} />}
+                        {bookingWrite.isPending
+                            ? (t('common.saving') || (isTamil ? 'சேமிக்கிறது...' : 'Saving...'))
+                            : (isTamil ? 'சேர்' : (t('common.save') || 'Save Charge'))}
+                    </button>
+                </div>
+            }
+        >
+            <div className="space-y-5">
+                {error && (
+                    <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start gap-2">
+                        <AlertTriangle size={14} className="text-rose-600 shrink-0 mt-0.5" />
+                        <p className="text-xs font-medium text-rose-800">{error}</p>
+                    </div>
+                )}
+
+                <FormToggle
+                    label={label('Charge Type', 'கட்டண வகை')}
+                    value={chargeType}
+                    onChange={(val) => setChargeType(val as 'damage' | 'penalty' | 'extra')}
+                    options={CHARGE_OPTIONS}
+                    name="chargeType"
+                    required
+                />
+
+                <TranslatableInput
+                    label={label('Description', 'விளக்கம்')}
+                    valueEn={description.en}
+                    valueTa={description.ta}
+                    onChangeEn={(val) => setDescription((prev) => ({ ...prev, en: val }))}
+                    onChangeTa={(val) => setDescription((prev) => ({ ...prev, ta: val }))}
+                    placeholder="e.g. Broken chair"
+                    required
+                    hideLangSwitcher={false}
+                />
+
+                <Input
+                    label={label('Amount', 'தொகை')}
+                    icon="currency_rupee"
+                    name="chargeAmount"
+                    type="text"
+                    inputMode="decimal"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value.replace(/[^0-9,]/g, ''))}
+                    placeholder="0"
+                    required
+                />
+            </div>
+        </ModalShell>
+    );
+};

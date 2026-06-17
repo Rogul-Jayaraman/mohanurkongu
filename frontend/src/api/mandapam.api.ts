@@ -111,6 +111,10 @@ export function getPublicAddons(language?: string): Promise<{ addons: any[] }> {
   return publicApi.get(`/mandapam/addons?language=${language || 'EN'}`);
 }
 
+export function getPublicCatalog(language?: string): Promise<import('../types/mandapam').PublicCatalog> {
+  return publicApi.get(`/mandapam/public/catalog?language=${language || 'EN'}`);
+}
+
 // ── Booking API ──
 
 export interface BookingFilters {

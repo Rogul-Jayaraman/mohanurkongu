@@ -51,10 +51,10 @@ export const ViewBookingModal: React.FC<ViewBookingModalProps> = ({ isOpen, book
     if (!booking) return null;
 
     const paymentStatus = getComputedPaymentStatus(booking);
-    const charges = (booking.ledgerEntries || []).reduce((s, e) => s + Number(e.amount), 0);
-    const payments = (booking.paymentEntries || []).reduce((s, e) => s + Number(e.amount), 0);
-    const refunds = (booking.refundEntries || []).reduce((s, e) => s + Number(e.amount), 0);
-    const outstanding = charges - payments + refunds;
+    const charges = booking.totalCharges ?? (booking.ledgerEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+    const payments = booking.totalPayments ?? (booking.paymentEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+    const refunds = booking.totalRefunds ?? (booking.refundEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+    const outstanding = booking.outstandingAmount ?? (charges - payments + refunds);
     const isToken = booking.bookingMethod === 'TOKEN_BOOKING';
 
     return (

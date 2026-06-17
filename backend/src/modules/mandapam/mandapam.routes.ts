@@ -22,6 +22,7 @@ export function createMandapamRoutes(controller: MandapamController): Router {
   const router = Router();
 
   // ── Public (no auth) ──
+  router.get('/mandapam/public/catalog', controller.getPublicCatalog);
   router.get('/mandapam/packages', controller.getPublicPackages);
   router.get('/mandapam/packages/:code', controller.getPublicPackageByCode);
   router.get('/mandapam/facilities', controller.getPublicFacilities);

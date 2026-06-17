@@ -3,7 +3,7 @@ import { queryKeys } from './queryKeys';
 import { listBookingsPipeline } from '../pipelines/mandapam/booking-list.pipeline';
 import { getBookingPipeline, validateTokenPipeline } from '../pipelines/mandapam/booking-read.pipeline';
 import { getAdminCalendarPipeline, getCalendarDayPipeline, getPublicCalendarPipeline } from '../pipelines/mandapam/calendar.pipeline';
-import { listAdminPackagesPipeline, getAdminPackagePipeline, listPublicPackagesPipeline } from '../pipelines/mandapam/package.pipeline';
+import { listAdminPackagesPipeline, getAdminPackagePipeline, listPublicPackagesPipeline, listPublicCatalogPipeline } from '../pipelines/mandapam/package.pipeline';
 import { listFacilitiesPipeline, listAddonsPipeline, listPublicFacilitiesPipeline, listPublicAddonsPipeline } from '../pipelines/mandapam/catalog-entity.pipeline';
 
 // ── Bookings ──
@@ -63,7 +63,7 @@ export function useAdminPackages() {
   return useQuery({
     queryKey: queryKeys.mandapam.packages(),
     queryFn: listAdminPackagesPipeline,
-    staleTime: 60_000,
+    staleTime: 300_000,
   });
 }
 
@@ -114,5 +114,13 @@ export function usePublicAddons(language?: string) {
     queryKey: [...queryKeys.mandapam.publicCatalog(), 'addons', language] as const,
     queryFn: () => listPublicAddonsPipeline(language),
     staleTime: 120_000,
+  });
+}
+
+export function usePublicCatalog(language?: string) {
+  return useQuery({
+    queryKey: [...queryKeys.mandapam.publicCatalog(), language] as const,
+    queryFn: () => listPublicCatalogPipeline(language),
+    staleTime: 300_000,
   });
 }

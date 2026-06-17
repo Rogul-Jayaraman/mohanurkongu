@@ -98,19 +98,20 @@ The backend uses two independent pipeline systems for **auth** and **mandapam (h
   Context: PipelineContext                Context: MandapamPipelineContext
   Step Type: StepFunction                 Step Type: MandapamStep
 
-  Pipelines:                              Pipelines:
-    login.pipeline.ts     [7 steps]         booking-create.pipeline.ts   [4 pre + ~7 tx + 2 post]
-    register.pipeline.ts  [6 steps]         booking-status.pipeline.ts   [3 pre + ~4 tx + 2 post]
-    refresh.pipeline.ts   [3 steps]         booking-settlement.pipeline  [4 pre + ~3 tx + 2 post]
-    change-password.ts    [4 steps]         booking-addon.pipeline.ts    [3 pre + ~3 tx + 2 post]
-    reset-password.ts     [5 steps]         financial-transaction.pipe   [4 pre + ~3 tx + 2 post]
-    otp.pipeline.ts       (class-based)     calendar-view.pipeline.ts    [3 fns: view / day / public]
-                                           calendar-block.pipeline.ts    [direct tx + cache flush]
-                                           catalog-entity.pipeline.ts    [single step + cache]
-                                           booking-get.pipeline.ts       [direct query + cache]
-                                           booking-list.pipeline.ts      [direct query + cache]
-                                           token-validate.pipeline.ts    [direct query]
-                                           package-update.pipeline.ts    [direct tx + cache flush]
+   Pipelines:                              Pipelines:
+     login.pipeline.ts     [7 steps]         booking-create.pipeline.ts   [4 pre + ~7 tx + 1 post]
+     register.pipeline.ts  [6 steps]         booking-status.pipeline.ts   [3 pre + ~4 tx + 2 post]
+     refresh.pipeline.ts   [3 steps]         booking-settlement.pipeline  [4 pre + ~3 tx + 2 post]
+     change-password.ts    [4 steps]         booking-addon.pipeline.ts    [3 pre + ~3 tx + 2 post]
+     reset-password.ts     [5 steps]         financial-transaction.pipe   [4 pre + ~3 tx + 2 post]
+     otp.pipeline.ts       (class-based)     calendar-view.pipeline.ts    [3 fns: view / day / public]
+                                            calendar-block.pipeline.ts    [direct tx + cache flush]
+                                            catalog-entity.pipeline.ts    [single step + cache]
+                                            booking-get.pipeline.ts       [direct query + cache, returns totalCharges/totalPayments/totalRefunds/outstandingAmount]
+                                            booking-list.pipeline.ts      [direct query + cache, uses Prisma groupBy aggregation]
+                                            token-validate.pipeline.ts    [direct query]
+                                            package-update.pipeline.ts    [direct tx + cache flush]
+                                            public-catalog.pipeline.ts    [new — consolidates packages/facilities/addons in 1 call]
 
   ── CACHE STEPS (shared) ──             ── MANDAPAM CACHE STEPS ──
   cacheRead(tags)     → checks cache      mandapamCacheRead(tags)       → checks cache
@@ -124,7 +125,7 @@ The backend uses two independent pipeline systems for **auth** and **mandapam (h
     changePassword() → flush              mandapam:booking:{id}
   AnalyticsCache:                          mandapam:booking-list:{hash}
     getStats() → cacheManager             mandapam:catalog:{facility|addon}
-    flushTags()                            mandapam:catalog:{type}:public
+    flushTags()                            mandapam:public:catalog:{lang}
                                            mandapam:packages:all:{lang}
                                            mandapam:package:{code}
 
@@ -142,12 +143,15 @@ The backend uses two independent pipeline systems for **auth** and **mandapam (h
 **Step-based pipelines** (booking-create, status, settlement, addon, financial-transaction):
 1. Pre-steps: `addCacheInvalidationTag()` registers tags for affected entities
 2. Transaction steps: main business logic runs inside a DB transaction
-3. Post-steps: `setBookingResponse` builds the response → `mandapamFlushCacheInvalidations` flushes all registered tags
+3. Post-steps: `setMutationResponse` builds lightweight `{ id, bookingNo, status, outstandingAmount }` response → `mandapamFlushCacheInvalidations` flushes tags
+   - Exception: `booking-create` omits the response step entirely; returns `{ id, bookingNo, status }` directly (frontend redirects to detail view)
 
 **Direct-query pipelines** (calendar-view, booking-get, booking-list):
 - `cacheManager.get(tag)` at start → return cached if hit
 - Execute DB query → `cacheManager.setByTags()` to store result
 - TTLs range from 60s (booking list) to 1800s (catalog/packages)
+- `booking-get`: precomputes `totalCharges`, `totalPayments`, `totalRefunds`, `outstandingAmount` (removes `_outstanding` private naming)
+- `booking-list`: uses Prisma `groupBy` aggregation instead of loading full entry arrays (4x data reduction for large lists)
 
 **Mutation pipelines** (calendar-block, package-update, catalog-entity):
 - Inline `cacheManager.flushTags()` after mutation completes
@@ -157,6 +161,7 @@ The backend uses two independent pipeline systems for **auth** and **mandapam (h
 - Controller methods check cache before querying DB
 - Cache keys include language parameter (e.g., `mandapam:packages:all:EN`)
 - Invalidated when admin updates/deletes entities
+- **New:** `GET /mandapam/public/catalog` consolidates packages + facilities + addons in a single call (replaces 3 separate public API calls)
 
 All cache operations are non-critical — failures are logged and swallowed to avoid impacting API availability.
 

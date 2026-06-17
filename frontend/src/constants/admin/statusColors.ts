@@ -30,27 +30,33 @@ export function getPaymentStatusColor(status: string): string {
 }
 
 export function getBookingPaymentStatus(booking: {
+  totalCharges?: number;
+  totalPayments?: number;
+  totalRefunds?: number;
+  outstandingAmount?: number;
   ledgerEntries?: { amount: number }[];
   paymentEntries?: { amount: number }[];
   refundEntries?: { amount: number }[];
 }): { status: string; label: string; color: string; bg: string; outstanding: number } {
-  const charges = (booking.ledgerEntries || []).reduce((s, e) => s + Number(e.amount), 0);
-  const payments = (booking.paymentEntries || []).reduce((s, e) => s + Number(e.amount), 0);
-  const refunds = (booking.refundEntries || []).reduce((s, e) => s + Number(e.amount), 0);
-  const outstanding = charges - payments + refunds;
+  const totalCharges = booking.totalCharges ?? (booking.ledgerEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+  const totalPayments = booking.totalPayments ?? (booking.paymentEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+  const totalRefunds = booking.totalRefunds ?? (booking.refundEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+  const outstanding = booking.outstandingAmount ?? (totalCharges - totalPayments + totalRefunds);
 
-  if (payments === 0 && refunds === 0) return { status: 'not_paid', label: 'Not Paid', color: 'text-rose-600', bg: 'bg-rose-50', outstanding };
-  if (payments - refunds >= charges || outstanding <= 0) return { status: 'fully_paid', label: 'Fully Paid', color: 'text-emerald-700', bg: 'bg-emerald-50', outstanding };
+  if (totalPayments === 0 && totalRefunds === 0) return { status: 'not_paid', label: 'Not Paid', color: 'text-rose-600', bg: 'bg-rose-50', outstanding };
+  if (totalPayments - totalRefunds >= totalCharges || outstanding <= 0) return { status: 'fully_paid', label: 'Fully Paid', color: 'text-emerald-700', bg: 'bg-emerald-50', outstanding };
   return { status: 'advance', label: 'Advance Paid', color: 'text-amber-700', bg: 'bg-amber-50', outstanding };
 }
 
 export function getComputedPaymentStatus(booking: {
+  totalPayments?: number;
+  totalRefunds?: number;
   ledgerEntries?: { amount: number }[];
   paymentEntries?: { amount: number }[];
   refundEntries?: { amount: number }[];
 }): string {
-  const payments = (booking.paymentEntries || []).reduce((s, e) => s + Number(e.amount), 0);
-  const refunds = (booking.refundEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+  const payments = booking.totalPayments ?? (booking.paymentEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+  const refunds = booking.totalRefunds ?? (booking.refundEntries || []).reduce((s, e) => s + Number(e.amount), 0);
   if (payments === 0 && refunds === 0) return 'not_paid';
   return getBookingPaymentStatus(booking).status;
 }

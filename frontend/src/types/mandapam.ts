@@ -11,36 +11,29 @@ export interface MandapamPackage {
   durationValue: number | null;
   tokenCount: number;
   status: boolean;
-  createdAt: string;
-  updatedAt: string;
   translations: PackageTranslation[];
   functions: PackageFunction[];
   pricings: PackagePricing[];
 }
 
 export interface PackageTranslation {
-  id: string;
   language: 'EN' | 'TA';
   displayName: string;
 }
 
 export interface PackageFunction {
   id: string;
-  packageId: string;
   status: boolean;
-  createdAt: string;
   translations: FunctionTranslation[];
 }
 
 export interface FunctionTranslation {
-  id: string;
   language: 'EN' | 'TA';
   name: string;
 }
 
 export interface PackagePricing {
   id: string;
-  packageId: string;
   pricingType: 'HOURLY' | 'FIXED';
   amount: number;
   currencyCode: string;
@@ -83,8 +76,12 @@ export interface AddonTranslation {
 
 export interface PublicPackage {
   code: string;
+  bookingType?: string;
+  durationType?: string;
+  durationValue?: number | null;
   displayName: string;
   functions: { name: string }[];
+  pricing?: { amount: number; currencyCode: string; pricingType: string } | null;
 }
 
 export interface PublicFacility {
@@ -94,7 +91,15 @@ export interface PublicFacility {
 
 export interface PublicAddon {
   iconName: string;
+  pricingType?: string;
+  supportsQuantity?: boolean;
   name: string;
+}
+
+export interface PublicCatalog {
+  packages: PublicPackage[];
+  facilities: PublicFacility[];
+  addons: PublicAddon[];
 }
 
 // ── Booking Types ──
@@ -245,5 +250,15 @@ export interface Booking {
   tokens: MandapamToken[];
   settlement: Settlement | null;
   timeline: BookingTimelineEntry[];
-  _outstanding?: number;
+  totalCharges?: number;
+  totalPayments?: number;
+  totalRefunds?: number;
+  outstandingAmount?: number;
+}
+
+export interface MutationBookingResponse {
+  id: string;
+  bookingNo: string;
+  status: BookingStatus;
+  outstandingAmount: number;
 }

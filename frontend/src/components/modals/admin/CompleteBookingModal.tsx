@@ -52,10 +52,10 @@ export const CompleteBookingModal: React.FC<CompleteBookingModalProps> = ({ isOp
 
     if (!booking) return null;
 
-    const baseCharges = (booking.ledgerEntries || []).reduce((s, e) => s + Number(e.amount), 0);
-    const payments = (booking.paymentEntries || []).reduce((s, e) => s + Number(e.amount), 0);
-    const refunds = (booking.refundEntries || []).reduce((s, e) => s + Number(e.amount), 0);
-    const outstanding = baseCharges - payments + refunds;
+    const baseCharges = booking.totalCharges ?? (booking.ledgerEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+    const payments = booking.totalPayments ?? (booking.paymentEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+    const refunds = booking.totalRefunds ?? (booking.refundEntries || []).reduce((s, e) => s + Number(e.amount), 0);
+    const outstanding = booking.outstandingAmount ?? (baseCharges - payments + refunds);
     const numAmount = amount ? Number(amount.replace(/,/g, '')) : 0;
     const isAmountEmpty = amount === '';
     const effectiveAmount = isAmountEmpty ? 0 : numAmount;
