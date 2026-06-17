@@ -1,6 +1,6 @@
 import api from '../lib/api';
 import { publicApi } from '../lib/publicApi';
-import type { MandapamPackage, MandapamFacility, MandapamAddon, TranslationPair, Booking, CalendarEntry } from '../types/mandapam';
+import type { MandapamPackage, MandapamFacility, MandapamAddon, TranslationPair, Booking, BookingListItem, CalendarEntry, MutationBookingResponse } from '../types/mandapam';
 
 // ── Admin Packages ──
 
@@ -210,7 +210,7 @@ export interface UnblockDatesDto {
   dates: string[];
 }
 
-export function adminListBookings(filters?: BookingFilters): Promise<{ bookings: Booking[]; meta: { total: number; page: number; limit: number; totalPages: number } }> {
+export function adminListBookings(filters?: BookingFilters): Promise<{ bookings: BookingListItem[]; meta: { total: number; page: number; limit: number; totalPages: number } }> {
   return api.get('/admin/mandapam/bookings', { params: filters });
 }
 
@@ -218,39 +218,39 @@ export function adminGetBooking(id: string): Promise<{ booking: Booking }> {
   return api.get(`/admin/mandapam/bookings/${id}`);
 }
 
-export function adminCreateBooking(dto: CreateBookingDto): Promise<{ booking: Booking }> {
+export function adminCreateBooking(dto: CreateBookingDto): Promise<{ booking: { id: string; bookingNo: string; status: string } }> {
   return api.post('/admin/mandapam/bookings', dto);
 }
 
-export function adminUpdateBookingStatus(id: string, dto: UpdateStatusDto): Promise<{ booking: Booking }> {
+export function adminUpdateBookingStatus(id: string, dto: UpdateStatusDto): Promise<{ booking: MutationBookingResponse }> {
   return api.patch(`/admin/mandapam/bookings/${id}/status`, dto);
 }
 
-export function adminAddPayment(id: string, dto: AddPaymentDto): Promise<{ booking: Booking }> {
+export function adminAddPayment(id: string, dto: AddPaymentDto): Promise<{ booking: MutationBookingResponse }> {
   return api.post(`/admin/mandapam/bookings/${id}/payments`, dto);
 }
 
-export function adminAddRefund(id: string, dto: AddRefundDto): Promise<{ booking: Booking }> {
+export function adminAddRefund(id: string, dto: AddRefundDto): Promise<{ booking: MutationBookingResponse }> {
   return api.post(`/admin/mandapam/bookings/${id}/refunds`, dto);
 }
 
-export function adminAddAddon(id: string, dto: AddAddonDto): Promise<{ booking: Booking }> {
+export function adminAddAddon(id: string, dto: AddAddonDto): Promise<{ booking: MutationBookingResponse }> {
   return api.post(`/admin/mandapam/bookings/${id}/addons`, dto);
 }
 
-export function adminRemoveAddon(bookingId: string, snapshotId: string): Promise<{ booking: Booking }> {
+export function adminRemoveAddon(bookingId: string, snapshotId: string): Promise<{ booking: MutationBookingResponse }> {
   return api.delete(`/admin/mandapam/bookings/${bookingId}/addons/${snapshotId}`);
 }
 
-export function adminAddCharge(id: string, dto: AddChargeDto): Promise<{ booking: Booking }> {
+export function adminAddCharge(id: string, dto: AddChargeDto): Promise<{ booking: MutationBookingResponse }> {
   return api.post(`/admin/mandapam/bookings/${id}/charges`, dto);
 }
 
-export function adminRemoveCharge(bookingId: string, chargeId: string): Promise<{ booking: Booking }> {
+export function adminRemoveCharge(bookingId: string, chargeId: string): Promise<{ booking: MutationBookingResponse }> {
   return api.delete(`/admin/mandapam/bookings/${bookingId}/charges/${chargeId}`);
 }
 
-export function adminSettlementAction(id: string, dto: SettlementActionDto): Promise<{ booking: Booking }> {
+export function adminSettlementAction(id: string, dto: SettlementActionDto): Promise<{ booking: MutationBookingResponse }> {
   return api.post(`/admin/mandapam/bookings/${id}/settlement`, dto);
 }
 
@@ -258,7 +258,7 @@ export function adminGetCalendar(from?: string, to?: string): Promise<{ entries:
   return api.get('/admin/mandapam/calendar', { params: { from, to } });
 }
 
-export function adminGetCalendarDay(date: string): Promise<any> {
+export function adminGetCalendarDay(date: string): Promise<{ entries: CalendarEntry[]; bookings: any[] }> {
   return api.get(`/admin/mandapam/calendar/${date}`);
 }
 

@@ -250,6 +250,34 @@ export interface Booking {
   tokens: MandapamToken[];
   settlement: Settlement | null;
   timeline: BookingTimelineEntry[];
+  calendarEntries?: CalendarEntry[];
+  totalCharges?: number;
+  totalPayments?: number;
+  totalRefunds?: number;
+  outstandingAmount?: number;
+}
+
+/** Slimmed-down booking shape returned by list endpoints (scalar fields + aggregate finances only) */
+export interface BookingListItem {
+  id: string;
+  bookingNo: string;
+  customerName: LocalizedText;
+  customerPhone: string;
+  customerEmail: string | null;
+  eventTitle: LocalizedText;
+  eventAddress: LocalizedText | null;
+  bookingType: BookingType;
+  eventType: EventType;
+  status: BookingStatus;
+  bookingMethod: BookingMethod;
+  packageCode: string;
+  bookingConfig: BookingConfig;
+  notes: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  packageSnapshot: BookingPackageSnapshot | null;
+  settlement: Settlement | null;
   totalCharges?: number;
   totalPayments?: number;
   totalRefunds?: number;

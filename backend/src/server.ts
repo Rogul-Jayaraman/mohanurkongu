@@ -11,6 +11,9 @@ import { archiveVerifications } from './jobs/archive-verification.job.js';
 import { purgeVerifications } from './jobs/purge-verification.job.js';
 import { runSessionExpiry } from './jobs/expire-session.job.js';
 import { expireRegistrationSessions, expireResetSessions } from './jobs/expire-registration.job.js';
+import './jobs/cleanup-temp-uploads.job.js';
+import './jobs/cleanup-draft-profiles.job.js';
+import './jobs/cleanup-deleted-uploads.job.js';
 import { BookingAutoTransitionService } from './modules/mandapam/services/booking-auto-transition.service.js';
 import { authConfig } from './config/auth.config.js';
 

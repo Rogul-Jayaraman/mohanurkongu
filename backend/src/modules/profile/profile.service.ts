@@ -5,6 +5,7 @@ import { MembershipGuard } from '../membership/membership.guard.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
 import { prisma } from '../../database/prisma.js';
+import { logger } from '../../common/utils/logger.js';
 import { appConfig } from '../../config/app.config.js';
 import { ProfileUpsertService } from './profile-upsert.service.js';
 import type { ProfileStatus } from '@prisma/client';
@@ -91,7 +92,7 @@ export class ProfileService {
   async saveDraft(accountId: string, dto: any) {
     await this.upsertService.resolveUploadTokensInDto(dto);
     const { profileId: existingProfileId, translations, photos, ...sections } = dto;
-    console.log('[saveDraft] translations present:', !!translations, 'length:', translations?.length, 'firstName:', translations?.[0]?.firstName);
+    logger.info({ translationsPresent: !!translations, length: translations?.length, firstName: translations?.[0]?.firstName }, '[saveDraft]');
 
     const uploadIds = this.upsertService.collectUploadIds(dto);
     await this.upsertService.validateUploadOwnership(uploadIds, accountId);
@@ -214,7 +215,7 @@ export class ProfileService {
   }
 
   async resumeDraft(accountId: string, profileId: string) {
-    console.log('[resumeDraft] accountId=%s profileId=%s', accountId, profileId);
+    logger.info({ accountId, profileId }, '[resumeDraft]');
     const profile = await prisma.profile.findFirst({
       where: { id: profileId, accountId, currentStatus: 'DRAFT' },
       include: {
@@ -243,15 +244,11 @@ export class ProfileService {
     });
 
     if (!profile) {
-      console.log('[resumeDraft] NOT FOUND — accountId=%s profileId=%s', accountId, profileId);
+      logger.warn({ accountId, profileId }, '[resumeDraft] NOT FOUND');
       throw new AppError(404, ErrorCodes.PROFILE_NOT_FOUND, 'PROFILE_NOT_FOUND');
     }
 
-    console.log('[resumeDraft] FOUND profile — id=%s accountId=%s currentStatus=%s', profile.id, profile.accountId, profile.currentStatus);
-    console.log('[resumeDraft] includes basic=%s community=%s professional=%s family=%s horoscope=%s photo=%s assets=%s partnerPref=%s translations=%s',
-      !!profile.basic, !!profile.community, !!profile.professional, !!profile.family,
-      !!profile.horoscope, !!profile.photo, !!profile.assets, !!profile.partnerPreference,
-      profile.translations?.length ?? 0);
+    logger.info({ id: profile.id, accountId: profile.accountId, currentStatus: profile.currentStatus }, '[resumeDraft] FOUND profile');
 
     const dto: any = {};
 
@@ -376,7 +373,7 @@ export class ProfileService {
       }));
     }
 
-    console.log('[resumeDraft] RETURNING dto keys=%s', Object.keys(dto).join(', '));
+    logger.info({ keys: Object.keys(dto) }, '[resumeDraft] RETURNING dto');
     return dto;
   }
 

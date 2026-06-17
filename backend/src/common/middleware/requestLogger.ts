@@ -257,7 +257,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
         flushBox();
         out('');
       } catch (e) {
-        console.error('[requestLogger] response error:', e);
+        logger.error({ err: e }, '[requestLogger] response error');
       }
     }
 
@@ -266,7 +266,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
 
     next();
   } catch (e) {
-    console.error('[requestLogger] error:', e);
+    logger.error({ err: e }, '[requestLogger] error');
     next();
   }
 }

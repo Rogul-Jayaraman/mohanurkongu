@@ -72,7 +72,12 @@ const getLedgerLabel = (entry: any, isTamil: boolean): string => {
     : '';
   switch (entry.source) {
     case 'PACKAGE': return isTamil ? 'தொகுப்பு கட்டணம்' : 'Package Fee';
-    case 'ADDON': return desc || (isTamil ? 'சேர்க்கை' : 'Add-on');
+    case 'ADDON': {
+        let label = desc || (isTamil ? 'சேர்க்கை' : 'Add-on');
+        label = label.replace(/^(Addon:\s*|கூடுதல்:\s*)/i, '');
+        label = label.replace(/\s*₹[\d,]+(\s*×\s*\d+[\dhNd]*)?.*$/g, '').trim();
+        return label || (isTamil ? 'சேர்க்கை' : 'Add-on');
+    }
     case 'DAMAGE': return `${isTamil ? 'சேதம்' : 'Damage'}${desc ? `: ${desc}` : ''}`;
     case 'PENALTY': return `${isTamil ? 'அபராதம்' : 'Penalty'}${desc ? `: ${desc}` : ''}`;
     case 'SERVICE': return `${isTamil ? 'கூடுதல்' : 'Extra'}${desc ? `: ${desc}` : ''}`;

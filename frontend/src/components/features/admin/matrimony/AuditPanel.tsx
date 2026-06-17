@@ -45,7 +45,7 @@ const AuditPanel: React.FC<AuditPanelProps> = ({ profileId, isOpen, onClose }) =
     const d = new Date(iso);
     return d.toLocaleDateString(isTamil ? 'ta-IN' : 'en-IN', {
       year: 'numeric', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: true,
     });
   };
 

@@ -383,7 +383,7 @@ export const JathagamPrintView: React.FC<{ profile: any }> = ({ profile }) => {
     const rasi = profile.rasi ? getBilingualValue(RASI_OPTIONS, profile.rasi, lang) : '-';
     const lagna = profile.laganam ? getBilingualValue(RASI_OPTIONS, profile.laganam, lang) : '-';
     const birthTimeRaw = profile.birthTime || profile.horoscope?.birthTime || '';
-    const birthTime = birthTimeRaw ? new Date(birthTimeRaw).toLocaleTimeString(isTamil ? 'ta-IN' : 'en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) : '-';
+    const birthTime = birthTimeRaw ? new Date(birthTimeRaw).toLocaleTimeString(isTamil ? 'ta-IN' : 'en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '-';
     const profileFor = profile.profileFor ? getEnumLabel(profile.profileFor, PROFILE_FOR_OPTIONS) : '-';
     const kuladeivam = (isTamil ? (profile.kuladeivamTa || profile.kuladeivamEn) : profile.kuladeivamEn) || '-';
     const birthPlace = (isTamil ? (profile.birthPlaceTa || profile.birthPlaceEn) : profile.birthPlaceEn) || '-';

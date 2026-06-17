@@ -575,17 +575,14 @@ model Counter {
 
 model Upload {
   id                 String       @id @default(uuid()) @db.Uuid
-  publicId           String       @unique @db.VarChar(16)    // kept until Phase 10 cleanup
-  uploadToken        String?      @unique @db.VarChar(32)    // nullable for Phase 2 backfill
+  uploadToken        String?      @unique @db.VarChar(32)
   ownerAccountId     String       @db.Uuid
   objectKey          String
-  originalFileName   String       // kept until Phase 10 cleanup
-  mimeType           String       // kept until Phase 10 cleanup
-  extension          String       // kept until Phase 10 cleanup
+  originalFileName   String
+  mimeType           String
   size               Int
   checksum           String
   status             UploadStatus @default(TEMP)
-  lastAccessedAt     DateTime?    // kept until Phase 10 cleanup
   version            Int          @default(1)
   width              Int?
   height             Int?
@@ -607,10 +604,8 @@ model Upload {
 
   @@index([ownerAccountId])
   @@index([status])
-  @@index([publicId])
   @@index([status, updatedAt])
   @@index([status, createdAt])
-  @@index([status, lastAccessedAt])
   @@index([attachedEntityId, status])
   @@index([status, cleanupAttempts])
   @@map("uploads")

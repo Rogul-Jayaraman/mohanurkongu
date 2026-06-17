@@ -1,6 +1,7 @@
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../common/errors/AppError.js';
 import { ErrorCodes } from '../../common/errors/ErrorCodes.js';
+import { logger } from '../../common/utils/logger.js';
 
 export class ProfileUpsertService {
   private readonly COMPLEXION_MAP: Record<string, string | null> = {
@@ -420,7 +421,7 @@ export class ProfileUpsertService {
 
     if (translations && Array.isArray(translations)) {
       for (const t of translations) {
-        console.log('[upsertSections] processing translation lang=%s firstName=%s lastName=%s', t.language, t.firstName, t.lastName);
+        logger.info({ lang: t.language, firstName: t.firstName, lastName: t.lastName }, '[upsertSections] processing translation');
         const createData: any = {
           profile: { connect: { id: profileId } },
           language: t.language,
@@ -433,13 +434,13 @@ export class ProfileUpsertService {
             updateData[field] = t[field];
           }
         }
-        console.log('[upsertSections] updateData keys=%s firstName=%s', Object.keys(updateData).join(','), updateData.firstName);
+        logger.info({ keys: Object.keys(updateData), firstName: updateData.firstName }, '[upsertSections] updateData');
         const result = await tx.profileTranslation.upsert({
           where: { profileId_language: { profileId, language: t.language } },
           create: createData,
           update: updateData,
         });
-        console.log('[upsertSections] upsert result id=%s firstName=%s', result.id, result.firstName);
+        logger.info({ id: result.id, firstName: result.firstName }, '[upsertSections] upsert result');
       }
     }
   }

@@ -2,14 +2,14 @@ import React from 'react';
 import { Eye, XCircle } from 'lucide-react';
 import { DataTable } from '@/components/ui/table/DataTable';
 import type { Column } from '@/components/ui/table/DataTable';
-import type { Booking } from '@/types/mandapam';
+import type { BookingListItem } from '@/types/mandapam';
 import { getBookingStatusStyle } from '@/constants/admin/statusColors';
 import { useDateFormatter } from '@/hooks/useDateFormatter';
 
 interface BookingsTableProps {
   t: any;
   language: string;
-  bookings: Booking[];
+  bookings: BookingListItem[];
   loading: boolean;
   error: string | null;
   onRetry: () => void;
@@ -18,7 +18,7 @@ interface BookingsTableProps {
   totalItems: number;
   itemsPerPage: number;
   onPageChange: (page: number) => void;
-  onViewDetails: (b: Booking) => void;
+  onViewDetails: (b: BookingListItem) => void;
 }
 
 const STATUS_LABEL: Record<string, { en: string; ta: string }> = {
@@ -54,7 +54,7 @@ export const BookingsTable: React.FC<BookingsTableProps> = ({
     return `${formatDate(startDate, { day: 'numeric', month: 'short', year: 'numeric' })} - ${formatDate(endDate, { day: 'numeric', month: 'short', year: 'numeric' })}`;
   };
 
-  const columns: Column<Booking>[] = [
+  const columns: Column<BookingListItem>[] = [
     {
       header: 'Booking No',
       width: '100px',

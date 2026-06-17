@@ -369,7 +369,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = () => {
                         <button
                             className={`btn-shine w-full md:w-auto bg-rosewood hover:bg-[#701a33] text-white px-10 md:px-16 py-4 md:py-5 rounded-xl ${weight('font-bold')} transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${ls('text-xs md:text-sm uppercase', 'text-xs md:text-base')} ${tracking}`}
                             onClick={() => {
-                                const dateStr = selectedDay ? new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay).toLocaleDateString() : '';
+                                const dateStr = selectedDay ? new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay).toLocaleDateString('en-CA') : '';
                                 navigate('/maaligai/contact/#inquiry', { state: { subject: `Booking inquiry for ${dateStr}`, date: dateStr } });
                             }}
                             disabled={!selectedDay}

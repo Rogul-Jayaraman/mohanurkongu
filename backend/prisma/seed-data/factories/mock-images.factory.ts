@@ -168,13 +168,11 @@ async function createUploadRecord(
 
   const upload = await prisma.upload.create({
     data: {
-      publicId: uploadToken,
       uploadToken,
       ownerAccountId,
       objectKey,
       originalFileName: `${uploadToken}.webp`,
       mimeType: 'image/webp',
-      extension: 'webp',
       size,
       checksum,
       status: 'ACTIVE',

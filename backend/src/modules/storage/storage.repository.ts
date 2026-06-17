@@ -1,5 +1,4 @@
 import { prisma } from '../../database/prisma.js';
-import { generatePublicId } from '../upload/public-id.helper.js';
 
 export class StorageRepository {
   async findById(id: string) {
@@ -32,13 +31,11 @@ export class StorageRepository {
   }) {
     return prisma.upload.create({
       data: {
-        publicId: generatePublicId(), // kept until Phase 10 cleanup
         uploadToken: data.uploadToken,
         ownerAccountId: data.ownerAccountId,
         objectKey: data.objectKey,
         originalFileName: '',
         mimeType: 'image/webp',
-        extension: 'webp',
         size: data.size,
         checksum: data.checksum,
         status: data.status as any,

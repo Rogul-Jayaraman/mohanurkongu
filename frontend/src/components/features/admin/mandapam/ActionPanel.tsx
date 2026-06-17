@@ -17,14 +17,16 @@ import {
     X,
     User,
     Tag,
-    CreditCard,
     FileText,
     Loader2,
+    Receipt,
+    Eye,
 } from 'lucide-react';
 import { BlockDatesModal } from '@/modals/admin/BlockDatesModal';
 import { getTamilDateInfo } from '@/constants/calendar';
 import { getBookingStatusStyle } from '@/constants/admin/statusColors';
 import { fmt12 } from '@/utils/time';
+import { SectionCard3D, SectionHeaderRedesigned, DetailRow, SectionDivider } from '@/components/features/matrimony/ProfileViewPrimitives';
 import type { BookingType, CalendarEntry, CalendarEntryStatus } from '@/types/mandapam';
 import type { CalendarDayOutput } from '@/pipelines/mandapam/context.types';
 
@@ -161,7 +163,7 @@ const ActionPanelComponent: React.FC<ActionPanelProps> = ({ t, language, selecte
                         date: ds,
                         startTime: b.bookingConfig?.startTime || null,
                         endTime: b.bookingConfig?.endTime || null,
-                        status: 'PARTIALLY_BOOKED',
+                        status: b.bookingType === 'HOURLY' ? 'PARTIALLY_BOOKED' : 'FULLY_BOOKED',
                         bookingId: b.id,
                     });
                 }
@@ -337,125 +339,158 @@ const ActionPanelComponent: React.FC<ActionPanelProps> = ({ t, language, selecte
                         )}
                     </div>
                 )}
-                {!isLoadingDetail && dayDetail && dayDetail.bookings?.length > 0 && (dayDetail.bookings as any[]).map((b) => {
+                {!isLoadingDetail && dayDetail && dayDetail.bookings?.length > 0 && (
+                    <div className="space-y-0">
+                    {(dayDetail.bookings as any[]).map((b, bIdx) => {
                     const totalCharges = b.totalCharges || 0;
                     const totalPayments = b.totalPayments || 0;
                     const totalRefunds = b.totalRefunds || 0;
-                    const outstanding = b.outstandingAmount ?? (totalCharges - totalPayments + totalRefunds);
+                    const balance = b.outstandingAmount ?? (totalCharges - totalPayments + totalRefunds);
                     const custName = b.customerName;
                     const evtTitle = b.eventTitle;
                     const config = b.bookingConfig || {};
                     const startT = config.startTime ? fmt12(config.startTime) : null;
                     const endT = config.endTime ? fmt12(config.endTime) : null;
+                    const discountTotal = (b.ledgerEntries || [])
+                        .filter((e: any) => e.source === 'DISCOUNT')
+                        .reduce((s: number, e: any) => s + Math.abs(Number(e.amount)), 0);
+                    const chargeEntries = (b.ledgerEntries || []).filter((e: any) => !['DISCOUNT', 'PACKAGE'].includes(e.source));
+                    const packageEntries = (b.ledgerEntries || []).filter((e: any) => e.source === 'PACKAGE');
+
+                    const getLedgerLabel = (entry: any): string => {
+                        const desc = entry.description
+                            ? (isTamil ? entry.description.ta || entry.description.en : entry.description.en || entry.description.ta)
+                            : '';
+                        switch (entry.source) {
+                            case 'PACKAGE': return isTamil ? 'தொகுப்பு கட்டணம்' : 'Package Fee';
+                            case 'ADDON': {
+                            let label = desc || (isTamil ? 'சேர்க்கை' : 'Add-on');
+                            label = label.replace(/^(Addon:\s*|கூடுதல்:\s*)/i, '');
+                            label = label.replace(/\s*₹[\d,]+(\s*×\s*\d+[\dhNd]*)?.*$/g, '').trim();
+                            return label || (isTamil ? 'சேர்க்கை' : 'Add-on');
+                        }
+                            case 'DAMAGE': return `${isTamil ? 'சேதம்' : 'Damage'}${desc ? `: ${desc}` : ''}`;
+                            case 'PENALTY': return `${isTamil ? 'அபராதம்' : 'Penalty'}${desc ? `: ${desc}` : ''}`;
+                            case 'SERVICE': return `${isTamil ? 'கூடுதல்' : 'Extra'}${desc ? `: ${desc}` : ''}`;
+                            case 'DISCOUNT': return isTamil ? 'தள்ளுபடி' : 'Discount';
+                            case 'ADJUSTMENT': return desc || (isTamil ? 'சரிசெய்தல்' : 'Adjustment');
+                            default: return desc || entry.source;
+                        }
+                    };
+
+                    const statusStyle = getBookingStatusStyle(b.status);
+                    const statusLabel = b.status === 'CONFIRMED' ? (isTamil ? 'உறுதிப்படுத்தப்பட்டது' : 'Confirmed')
+                        : b.status === 'IN_PROGRESS' ? (isTamil ? 'நிகழ்வு நடைபெறுகிறது' : 'Event In Progress')
+                        : b.status === 'SETTLEMENT_PENDING' ? (isTamil ? 'தீர்வு நிலுவை' : 'Settlement Pending')
+                        : b.status === 'COMPLETED' ? (isTamil ? 'முடிக்கப்பட்டது' : 'Completed')
+                        : b.status === 'CANCELLED' ? (isTamil ? 'ரத்து செய்யப்பட்டது' : 'Cancelled')
+                        : b.status;
+
+                    const bTypeLabel = b.bookingType === 'HOURLY' ? (isTamil ? 'மணிநேர முன்பதிவு' : 'Hourly Booking')
+                        : b.bookingType === 'ONE_DAY' ? (isTamil ? 'ஒரு நாள் முன்பதிவு' : '1 Day Booking')
+                        : (isTamil ? 'இரண்டு நாள் முன்பதிவு' : '2 Day Booking');
 
                     return (
-                        <div key={b.id} className="bg-linear-to-br from-sage/[0.02] via-ivory to-sage/[0.02] border border-sage/20 rounded-2xl p-4 md:p-6 space-y-4 mb-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-lg bg-sage/10 flex items-center justify-center">
-                                        <FileText size={12} className="text-sage" />
-                                    </div>
-                                    <span className="text-[9px] font-black text-sage uppercase tracking-[0.15em]">
-                                        {isTamil ? 'முன்பதிவு விவரம்' : 'Booking Details'}
-                                    </span>
-                                </div>
-                                <span className="text-[10px] font-mono font-black text-rosewood/50 bg-white/60 px-2 py-1 rounded-lg border border-gold/10">
-                                    {b.bookingNo}
+                        <React.Fragment key={b.id}>
+                        {bIdx > 0 && <SectionDivider />}
+                        <SectionCard3D>
+                            <SectionHeaderRedesigned
+                                title={b.bookingNo}
+                                icon={<Receipt size={16} />}
+                                gradient="bg-ivory-gold-gradient text-rosewood"
+                                isTamil={isTamil}
+                            >
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.text.replace('text-', 'bg-').replace('-700', '-500')}`} />
+                                    {statusLabel}
                                 </span>
-                            </div>
+                                <button onClick={() => navigate(`/admin/mandapam/bookings/${b.id}`)} className="ml-1 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-rosewood bg-ivory-gold-gradient hover:-translate-y-0.5 active:scale-95 transition-all duration-200 shrink-0">
+                                    <Eye size={12} />
+                                    {isTamil ? 'விவரம்' : 'View'}
+                                </button>
+                            </SectionHeaderRedesigned>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <User size={12} className="text-rosewood/30 shrink-0" />
-                                        <p className="text-xs font-bold text-rosewood/70">
-                                            {isTamil ? custName?.ta || custName?.en : custName?.en || custName?.ta}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Tag size={12} className="text-rosewood/30 shrink-0" />
-                                        <p className="text-xs font-bold text-rosewood/70">
-                                            {isTamil ? evtTitle?.ta || evtTitle?.en : evtTitle?.en || evtTitle?.ta}
-                                        </p>
-                                    </div>
-                                    {b.packageSnapshot && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-xs text-rosewood/30">inventory_2</span>
-                                            <p className="text-xs font-bold text-rosewood/70">
-                                                {b.packageSnapshot.packageName?.en} ({b.packageCode})
-                                            </p>
-                                        </div>
-                                    )}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                                <div>
+                                    <DetailRow label={isTamil ? 'பெயர்' : 'Name'} value={isTamil ? custName?.ta || custName?.en : custName?.en || custName?.ta} />
+                                    <DetailRow label={isTamil ? 'தொலைபேசி' : 'Phone'} value={b.customerPhone} />
+                                    <DetailRow label={isTamil ? 'நிகழ்வுத் தலைப்பு' : 'Event Title'} value={isTamil ? evtTitle?.ta || evtTitle?.en : evtTitle?.en || evtTitle?.ta} />
+                                    <DetailRow label={isTamil ? 'நிகழ்வு வகை' : 'Event Type'} value={b.eventType} />
                                 </div>
-                                <div className="space-y-2">
+                                <div>
+                                    <DetailRow label={isTamil ? 'முன்பதிவு வகை' : 'Booking Type'} value={bTypeLabel} />
+                                    <DetailRow label={isTamil ? 'தேதி' : 'Date'} value={
+                                        `${new Date(config.startDate || dateStr!).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}${config.endDate && config.endDate !== config.startDate ? ` — ${new Date(config.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}`
+                                    } />
                                     {b.bookingType === 'HOURLY' && startT && endT && (
-                                        <div className="flex items-center gap-2">
-                                            <Clock size={12} className="text-rosewood/30 shrink-0" />
-                                            <p className="text-xs font-bold text-rosewood/70">
-                                                {startT} → {endT}
-                                                {config.durationHours && <span className="text-rosewood/40 ml-1">({config.durationHours}h)</span>}
-                                            </p>
-                                        </div>
+                                        <DetailRow label={isTamil ? 'நேரம்' : 'Time'} value={`${startT} — ${endT}${config.durationHours ? ` (${config.durationHours}h)` : ''}`} />
                                     )}
-                                    <div className="flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-xs text-rosewood/30">calendar_month</span>
-                                        <p className="text-xs font-bold text-rosewood/70">
-                                            {new Date(config.startDate || dateStr!).toLocaleDateString(isTamil ? 'ta-IN' : 'en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                            {config.endDate && config.endDate !== config.startDate && (
-                                                <> — {new Date(config.endDate).toLocaleDateString(isTamil ? 'ta-IN' : 'en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</>
+                                    <DetailRow label={isTamil ? 'தொகுப்பு' : 'Package'} value={b.packageSnapshot?.packageName?.en || b.packageCode} />
+                                </div>
+                            </div>
+
+                            <div className="border-t border-gold/10 mt-3 pt-3">
+                                <div className="overflow-hidden rounded-xl border border-gold/10">
+                                    <table className="w-full text-xs">
+                                        <thead>
+                                            <tr className="bg-rosewood/[0.03]">
+                                                <th className="text-left py-2 px-3 font-semibold text-rosewood">{isTamil ? 'விளக்கம்' : 'Description'}</th>
+                                                <th className="text-right py-2 px-3 font-semibold text-rosewood">{isTamil ? 'தொகை' : 'Amount'}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(packageEntries.length > 0 || chargeEntries.length > 0) ? (
+                                                <>
+                                                    {packageEntries.map((e: any, i: number) => (
+                                                        <tr key={e.id || `pkg-${i}`} className="border-t border-gold/5">
+                                                            <td className="py-2 px-3 font-semibold text-dark-brown">{getLedgerLabel(e)}</td>
+                                                            <td className="py-2 px-3 font-semibold text-dark-brown text-right">{formatCurrency(Number(e.amount))}</td>
+                                                        </tr>
+                                                    ))}
+                                                    {chargeEntries.map((e: any, i: number) => (
+                                                        <tr key={e.id || `chg-${i}`} className="border-t border-gold/5">
+                                                            <td className="py-2 px-3 font-semibold text-dark-brown">{getLedgerLabel(e)}</td>
+                                                            <td className="py-2 px-3 font-semibold text-dark-brown text-right">{formatCurrency(Number(e.amount))}</td>
+                                                        </tr>
+                                                    ))}
+                                                </>
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={2} className="py-3 px-3 text-center text-dark-brown/50">
+                                                        {isTamil ? 'கட்டண உள்ளீடுகள் இல்லை' : 'No charge entries'}
+                                                    </td>
+                                                </tr>
                                             )}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full border ${
-                                            getBookingStatusStyle(b.status).bg + ' ' + getBookingStatusStyle(b.status).text + ' ' + getBookingStatusStyle(b.status).border
-                                        }`}>
-                                            <span className={`w-1 h-1 rounded-full ${getBookingStatusStyle(b.status).text.replace('text-', 'bg-').replace('-700', '-500')}`} />
-                                            {b.status === 'CONFIRMED' ? (isTamil ? 'உறுதிப்படுத்தப்பட்டது' : 'Confirmed') : b.status === 'IN_PROGRESS' ? (isTamil ? 'நிகழ்வு நடைபெறுகிறது' : 'Event In Progress') : b.status === 'SETTLEMENT_PENDING' ? (isTamil ? 'தீர்வு நிலுவை' : 'Settlement Pending') : b.status === 'COMPLETED' ? (isTamil ? 'முடிக்கப்பட்டது' : 'Completed') : b.status === 'CANCELLED' ? (isTamil ? 'ரத்து செய்யப்பட்டது' : 'Cancelled') : b.status}
-                                        </span>
-                                    </div>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr className="border-t-2 border-gold/20">
+                                                <td className="py-2 px-3 font-bold text-rosewood">{isTamil ? 'மொத்த கட்டணம்' : 'Total Charges'}</td>
+                                                <td className="py-2 px-3 font-bold text-rosewood text-right">{formatCurrency(totalCharges + discountTotal)}</td>
+                                            </tr>
+                                            {discountTotal > 0 && (
+                                                <tr className="border-t border-gold/5">
+                                                    <td className="py-2 px-3 font-semibold text-dark-brown/70">{isTamil ? 'தள்ளுபடி' : 'Discount'}</td>
+                                                    <td className="py-2 px-3 font-semibold text-rose-600 text-right">({formatCurrency(discountTotal)})</td>
+                                                </tr>
+                                            )}
+                                            <tr className="border-t border-gold/5">
+                                                <td className="py-2 px-3 font-semibold text-dark-brown">{isTamil ? 'செலுத்தப்பட்டது' : 'Paid'}</td>
+                                                <td className="py-2 px-3 font-semibold text-emerald-700 text-right">{formatCurrency(totalPayments)}</td>
+                                            </tr>
+                                            <tr className="border-t border-gold/5">
+                                                <td className="py-2 px-3 font-bold text-rosewood">{isTamil ? 'இருப்பு' : 'Balance Due'}</td>
+                                                <td className={`py-2 px-3 font-bold text-right ${balance > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>{formatCurrency(balance)}</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
                                 </div>
                             </div>
-
-                            <div className="border-t border-sage/10 pt-3 space-y-2">
-                                <div className="flex justify-between text-xs">
-                                    <span className="text-rosewood/50 font-bold">{isTamil ? 'மொத்த கட்டணம்' : 'Total Charges'}</span>
-                                    <span className="text-rosewood font-black">{formatCurrency(totalCharges)}</span>
-                                </div>
-                                <div className="flex justify-between text-xs">
-                                    <span className="text-rosewood/50 font-bold">{isTamil ? 'செலுத்தப்பட்டது' : 'Paid'}</span>
-                                    <span className="text-emerald-700 font-black">- {formatCurrency(totalPayments)}</span>
-                                </div>
-                                {totalRefunds > 0 && (
-                                    <div className="flex justify-between text-xs">
-                                        <span className="text-rosewood/50 font-bold">{isTamil ? 'பணம் திரும்பியது' : 'Refunded'}</span>
-                                        <span className="text-red-500 font-black">+ {formatCurrency(totalRefunds)}</span>
-                                    </div>
-                                )}
-                                <div className="flex justify-between text-sm pt-1.5 border-t-2 border-sage/20">
-                                    <span className="text-rosewood font-black">{isTamil ? 'நிலுவை' : 'Outstanding'}</span>
-                                    <span className={`font-black ${outstanding <= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                        {formatCurrency(outstanding)}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                                {(b.paymentEntries || []).slice(0, 3).map((p: any, i: number) => (
-                                    <span key={i} className="inline-flex items-center gap-1 text-[8px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        <CreditCard size={10} />
-                                        {formatCurrency(p.amount)}
-                                    </span>
-                                ))}
-                                {(b.paymentEntries || []).length > 3 && (
-                                    <span className="text-[8px] font-bold text-rosewood/40 px-1">
-                                        +{b.paymentEntries.length - 3} more
-                                    </span>
-                                )}
-                            </div>
-                        </div>
+                        </SectionCard3D>
+                        </React.Fragment>
                     );
                 })}
+                    </div>
+                )}
 
                 <div className="flex flex-wrap items-center gap-3 pt-5 border-t border-gold/10">
                     <p className="text-[10px] text-rosewood/40 italic flex items-center gap-1 mr-auto">

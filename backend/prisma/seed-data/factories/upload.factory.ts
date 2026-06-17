@@ -82,20 +82,17 @@ export async function seedUploads(
 
       const upload = await prisma.upload.create({
         data: {
-          publicId: generatePublicId(),
           uploadToken: def.status !== 'DELETED' ? generateUploadToken() : null,
           ownerAccountId: ownerId,
           objectKey: `${folder}/${ownerId}/${generatePublicId()}.${EXTENSIONS[mimeIdx]}`,
           originalFileName: `photo_${generatePublicId()}.${EXTENSIONS[mimeIdx]}`,
           mimeType: MIME_TYPES[mimeIdx],
-          extension: EXTENSIONS[mimeIdx],
           size: randomSize(def.status),
           checksum: generateChecksum(),
           status: def.status,
           version: 1,
           width: dims.w > 0 ? dims.w : null,
           height: dims.h > 0 ? dims.h : null,
-          lastAccessedAt: def.status === 'ACTIVE' ? randomDateBefore(now, 30) : null,
           createdAt,
           updatedAt: def.status === 'ACTIVE'
             ? randomDateAfter(createdAt, 30)
