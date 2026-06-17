@@ -79,7 +79,7 @@ async function bootstrap() {
       clearInterval(regExpireInterval);
       clearInterval(membershipExpireInterval);
 
-      bookingAutoTransition.stop();
+      await bookingAutoTransition.stop();
 
       logger.info('Shutting down workers...');
       await Promise.allSettled([

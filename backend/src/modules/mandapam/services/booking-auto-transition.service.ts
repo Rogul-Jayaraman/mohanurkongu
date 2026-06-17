@@ -31,11 +31,13 @@ export class BookingAutoTransitionService {
     logger.info({ delayMs: msUntilNextHalfHour }, 'Booking auto-transition scheduler started');
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
+    logger.info('Running final auto-transition check on shutdown');
+    await this.run();
     logger.info('Booking auto-transition scheduler stopped');
   }
 
