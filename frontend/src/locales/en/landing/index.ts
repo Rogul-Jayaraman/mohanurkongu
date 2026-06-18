@@ -1,3 +1,1 @@
-import { home } from "./home";
-
-export const landingEn = home;
+import { home } from "./home";export const landingEn = home;

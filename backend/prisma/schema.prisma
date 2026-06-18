@@ -788,9 +788,8 @@ model Profile {
   shortlists        Shortlist[]
   profileOpens      ProfileOpen[]
 
-  @@index([accountId])
-  @@index([currentStatus])
-  @@index([createdAt])
+  @@index([accountId, currentStatus])
+  @@index([currentStatus, createdAt])
   @@map("profiles")
 }
 
@@ -995,6 +994,7 @@ model ProfileTranslation {
   nativeCity      String?
   nativeState     String?
   nativeCountry   String?
+  searchVector    Unsupported("tsvector")?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 

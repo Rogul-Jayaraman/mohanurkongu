@@ -1,22 +1,73 @@
 services:
   postgres:
-    extends:
-      file: docker-compose.yml
-      service: postgres
+    image: postgres:16-alpine
+    container_name: mkm-postgres
+    restart: unless-stopped
+    env_file: ../backend/.env.prod
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - mkm-network
 
   redis:
-    extends:
-      file: docker-compose.yml
-      service: redis
+    image: redis:7-alpine
+    container_name: mkm-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 512mb --maxmemory-policy noeviction --appendonly yes --requirepass $$REDIS_QUEUE_PASSWORD
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - mkm-network
+
+  redis-cache:
+    image: redis:7-alpine
+    container_name: mkm-redis-cache
+    restart: unless-stopped
+    command: redis-server --port 6380 --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass $$REDIS_CACHE_PASSWORD
+    volumes:
+      - redis_cache_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6380", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - mkm-network
 
   mailpit:
-    extends:
-      file: docker-compose.yml
-      service: mailpit
+    image: axllent/mailpit:latest
+    container_name: mkm-mailpit
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - mkm-network
 
@@ -24,26 +75,37 @@ services:
     build:
       context: ../backend
       dockerfile: ../docker/backend/Dockerfile
+    env_file: ../backend/.env.prod
     container_name: mkm-backend
     restart: unless-stopped
     ports:
       - "4000:4000"
-    env_file:
-      - ../backend/.env
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://mohanurkongu:mohanurkongu@postgres:5432/mohanurkongu?schema=public
-      REDIS_HOST: redis
-      SMTP_HOST: mailpit
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      REDIS_QUEUE_HOST: redis
+      REDIS_QUEUE_PORT: 6379
+      REDIS_CACHE_HOST: redis-cache
+      REDIS_CACHE_PORT: 6380
       STORAGE_DIR: /storage/media
     volumes:
-      - media_storage:/storage
+      - ../storage:/storage
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - mkm-network
 
@@ -55,32 +117,76 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - mkm-network
 
   nginx:
     build:
-      context: ../docker/nginx
+      context: ./nginx
       dockerfile: Dockerfile
     container_name: mkm-nginx
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+    env_file: ../backend/.env.prod
     environment:
       BACKEND_HOST: backend
       BACKEND_PORT: 4000
       FRONTEND_HOST: frontend
       FRONTEND_PORT: 80
     volumes:
-      - media_storage:/storage:ro
+      - ../storage:/storage:ro
+      - ../media:/media-mohanurkongu:ro
+      - cert_data:/etc/letsencrypt
+      - cert_www:/var/www/certbot
     depends_on:
       - frontend
       - backend
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - mkm-network
+
+  certbot:
+    image: certbot/certbot:v2
+    container_name: mkm-certbot
+    entrypoint: /bin/sh
+    env_file: ../backend/.env.prod
+    command: >
+      -c "while :; do
+        certbot certonly --webroot -w /var/www/certbot
+          -d $$DOMAIN_NAME
+          --email $$CERTBOT_EMAIL
+          --agree-tos --no-eff-email --non-interactive
+          --force-renewal || true;
+        sleep 43200;
+      done"
+    volumes:
+      - cert_data:/etc/letsencrypt
+      - cert_www:/var/www/certbot
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - mkm-network
 
 volumes:
-  media_storage:
+  postgres_data:
+  redis_data:
+  redis_cache_data:
+  cert_data:
+  cert_www:
 
 networks:
   mkm-network:

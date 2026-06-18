@@ -1,10 +1,1 @@
-import api from '@/lib/api';
-import type { ManamaalaiAnalytics, MandapamAnalytics } from '@/types/analytics';
-
-export function fetchManamaalaiAnalytics(): Promise<ManamaalaiAnalytics> {
-  return api.get('/admin/analytics/manamaalai') as Promise<ManamaalaiAnalytics>;
-}
-
-export function fetchMandapamAnalytics(): Promise<MandapamAnalytics> {
-  return api.get('/admin/analytics/mandapam') as Promise<MandapamAnalytics>;
-}
+import api from '@/lib/api';import type { ManamaalaiAnalytics, MandapamAnalytics } from '@/types/analytics';export function fetchManamaalaiAnalytics(): Promise<ManamaalaiAnalytics> {  return api.get('/admin/analytics/manamaalai') as Promise<ManamaalaiAnalytics>;}export function fetchMandapamAnalytics(): Promise<MandapamAnalytics> {  return api.get('/admin/analytics/mandapam') as Promise<MandapamAnalytics>;}

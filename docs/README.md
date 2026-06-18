@@ -1,42 +1,55 @@
-# Mohanur Kongu Manamaalai — Engineering Documentation
+# Mohanurkongu Documentation
 
-**Domain:** Matrimony + Mandapam (marriage hall booking) platform for the Kongu Vellalar community.
+A matrimony (Manamaalai) + hall booking (Maaligai) platform — one codebase, two products.
 
-**Repository:** `Mohanurkongu` — monorepo (backend + frontend + workers)
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        WHO SHOULD READ WHAT                         │
+├─────────────────────────────────────────────────────────────────────┤
+│  NEW DEVELOPER                                                      │
+│    ┌─────────────────────────────────────────────────────────┐      │
+│    │  01-overview/01-01-WHAT_IS_THIS.md                       │      │
+│    │  02-getting-started/02-01-QUICKSTART.md                  │      │
+│    │  04-development/04-01-BACKEND_CODEBASE_TOUR.md          │      │
+│    └─────────────────────────────────────────────────────────┘      │
+│                                                                     │
+│  JUNIOR / MID DEVELOPER                                             │
+│    ┌─────────────────────────────────────────────────────────┐      │
+│   │  03-architecture/ (all 11 files — understand the system) │      │
+│    │  04-development/04-03-HOW_TO_ADD_A_ROUTE.md              │      │
+│    │  04-development/04-04-HOW_TO_ADD_A_PIPELINE.md           │      │
+│    └─────────────────────────────────────────────────────────┘      │
+│                                                                     │
+│  SENIOR / ARCHITECT                                                │
+│    ┌─────────────────────────────────────────────────────────┐      │
+│    │  06-business-logic/ (state machines + edge cases)        │      │
+│    │  05-pipelines/05-01-INDEX.md                             │      │
+│    │  08-reference/ (config, error codes, API ref)            │      │
+│    └─────────────────────────────────────────────────────────┘      │
+│                                                                     │
+│  DEVOPS / OPS                                                      │
+│    ┌─────────────────────────────────────────────────────────┐      │
+│    │  07-operations/ (deploy, monitor, backup, security)      │      │
+│    │  03-architecture/03-10-DEPLOYMENT_TOPOLOGY.md            │      │
+│    └─────────────────────────────────────────────────────────┘      │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-**Status:** Pre-production | Auth module connected | All other modules use stubs
+## Reading Order
+
+| # | Section | What You Will Learn |
+|---|---------|-------------------|
+| 01 | [Overview](01-overview/01-01-WHAT_IS_THIS.md) | What the system does, glossary, tech stack |
+| 02 | [Getting Started](02-getting-started/02-01-QUICKSTART.md) | Clone, install, run tests in 10 minutes |
+| 03 | [Architecture](03-architecture/03-01-SYSTEM_OVERVIEW.md) | System design, request lifecycle, pipeline pattern, DB schema, auth, caching, i18n, deployment, storage |
+| 04 | [Development](04-development/04-01-BACKEND_CODEBASE_TOUR.md) | Codebase tours, how-to guides, patterns, error handling |
+| 05 | [Pipeline Index](05-pipelines/05-01-INDEX.md) | Master index of all 61 pipeline files |
+| 06 | [Business Logic](06-business-logic/06-01-ACCOUNT_LIFECYCLE.md) | State machines, business rules, edge cases |
+| 07 | [Operations](07-operations/07-01-DEPLOYMENT_GUIDE.md) | Deploy, monitor, backup, security checklist |
+| 08 | [Reference](08-reference/08-01-CONFIGURATION.md) | Config, error codes, API ref, feature matrix, limitations, modules |
 
 ## Quick Links
 
-- [CREATE_NEW_PROFILE](./features/CREATE_NEW_PROFILE.md) — Complete profile creation workflow (7-step wizard, draft save/resume, upload lifecycle, publish)
-- [PROJECT_OVERVIEW](./PROJECT_OVERVIEW.md) — Goals, domain, team, lifecycle
-- [SYSTEM_OVERVIEW](./SYSTEM_OVERVIEW.md) — High-level architecture
-- [MODULES](./MODULES.md) — Module breakdown with status
-- [FEATURE_MATRIX](./FEATURE_MATRIX.md) — Feature-by-feature implementation status
-- [BUSINESS_RULES](./BUSINESS_RULES.md) — State machines, validation, permissions
-- [KNOWN_LIMITATIONS](./KNOWN_LIMITATIONS.md) — Gaps, stubs, unimplemented paths
-- [architecture/](./architecture/) — Context, component, sequence, deployment diagrams
-- [BOOKING_ARCHITECTURE](./architecture.md) — Booking system architecture (20 diagrams)
-- [config/ENVIRONMENT.md](./config/ENVIRONMENT.md) — Environment variables reference
-- [deployment/](./deployment/) — Deployment, rollback, backup, monitoring, runbook
-- [database/](./database/) — Schema, ERD, data rules, migration guide
-- [api/](./api/) — OpenAPI spec, error reference, Postman collection
-- [quality/](./quality/) — Bug reports, regression matrix, risk register
-- [incidents/](./incidents/) — Incident history, postmortems, recovery plans
-- [adr/](./adr/) — Architecture Decision Records
-- [architecture/CACHE_ARCHITECTURE](./architecture/CACHE_ARCHITECTURE.md) — 3-layer cache (Redis + React Query + DB) with permission isolation
-- [features/CACHE_MUTATIONS](./features/CACHE_MUTATIONS.md) — Cache mutation feature workflow (which mutations invalidate which keys)
-
-## Documentation Coverage
-
-| Category | Coverage | Missing |
-|---|---|---|
-| Architecture | 100% | — |
-| Caching | 100% | — (Phase 0-1 in progress) |
-| API Contracts | 100% (auth) | 0% (profiles, admin, mandapam — no backend) |
-| Database | 100% | — |
-| Deployment | 90% | CI/CD pipeline TBD |
-| Config/Env | 100% | — |
-| Quality/Bugs | 100% | — |
-| Incidents | 100% | — |
-| ADRs | 100% | — |
+- **Pipeline docs** (61 files): [`05-pipelines/`](05-pipelines/05-01-INDEX.md) — indexed in section 05
+- **Source code**: [`backend/`](../backend/), [`frontend/`](../frontend/)
+- **Infrastructure**: [`docker/`](../docker/) — dev & prod compose files in `docker/`

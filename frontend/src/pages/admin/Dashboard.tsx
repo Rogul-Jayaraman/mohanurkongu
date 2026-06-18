@@ -1,8 +1,1 @@
-import React from 'react';
-import DashboardFeature from '@/components/features/admin/Dashboard';
-
-const Dashboard: React.FC = () => {
-    return <DashboardFeature />;
-};
-
-export default Dashboard;
+import React from 'react';import DashboardFeature from '@/components/features/admin/Dashboard';const Dashboard: React.FC = () => {    return <DashboardFeature />;};export default Dashboard;

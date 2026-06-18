@@ -27,12 +27,20 @@ frontend/build/
 .DS_Store
 
 
-# Environment variables
+# Environment variables — .env.example is the ONLY exception, never add secrets
 .env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+.env.prod
+.env.staging
+
+# Sentry config
+.sentryclirc
 
 # Vite
 *.local
@@ -44,14 +52,10 @@ temp/
 #refrence files
 refrence/
 storage/
+media/
 
 # agent
 .agents/
 .claude/
 .opencode/
 
-
-#docs
-docs/
-pipelines/
-scripts/

@@ -12,6 +12,7 @@ cp .env.example .env          # Configure DB, Redis, SMTP, JWT secrets
 npx prisma generate
 npx prisma db push            # Create tables (or npm run db:migrate)
 npm run db:seed               # Seed roles, admin account, plans
+npm run db:seed:enhanced       # Seed roles, admin account, plans + comprehensive mock data (15k+ records)
 npm run dev                   # http://localhost:4000
 ```
 
@@ -31,6 +32,7 @@ npm run dev                   # http://localhost:4000
 | `npm run db:push` | `prisma db push` |
 | `npm run db:migrate` | `prisma migrate dev` |
 | `npm run db:seed` | `tsx prisma/seed.ts` |
+| `npm run db:seed:enhanced` | `tsx prisma/seed.ts` (with ENHANCED_SEED=true) |
 
 ---
 

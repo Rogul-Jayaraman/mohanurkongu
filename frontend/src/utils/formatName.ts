@@ -1,10 +1,1 @@
-export const formatFullName = (
-  first?: string | null,
-  last?: string | null
-): string => [first, last].filter(Boolean).join(' ');
-
-export const getInitials = (first?: string | null, last?: string | null): string => {
-  const parts = [first, last].filter((p): p is string => Boolean(p));
-  if (parts.length === 0) return '?';
-  return parts.map((p) => p[0].toUpperCase()).join('');
-};
+export const formatFullName = (  first?: string | null,  last?: string | null): string => [first, last].filter(Boolean).join(' ');export const getInitials = (first?: string | null, last?: string | null): string => {  const parts = [first, last].filter((p): p is string => Boolean(p));  if (parts.length === 0) return '?';  return parts.map((p) => p[0].toUpperCase()).join('');};

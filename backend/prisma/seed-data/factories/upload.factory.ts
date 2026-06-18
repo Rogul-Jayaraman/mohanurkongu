@@ -2,12 +2,11 @@ import type { PrismaClient, UploadStatus } from '@prisma/client';
 import { SEED_CONFIG } from '../config.js';
 import {
   randomInt, randomDateBefore, randomDateAfter,
-  generatePublicId, generateUploadToken, generateChecksum,
-  pickRandom, randomBool, weightedPick, progressBar,
+  generateUploadToken, generateChecksum,
+  pickRandom, weightedPick, progressBar,
 } from '../helpers.js';
 
 const MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
-const EXTENSIONS = ['jpg', 'png', 'webp', 'heic'];
 
 interface UploadDefinition {
   status: UploadStatus;
@@ -75,17 +74,20 @@ export async function seedUploads(
 
       const isUsable = def.status === 'ACTIVE' || def.status === 'ATTACHED';
 
-      const folder = uploadType === 'profile_photo' ? 'profiles'
+      const category = uploadType === 'profile_photo' ? 'profiles'
         : uploadType === 'gallery_photo' ? 'gallery'
         : uploadType === 'horoscope_chart' ? 'horoscope'
         : 'temp';
+      const token = def.status !== 'DELETED' ? generateUploadToken() : null;
+      const year = createdAt.getUTCFullYear();
+      const month = String(createdAt.getUTCMonth() + 1).padStart(2, '0');
 
       const upload = await prisma.upload.create({
         data: {
-          uploadToken: def.status !== 'DELETED' ? generateUploadToken() : null,
+          uploadToken: token,
           ownerAccountId: ownerId,
-          objectKey: `${folder}/${ownerId}/${generatePublicId()}.${EXTENSIONS[mimeIdx]}`,
-          originalFileName: `photo_${generatePublicId()}.${EXTENSIONS[mimeIdx]}`,
+          objectKey: token ? `${category}/${year}/${month}/${token}.webp` : `${category}/${year}/${month}/deleted_${generateUploadToken()}.webp`,
+          originalFileName: `${token || 'unknown'}.webp`,
           mimeType: MIME_TYPES[mimeIdx],
           size: randomSize(def.status),
           checksum: generateChecksum(),

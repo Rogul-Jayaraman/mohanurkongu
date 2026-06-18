@@ -3,6 +3,23 @@ import argon2 from 'argon2';
 
 const prisma = new PrismaClient();
 
+const isEnhancedSeed = process.env.ENHANCED_SEED === 'true' || process.env.SEED_DATA === 'true';
+
+// Custom test data configuration (overrides defaults from seed-data/index.ts)
+const customConfig = {
+  TOTAL_ACCOUNTS: process.env.CONFIG_TOTAL_ACCOUNTS ? parseInt(process.env.CONFIG_TOTAL_ACCOUNTS) : undefined,
+  TOTAL_PROFILES: process.env.CONFIG_TOTAL_PROFILES ? parseInt(process.env.CONFIG_TOTAL_PROFILES) : undefined,
+  TOTAL_UPLOADS: process.env.CONFIG_TOTAL_UPLOADS ? parseInt(process.env.CONFIG_TOTAL_UPLOADS) : undefined,
+  TOTAL_SHORTLISTS: process.env.CONFIG_TOTAL_SHORTLISTS ? parseInt(process.env.CONFIG_TOTAL_SHORTLISTS) : undefined,
+  TOTAL_MEMBERSHIPS: process.env.CONFIG_TOTAL_MEMBERSHIPS ? parseInt(process.env.CONFIG_TOTAL_MEMBERSHIPS) : undefined,
+  TOTAL_SESSIONS: process.env.CONFIG_TOTAL_SESSIONS ? parseInt(process.env.CONFIG_TOTAL_SESSIONS) : undefined,
+  TOTAL_VERIFICATIONS: process.env.CONFIG_TOTAL_VERIFICATIONS ? parseInt(process.env.CONFIG_TOTAL_VERIFICATIONS) : undefined,
+  TOTAL_AUDIT_EVENTS: process.env.CONFIG_TOTAL_AUDIT_EVENTS ? parseInt(process.env.CONFIG_TOTAL_AUDIT_EVENTS) : undefined,
+  TOTAL_REG_SESSIONS: process.env.CONFIG_TOTAL_REG_SESSIONS ? parseInt(process.env.CONFIG_TOTAL_REG_SESSIONS) : undefined,
+  TOTAL_RESET_SESSIONS: process.env.CONFIG_TOTAL_RESET_SESSIONS ? parseInt(process.env.CONFIG_TOTAL_RESET_SESSIONS) : undefined,
+  TOTAL_PROFILE_OPENS: process.env.CONFIG_TOTAL_PROFILE_OPENS ? parseInt(process.env.CONFIG_TOTAL_PROFILE_OPENS) : undefined,
+};
+
 const PROFILE_FOR_VALUES = [
   'MYSELF', 'MY_SON', 'MY_DAUGHTER', 'MY_SISTER', 'MY_BROTHER',
 ] as const;
@@ -125,10 +142,18 @@ async function main() {
   await seedDefaultAdmin();
   await setDevCascade();
 
-  if (process.env.SEED_DATA === 'true') {
+  if (isEnhancedSeed) {
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('  SEED_DATA=true — generating test data');
+    console.log('  ENHANCED_SEED=true — generating comprehensive test data');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    if (Object.keys(customConfig).some(key => customConfig[key as keyof typeof customConfig] !== undefined)) {
+      console.log('  🔧 Using custom configuration:');
+      for (const [key, value] of Object.entries(customConfig)) {
+        if (value !== undefined) {
+          console.log(`    ${key}: ${value}`);
+        }
+      }
+    }
     const { generateTestData } = await import('./seed-data/index.js');
     await generateTestData();
   }

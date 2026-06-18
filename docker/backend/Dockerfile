@@ -23,7 +23,7 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev --ignore-scripts
 
-FROM node:22-slim AS production
+FROM node:22-slim
 WORKDIR /app
 ENV HOME=/app
 RUN addgroup --system app && adduser --system --ingroup app app
@@ -32,19 +32,15 @@ COPY --from=build /app/dist ./dist
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/node_modules/pino-pretty ./node_modules/pino-pretty
 COPY --from=build /app/node_modules/@swisseph/node ./node_modules/@swisseph/node
 COPY --from=build /app/package.json ./
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/src/modules/notification/templates ./dist/src/modules/notification/templates
 
-RUN chmod -R 777 /app/node_modules/@prisma /app/node_modules/.prisma && chown -R app:app /app
-
+RUN chown -R app:app /app/node_modules/@prisma /app/node_modules/.prisma && chown -R app:app /app
 RUN mkdir -p /storage/media && chown -R app:app /storage
 
 USER app
 EXPOSE 4000
-
 ENV NODE_ENV=production
-
-CMD npx prisma migrate deploy && node dist/src/server.js
+CMD sh -c "ok=0; for i in 1 2 3 4 5; do npx prisma migrate deploy && { ok=1; break; }; echo 'Migration attempt '$i'/5 failed, retrying...'; sleep 3; done; [ $ok -eq 1 ] && exec node dist/src/server.js || { echo 'Migration failed after 5 attempts'; exit 1; }"

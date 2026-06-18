@@ -1,8 +1,1 @@
-import React from 'react';
-import ProfileManagement from '@/components/features/admin/matrimony/ProfileManagement';
-
-const ProfilesPage: React.FC = () => {
-    return <ProfileManagement />;
-};
-
-export default ProfilesPage;
+import React from 'react';import ProfileManagement from '@/components/features/admin/matrimony/ProfileManagement';const ProfilesPage: React.FC = () => {    return <ProfileManagement />;};export default ProfilesPage;

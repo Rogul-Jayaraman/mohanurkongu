@@ -1,8 +1,1 @@
-import React from 'react';
-import PackageManagement from '@/components/features/admin/mandapam/packages/PackageManagement';
-
-const PackagesPage: React.FC = () => {
-    return <PackageManagement />;
-};
-
-export default PackagesPage;
+import React from 'react';import PackageManagement from '@/components/features/admin/mandapam/packages/PackageManagement';const PackagesPage: React.FC = () => {    return <PackageManagement />;};export default PackagesPage;

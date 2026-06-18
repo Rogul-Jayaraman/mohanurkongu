@@ -1,18 +1,1 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { adminUpdatePlan } from '../api/admin-membership.api';
-import { queryKeys } from './queryKeys';
-import { showErrorToast } from './mutationUtils';
-
-export function useAdminUpdatePlanMutation() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (args: { planId: string; data: Record<string, unknown> }) =>
-      adminUpdatePlan(args.planId, args.data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.membership.all });
-      toast.success('Plan updated');
-    },
-    onError: (err) => showErrorToast(err, 'Could not update plan'),
-  });
-}
+import { useMutation, useQueryClient } from '@tanstack/react-query';import { toast } from 'sonner';import { adminUpdatePlan } from '../api/admin-membership.api';import { queryKeys } from './queryKeys';import { showErrorToast } from './mutationUtils';export function useAdminUpdatePlanMutation() {  const qc = useQueryClient();  return useMutation({    mutationFn: (args: { planId: string; data: Record<string, unknown> }) =>      adminUpdatePlan(args.planId, args.data),    onSuccess: () => {      qc.invalidateQueries({ queryKey: queryKeys.membership.all });      toast.success('Plan updated');    },    onError: (err) => showErrorToast(err, 'Could not update plan'),  });}

@@ -1,12 +1,1 @@
-import i18n from 'i18next';
-
-export function translateError(message: string): string {
-  if (!message || !message.startsWith('PROFILE_')) return message;
-  const parts = message.split(':');
-  const code = parts[0];
-  const params = parts.slice(1);
-  const key = `errors:${code}`;
-  const interpolation: Record<string, string> = {};
-  params.forEach((val, i) => { interpolation[`p${i}`] = val; });
-  return i18n.t(key, interpolation);
-}
+import i18n from 'i18next';export function translateError(message: string): string {  if (!message || !message.startsWith('PROFILE_')) return message;  const parts = message.split(':');  const code = parts[0];  const params = parts.slice(1);  const key = `errors:${code}`;  const interpolation: Record<string, string> = {};  params.forEach((val, i) => { interpolation[`p${i}`] = val; });  return i18n.t(key, interpolation);}

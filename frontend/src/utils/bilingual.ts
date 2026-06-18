@@ -1,16 +1,1 @@
-export function getBilingualLabel(label: { en: string; ta: string }, lang: 'en' | 'ta'): string {
-  const match = label.en.match(/\(([^)]+)\)/);
-  const other = match ? match[1].trim() : label.en;
-  if (lang === 'ta') return `${label.ta} (${other})`;
-  return `${other} (${label.ta})`;
-}
-
-export function getBilingualValue(options: any[], value: string | null | undefined, lang: 'en' | 'ta'): string {
-  if (!value || !options) return '-';
-  const option = options.find(o => o.value === value);
-  if (!option) return value;
-  const label = option.label;
-  if (!label || typeof label !== 'object') return value;
-  return getBilingualLabel(label, lang);
-}
-  
+export function getBilingualLabel(label: { en: string; ta: string }, lang: 'en' | 'ta'): string {  const match = label.en.match(/\(([^)]+)\)/);  const other = match ? match[1].trim() : label.en;  if (lang === 'ta') return `${label.ta} (${other})`;  return `${other} (${label.ta})`;}export function getBilingualValue(options: any[], value: string | null | undefined, lang: 'en' | 'ta'): string {  if (!value || !options) return '-';  const option = options.find(o => o.value === value);  if (!option) return value;  const label = option.label;  if (!label || typeof label !== 'object') return value;  return getBilingualLabel(label, lang);}  

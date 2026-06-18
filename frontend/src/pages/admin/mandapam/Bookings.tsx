@@ -1,8 +1,1 @@
-import React from 'react';
-import BookingManagement from '@/components/features/admin/mandapam/bookings/BookingManagement';
-
-const BookingsPage: React.FC = () => {
-    return <BookingManagement />;
-};
-
-export default BookingsPage;
+import React from 'react';import BookingManagement from '@/components/features/admin/mandapam/bookings/BookingManagement';const BookingsPage: React.FC = () => {    return <BookingManagement />;};export default BookingsPage;
